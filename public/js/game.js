@@ -63,26 +63,38 @@ const MAIN_PATH = [
 ];
 
 // Fixed: main path has exactly 52 entries (indices 0-51)
-const PATH52 = MAIN_PATH.slice(0,52);
+const PATH52 = [
+  [1,6],[2,6],[3,6],[4,6],[5,6],
+  [6,5],[6,4],[6,3],[6,2],[6,1],[6,0],
+  [7,0],[8,0],
+  [8,1],[8,2],[8,3],[8,4],[8,5],[8,6],
+  [9,6],[10,6],[11,6],[12,6],[13,6],[14,6],
+  [14,7],[14,8],
+  [13,8],[12,8],[11,8],[10,8],[9,8],[8,8],
+  [8,9],[8,10],[8,11],[8,12],[8,13],[8,14],
+  [7,14],[6,14],
+  [6,13],[6,12],[6,11],[6,10],[6,9],[6,8],
+  [5,8],[4,8],[3,8],[2,8],[1,8],[0,8],
+];
 
 // Home stretches (6 squares toward center), one per player
 const HOME_STRETCH = [
-  [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]],  // blue (P0) going up col7
-  [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],       // red (P1) going right row7
-  [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],       // green (P2) going down col7
-  [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]],   // yellow (P3) going left row7
+  [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],       // blue  (P0) going right toward center
+  [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],       // red   (P1) going down toward center
+  [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]],   // green (P2) going up toward center
+  [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]],   // yellow(P3) going left toward center
 ];
 
 // Base positions for 4 pieces per player
 const BASE_POS = [
-  [[2,2],[3,2],[2,3],[3,3]],
-  [[11,2],[12,2],[11,3],[12,3]],
-  [[2,11],[3,11],[2,12],[3,12]],
-  [[11,11],[12,11],[11,12],[12,12]],
+  [[2,2],[3,2],[2,3],[3,3]],       // blue: top-left
+  [[10,2],[11,2],[10,3],[11,3]],   // red: top-right
+  [[2,10],[3,10],[2,11],[3,11]],   // green: bottom-left
+  [[10,10],[11,10],[10,11],[11,11]], // yellow: bottom-right
 ];
 
 // Entry point on main path for each player
-const ENTRY = [0, 13, 26, 39];
+const ENTRY = [0, 13, 39, 26];
 
 // Safe squares (star positions) — no captures here
 const SAFE = new Set(['1,8','6,2','8,1','13,6','13,8','8,13','6,13','1,6']);
