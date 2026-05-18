@@ -4,271 +4,269 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Clash of Coins</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
-  --gold:#D4AF37;--gold2:#FFD700;--gdark:#8B6914;--gglow:rgba(212,175,55,.28);
-  --bg:#07070e;--bg2:#0d0d1a;--bg3:#131325;--panel:#10101e;
-  --bdr:#222240;--text:#ede5d8;--muted:#6a5f8a;
-  --blue:#4d7fff;--red:#ff4444;--green:#22cc55;--yel:#ffcc00;
-  --r:14px;
+  --gold:#FFD700;--gold2:#FFA500;--gdark:#8B6914;--gglow:rgba(255,215,0,.3);
+  --bg:#0a0a14;--panel:#13131f;--bdr:#1e1e30;--text:#fff;--muted:#7a7a9a;
+  --blue:#1a6fff;--blue2:#4d9fff;--bluebg:#0a1a50;
+  --red:#ff1a1a;--red2:#ff6666;--redbg:#500a0a;
+  --green:#00cc44;--green2:#44ff88;--greenbg:#0a4422;
+  --yel:#ffcc00;--yel2:#ffe566;--yelbg:#4a3800;
+  --r:16px;
 }
-html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:16px}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif}
 #app{position:fixed;inset:0;display:flex;flex-direction:column}
-.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden;background:var(--bg2)}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
 .screen.active{display:flex}
 #particles{position:fixed;inset:0;pointer-events:none;z-index:0}
 
 /* ===== LOGIN ===== */
 #scr-login{
   align-items:center;justify-content:center;z-index:1;
-  background:radial-gradient(ellipse at 50% -5%,#201500 0%,var(--bg) 65%);
+  background:linear-gradient(160deg,#0d0020 0%,#000d30 40%,#001a0d 100%);
 }
-.login-box{text-align:center;width:340px;max-width:92vw;position:relative;z-index:2;padding:0 16px}
-.logo-crown{font-size:56px;display:block;margin-bottom:8px;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 24px var(--gold))}
-@keyframes float{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-12px) rotate(4deg)}}
-.logo-name{font-family:'Cinzel Decorative',serif;line-height:1.05;margin-bottom:4px}
-.logo-clash{display:block;font-size:50px;color:var(--gold);text-shadow:0 0 50px var(--gglow),0 2px 0 var(--gdark)}
-.logo-of{display:block;font-size:14px;color:#444;letter-spacing:8px;margin:2px 0}
-.logo-coins{display:block;font-size:50px;color:var(--gold2);text-shadow:0 0 30px rgba(255,215,0,.3)}
-.logo-slogan{font-size:11px;letter-spacing:5px;color:#3a3a3a;text-transform:uppercase;margin:10px 0 28px}
-.coins-spin{display:flex;justify-content:center;gap:10px;margin-bottom:18px}
-.cs{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--gold2),var(--gdark));border:2px solid var(--gold);animation:spinY 3s linear infinite}
-.cs:nth-child(2){animation-delay:.4s}.cs:nth-child(3){animation-delay:.8s}
+.login-box{text-align:center;width:340px;max-width:92vw;z-index:2;padding:0 16px}
+.logo-wrap{margin-bottom:24px}
+.logo-crown{font-size:60px;display:block;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 30px var(--gold))}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.logo-text{font-family:'Cinzel Decorative',serif;font-size:52px;font-weight:900;line-height:1;color:var(--gold);text-shadow:0 0 60px var(--gglow),0 4px 0 #8B4000,0 8px 20px rgba(0,0,0,.8)}
+.logo-of{font-size:13px;color:#555;letter-spacing:8px;display:block;margin:2px 0}
+.logo-sub{font-size:11px;letter-spacing:5px;color:#333;text-transform:uppercase;margin:10px 0 30px}
+.coins-row{display:flex;justify-content:center;gap:10px;margin-bottom:20px}
+.cr{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe566,#ff8800);border:2px solid var(--gold);box-shadow:0 0 10px var(--gglow);animation:spinY 2.5s linear infinite}
+.cr:nth-child(2){animation-delay:.35s}.cr:nth-child(3){animation-delay:.7s}
 @keyframes spinY{0%{transform:rotateY(0)}100%{transform:rotateY(360deg)}}
-.btn-g{display:block;width:100%;padding:15px;background:linear-gradient(135deg,var(--gold) 0%,#b8922a 100%);color:#000;font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;border:none;border-radius:50px;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all .2s;box-shadow:0 6px 28px var(--gglow);margin-bottom:12px}
-.btn-g:hover{transform:translateY(-3px);box-shadow:0 10px 36px var(--gglow)}
-.btn-g:active{transform:scale(.97)}
-.btn-o{display:block;width:100%;padding:14px;background:transparent;color:var(--gold);border:1.5px solid var(--gold);border-radius:50px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:2px;text-transform:uppercase;transition:all .2s;margin-bottom:20px}
-.btn-o:hover{background:var(--gglow)}
-.login-div{font-size:11px;color:#2a2a2a;margin:4px 0 14px}
-.social-row{display:flex;justify-content:center;gap:14px;margin-bottom:18px}
-.sb{width:46px;height:46px;border-radius:50%;background:var(--panel);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;transition:all .2s}
-.sb:hover{border-color:var(--gdark);transform:translateY(-2px)}
-.login-terms{font-size:10px;color:#2a2a2a;line-height:1.6}
-.login-terms a{color:var(--gdark);text-decoration:none}
+.btn-main{display:block;width:100%;padding:16px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;border:none;border-radius:50px;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all .2s;box-shadow:0 6px 30px rgba(255,165,0,.4),0 2px 0 #8B4000;margin-bottom:12px}
+.btn-main:hover{transform:translateY(-3px);box-shadow:0 10px 40px rgba(255,165,0,.5)}
+.btn-main:active{transform:scale(.97);box-shadow:0 2px 10px rgba(255,165,0,.3)}
+.btn-sec{display:block;width:100%;padding:14px;background:rgba(255,255,255,.06);color:var(--gold);border:1.5px solid rgba(255,215,0,.4);border-radius:50px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:2px;text-transform:uppercase;transition:all .2s;margin-bottom:20px}
+.btn-sec:hover{background:rgba(255,215,0,.1);border-color:var(--gold)}
+.social-row{display:flex;justify-content:center;gap:14px;margin-bottom:16px}
+.sb{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:22px;transition:all .2s}
+.sb:hover{transform:translateY(-3px);border-color:var(--gold)}
+.terms{font-size:10px;color:#2a2a2a;line-height:1.6}
+.terms a{color:var(--gdark)}
 
 /* ===== TOPBAR ===== */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--bdr);flex-shrink:0;position:relative;z-index:5}
-.tb-logo{font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--gold);letter-spacing:1px}
-.tb-coins{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--gdark);border-radius:24px;padding:5px 14px;cursor:pointer;transition:all .2s}
-.tb-coins:hover{background:var(--bg2)}
-.cd{width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--gold2),var(--gdark));border:1.5px solid var(--gold);flex-shrink:0}
-.tb-coins span{font-size:14px;font-weight:700;color:var(--gold)}
-.tb-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gdark));display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:12px;border:2px solid var(--gold);cursor:pointer;transition:transform .2s}
-.tb-av:hover{transform:scale(1.08)}
-.online-badge{display:flex;align-items:center;gap:5px;font-size:10px;color:#44dd66;padding:3px 10px;border-radius:12px;background:rgba(34,170,68,.1);border:1px solid rgba(34,170,68,.25)}
-.od{width:6px;height:6px;border-radius:50%;background:#44dd66;animation:blink 1.5s ease-in-out infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;z-index:5}
+.tb-logo{font-family:'Cinzel Decorative',serif;font-size:15px;color:var(--gold);text-shadow:0 0 10px var(--gglow)}
+.tb-coins{display:flex;align-items:center;gap:6px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);border-radius:24px;padding:5px 14px;cursor:pointer;transition:all .2s}
+.tb-coins:hover{background:rgba(255,215,0,.2)}
+.cd{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe566,#ff8800);border:1.5px solid var(--gold);box-shadow:0 0 6px var(--gglow)}
+.tb-coins span{font-size:15px;font-weight:700;color:var(--gold)}
+.tb-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:12px;border:2px solid var(--gold);box-shadow:0 0 10px var(--gglow);cursor:pointer}
+.online-b{display:flex;align-items:center;gap:5px;font-size:10px;color:#44ff88;padding:3px 10px;border-radius:12px;background:rgba(0,255,100,.08);border:1px solid rgba(0,255,100,.2)}
+.od{width:6px;height:6px;border-radius:50%;background:#44ff88;animation:blink 1.5s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
 /* ===== SCROLL ===== */
 .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px 80px}
 .scroll::-webkit-scrollbar{width:0}
 
 /* ===== HOME ===== */
-.bal-card{position:relative;overflow:hidden;background:linear-gradient(135deg,#191100,#0d0c00);border:1px solid var(--gdark);border-radius:var(--r);padding:22px;text-align:center;margin-bottom:14px}
-.bal-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(212,175,55,.1),transparent 70%);pointer-events:none}
-.bal-lbl{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
-.bal-val{font-size:42px;font-weight:700;color:var(--gold);line-height:1;text-shadow:0 0 30px var(--gglow)}
-.bal-icon{font-size:28px;vertical-align:middle;margin-left:4px}
-.bal-sub{font-size:11px;color:#3a3a3a;margin-top:6px}
-.xp-bg{height:3px;background:var(--bdr);border-radius:2px;margin-top:10px;overflow:hidden}
-.xp-fill{height:3px;width:64%;background:linear-gradient(90deg,var(--gdark),var(--gold2));border-radius:2px}
+#scr-home{background:linear-gradient(180deg,#0d0d20 0%,#0a0a14 100%)}
+.bal-card{position:relative;overflow:hidden;border-radius:20px;padding:24px;text-align:center;margin-bottom:16px;background:linear-gradient(135deg,#1a1200,#0d0900);border:1px solid rgba(255,215,0,.25)}
+.bal-card::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(255,215,0,.08) 0%,transparent 60%);pointer-events:none}
+.bal-lbl{font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px}
+.bal-num{font-size:48px;font-weight:700;color:var(--gold);text-shadow:0 0 40px var(--gglow);line-height:1}
+.bal-coin{font-size:32px;vertical-align:middle}
+.bal-sub{font-size:11px;color:#444;margin-top:6px}
+.xp-bg{height:4px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:10px;overflow:hidden}
+.xp-fill{height:4px;width:64%;background:linear-gradient(90deg,var(--gold2),var(--gold));border-radius:2px;box-shadow:0 0 6px var(--gglow)}
 
-.qnav{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
-.qn{background:var(--panel);border:1px solid var(--bdr);border-radius:12px;padding:12px 4px;text-align:center;cursor:pointer;transition:all .2s}
-.qn:hover{border-color:var(--gdark);background:var(--bg3);transform:translateY(-2px)}
-.qn-ic{font-size:22px;margin-bottom:4px}
-.qn-lb{font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.qnav{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+.qn{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px 4px;text-align:center;cursor:pointer;transition:all .2s}
+.qn:hover{border-color:rgba(255,215,0,.3);background:rgba(255,215,0,.06);transform:translateY(-2px)}
+.qn-ic{font-size:24px;margin-bottom:4px}
+.qn-lb{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 
-.sec{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;font-weight:700}
+.sec{font-size:10px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;font-weight:700}
 
 .play-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-.pc{border-radius:var(--r);padding:18px 14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
-.pc::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.06),transparent);pointer-events:none}
-.pc:hover{transform:translateY(-3px)}
+.pc{border-radius:18px;padding:20px 14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.pc::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.08),transparent 60%);pointer-events:none}
+.pc:hover{transform:translateY(-4px)}
 .pc:active{transform:scale(.97)}
-.pc-free{background:linear-gradient(140deg,#091550,#070e38);border:1px solid #1a2e88}
-.pc-comp{background:linear-gradient(140deg,#4f0808,#380505);border:1px solid #881515}
-.pc-ic{font-size:32px;margin-bottom:8px;display:block}
-.pc-title{font-size:15px;font-weight:700;color:#fff;letter-spacing:.5px;text-transform:uppercase}
-.pc-sub{font-size:11px;color:#666;margin-top:3px}
-.pc-badge{position:absolute;top:10px;right:10px;font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.pc-free .pc-badge{background:rgba(77,127,255,.2);color:var(--blue);border:1px solid rgba(77,127,255,.3)}
-.pc-comp .pc-badge{background:rgba(255,68,68,.2);color:var(--red);border:1px solid rgba(255,68,68,.3)}
+.pc-free{background:linear-gradient(145deg,#0d2060,#060e35);border:1.5px solid rgba(77,127,255,.4);box-shadow:0 8px 32px rgba(77,127,255,.2)}
+.pc-comp{background:linear-gradient(145deg,#600d0d,#350606);border:1.5px solid rgba(255,68,68,.4);box-shadow:0 8px 32px rgba(255,68,68,.2)}
+.pc-ic{font-size:36px;margin-bottom:8px;display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+.pc-title{font-size:16px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.5px}
+.pc-sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:3px}
 
-.tourn-card{background:linear-gradient(135deg,#160c4a,#0d0830);border:1px solid #4422aa;border-radius:var(--r);padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
-.tourn-card::before{content:'🔥';position:absolute;right:14px;top:12px;font-size:22px;opacity:.4}
-.tourn-card:hover{border-color:var(--gdark);transform:translateY(-2px)}
-.tc-ic{font-size:40px;flex-shrink:0}
-.tc-title{font-size:11px;color:#aa66ff;font-weight:700;text-transform:uppercase;letter-spacing:1px}
-.tc-pool{font-size:26px;font-weight:700;color:var(--gold);line-height:1.1;text-shadow:0 0 20px var(--gglow)}
-.tc-meta{font-size:10px;color:#444;margin-top:3px}
+.tourn-card{position:relative;overflow:hidden;background:linear-gradient(135deg,#1a0d55,#0d0830);border:1.5px solid rgba(170,102,255,.4);border-radius:18px;padding:18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .2s;box-shadow:0 8px 32px rgba(120,60,255,.2)}
+.tourn-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.06),transparent);pointer-events:none}
+.tourn-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(120,60,255,.3)}
+.tc-ic{font-size:44px;flex-shrink:0;filter:drop-shadow(0 4px 12px rgba(255,215,0,.4))}
+.tc-title{font-size:11px;color:#cc88ff;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.tc-pool{font-size:28px;font-weight:700;color:var(--gold);text-shadow:0 0 20px var(--gglow)}
+.tc-meta{font-size:10px;color:rgba(255,255,255,.3);margin-top:3px}
 
-.lb-card{background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden}
-.lb-hdr{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--bdr)}
-.lb-hdr span{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:700}
-.lb-hdr a{font-size:11px;color:var(--gold);cursor:pointer;text-decoration:none}
-.lb-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bdr);transition:background .15s;cursor:pointer}
+.lb-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:18px;overflow:hidden}
+.lb-hdr{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.05)}
+.lb-hdr span{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;font-weight:700}
+.lb-hdr a{font-size:11px;color:var(--gold);cursor:pointer}
+.lb-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s;cursor:pointer}
 .lb-row:last-child{border-bottom:none}
-.lb-row:hover{background:var(--bg3)}
-.lb-rank{font-size:14px;font-weight:700;width:22px;color:var(--gold);text-align:center}
-.lb-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-.lb-name{flex:1;font-size:13px;font-weight:600}
-.lb-coins{font-size:12px;color:var(--gold);font-weight:700}
+.lb-row:hover{background:rgba(255,215,0,.04)}
+.lb-rank{font-size:15px;font-weight:700;width:24px;color:var(--gold);text-align:center}
+.lb-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.lb-name{flex:1;font-size:14px;font-weight:600}
+.lb-coins{font-size:13px;color:var(--gold);font-weight:700}
 
 /* ===== BOTTOM NAV ===== */
-.bnav{display:flex;justify-content:space-around;align-items:center;padding:8px 0 max(12px,env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--bdr);flex-shrink:0;position:relative;z-index:10}
-.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 14px;transition:all .2s;border:none;background:none}
-.ni-ic{font-size:22px;transition:all .2s}
-.ni-lb{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.bnav{display:flex;justify-content:space-around;align-items:center;padding:8px 0 max(12px,env(safe-area-inset-bottom));background:rgba(10,10,20,.95);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;z-index:10}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 16px;transition:all .2s;border:none;background:none}
+.ni-ic{font-size:22px;transition:all .25s}
+.ni-lb{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
 .nav-item.active .ni-lb{color:var(--gold)}
-.nav-item.active .ni-ic{filter:drop-shadow(0 0 8px var(--gold));transform:translateY(-2px)}
+.nav-item.active .ni-ic{filter:drop-shadow(0 0 10px var(--gold));transform:translateY(-3px)}
 
 /* ===== SCREEN HEADER ===== */
-.shdr{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--bdr);flex-shrink:0}
-.bk{background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;padding:0;line-height:1;transition:transform .2s}
-.bk:hover{transform:translateX(-3px)}
-.shdr h2{font-size:18px;font-weight:700;color:var(--gold)}
+.shdr{display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(0,0,0,.5);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
+.bk{background:none;border:none;color:var(--gold);font-size:26px;cursor:pointer;padding:0;line-height:1;transition:transform .2s;text-shadow:0 0 10px var(--gglow)}
+.bk:hover{transform:translateX(-4px)}
+.shdr h2{font-size:20px;font-weight:700;color:var(--gold);text-shadow:0 0 10px var(--gglow)}
 
-/* ===== MODE ===== */
-.mtabs{display:flex;background:var(--panel);border-radius:12px;overflow:hidden;border:1px solid var(--bdr);margin-bottom:18px}
-.mt{flex:1;padding:11px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .2s;text-transform:uppercase;letter-spacing:.5px}
-.mt.active{background:linear-gradient(135deg,var(--gdark),#7a5a10);color:var(--gold2)}
-.pbtns{display:flex;gap:8px;margin-bottom:18px}
-.pb{flex:1;padding:11px;text-align:center;background:var(--panel);border:1.5px solid var(--bdr);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);transition:all .2s;font-family:'Rajdhani',sans-serif}
-.pb.active{border-color:var(--gold);color:var(--gold);background:rgba(212,175,55,.08)}
-.pb:hover{border-color:var(--gdark)}
-.mise-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
-.mb{padding:11px 4px;text-align:center;background:var(--panel);border:1.5px solid var(--bdr);border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;color:var(--muted);transition:all .2s}
-.mb.active{border-color:var(--gold);color:var(--gold);background:rgba(212,175,55,.08)}
-.mb:hover{border-color:var(--gdark)}
-.gp-box{background:linear-gradient(135deg,#191100,#0d0c00);border:1px solid var(--gdark);border-radius:var(--r);padding:16px;text-align:center;margin-bottom:20px}
-.gp-lbl{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
-.gp-val{font-size:30px;font-weight:700;color:var(--gold)}
-.gp-sub{font-size:10px;color:#333;margin-top:2px}
-.btn-find{width:100%;padding:17px;background:linear-gradient(135deg,var(--gold) 0%,#b8922a 100%);color:#000;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;border:none;border-radius:50px;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all .2s;box-shadow:0 6px 28px var(--gglow)}
-.btn-find:hover{transform:translateY(-3px);box-shadow:0 10px 36px var(--gglow)}
-.mfooter{text-align:center;font-size:10px;color:#2a2a2a;margin-top:12px}
-.mfooter a{color:var(--gdark);text-decoration:none}
+/* ===== MODE SCREEN ===== */
+#scr-mode{background:linear-gradient(180deg,#0d0d20,#0a0a14)}
+.mtabs{display:flex;background:rgba(255,255,255,.04);border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.06);margin-bottom:20px}
+.mt{flex:1;padding:12px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .2s;text-transform:uppercase;letter-spacing:.5px}
+.mt.active{background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000}
+.pbtns{display:flex;gap:8px;margin-bottom:20px}
+.pb{flex:1;padding:12px;text-align:center;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);transition:all .2s;font-family:'Rajdhani',sans-serif}
+.pb.active{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,.1);box-shadow:0 0 12px rgba(255,215,0,.2)}
+.mise-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.mb{padding:12px 4px;text-align:center;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:12px;cursor:pointer;font-size:15px;font-weight:700;color:var(--muted);transition:all .2s}
+.mb.active{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,.1);box-shadow:0 0 12px rgba(255,215,0,.2)}
+.gp-box{background:linear-gradient(135deg,#1a1200,#0d0900);border:1px solid rgba(255,215,0,.25);border-radius:18px;padding:18px;text-align:center;margin-bottom:22px}
+.gp-lbl{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.gp-val{font-size:32px;font-weight:700;color:var(--gold);text-shadow:0 0 20px var(--gglow)}
+.gp-sub{font-size:10px;color:#333;margin-top:3px}
+.btn-find{width:100%;padding:18px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:700;border:none;border-radius:50px;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all .2s;box-shadow:0 8px 32px rgba(255,165,0,.4),0 2px 0 #8B4000}
+.btn-find:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(255,165,0,.5)}
+.mfooter{text-align:center;font-size:10px;color:#222;margin-top:14px}
 
 /* ===== MATCHMAKING ===== */
-#scr-matchmaking{justify-content:flex-start}
+#scr-matchmaking{background:linear-gradient(180deg,#0d0d20,#0a0a14);justify-content:flex-start}
 .mm-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
-.mm-icon{font-size:72px;margin-bottom:20px;animation:pulse-mm 2s ease-in-out infinite}
-@keyframes pulse-mm{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-.mm-title{font-size:20px;font-weight:700;color:var(--gold);margin-bottom:8px}
-.mm-status{font-size:13px;color:var(--muted);margin-bottom:24px}
-.mm-dots{display:flex;justify-content:center;gap:8px;margin-bottom:28px}
-.md{width:10px;height:10px;border-radius:50%;background:var(--gold);animation:bounce .9s ease-in-out infinite}
+.mm-ic{font-size:80px;margin-bottom:22px;animation:mm-pulse 2s ease-in-out infinite}
+@keyframes mm-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.mm-title{font-size:22px;font-weight:700;color:var(--gold);margin-bottom:8px;text-shadow:0 0 20px var(--gglow)}
+.mm-st{font-size:13px;color:var(--muted);margin-bottom:28px}
+.mm-dots{display:flex;justify-content:center;gap:10px;margin-bottom:30px}
+.md{width:12px;height:12px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gglow);animation:bounce .9s ease-in-out infinite}
 .md:nth-child(2){animation-delay:.15s}.md:nth-child(3){animation-delay:.3s}
-@keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-10px);opacity:1}}
-.mm-info{font-size:13px;color:var(--muted)}
-.mm-info span{color:var(--gold);font-weight:700;font-size:16px}
+@keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-12px);opacity:1}}
 
-/* ===== GAME ===== */
-#scr-game{background:var(--bg)}
-.ghdr{width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--bdr);flex-shrink:0}
-.gh-title{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);letter-spacing:.5px}
-.gh-mise{font-size:11px;color:var(--muted)}.gh-mise span{color:var(--gold);font-weight:700}
-.game-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;gap:6px;overflow:hidden}
-.prow{display:flex;justify-content:space-between;width:100%;max-width:480px;padding:0 4px}
-.pi{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:76px}
-.pav{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;transition:all .3s;flex-shrink:0}
-.pnm{font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+/* ===== GAME SCREEN ===== */
+#scr-game{background:linear-gradient(180deg,#080812,#0a0a10)}
+.ghdr{width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
+.gh-title{font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--gold);text-shadow:0 0 10px var(--gglow)}
+.gh-mise{font-size:12px;color:var(--muted)}.gh-mise span{color:var(--gold);font-weight:700}
+.game-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;gap:8px;overflow:hidden}
+.prow{display:flex;justify-content:space-between;width:100%;max-width:500px;padding:0 6px}
+.pi{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:80px}
+.pav{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;transition:all .3s;border:2px solid rgba(255,255,255,.2)}
+.pnm{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
 .psc{font-size:12px;font-weight:700;transition:all .3s}
-#board-canvas{border-radius:10px;display:block;cursor:pointer;max-width:min(380px,calc(100vw - 24px));max-height:min(380px,calc(100vh - 290px))}
+
+#board-canvas{border-radius:14px;display:block;cursor:pointer;box-shadow:0 20px 60px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05)}
+
 .dice-row{display:flex;align-items:center;gap:16px}
-.dice-el{width:54px;height:54px;background:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:36px;border:2.5px solid var(--gold);transition:all .3s;color:#111;flex-shrink:0;box-shadow:0 4px 16px rgba(212,175,55,.3)}
-.dice-el.rolling{animation:roll .45s ease-in-out}
-@keyframes roll{0%,100%{transform:rotate(0)}25%{transform:rotate(-22deg) scale(1.12)}75%{transform:rotate(22deg) scale(.9)}}
-.roll-btn{padding:13px 32px;background:linear-gradient(135deg,var(--gold),#b8922a);color:#000;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;border:none;border-radius:34px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s;box-shadow:0 4px 16px var(--gglow)}
-.roll-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px var(--gglow)}
+.dice-el{width:58px;height:58px;background:linear-gradient(135deg,#fff,#e8e8e8);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:38px;border:none;transition:all .3s;color:#111;flex-shrink:0;box-shadow:0 6px 20px rgba(0,0,0,.5),0 2px 0 rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.8)}
+.dice-el.rolling{animation:roll .4s ease-in-out}
+@keyframes roll{0%,100%{transform:rotate(0) scale(1)}30%{transform:rotate(-25deg) scale(1.15)}70%{transform:rotate(25deg) scale(.9)}}
+.roll-btn{padding:14px 36px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;border:none;border-radius:40px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s;box-shadow:0 6px 24px rgba(255,165,0,.4),0 2px 0 #8B4000}
+.roll-btn:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 10px 32px rgba(255,165,0,.5)}
 .roll-btn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none;transform:none}
-.game-log{font-size:12px;color:var(--muted);text-align:center;min-height:20px;padding:0 8px;font-weight:600;transition:all .3s}
+.game-log{font-size:13px;color:var(--muted);text-align:center;min-height:20px;font-weight:600;transition:all .3s;padding:0 10px}
 
 /* ===== WALLET ===== */
-.w-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#191100,#0d0c00);border:1px solid var(--gdark);border-radius:var(--r);padding:26px;text-align:center;margin-bottom:16px}
-.w-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(212,175,55,.12),transparent 70%);pointer-events:none}
-.wh-lbl{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
-.wh-val{font-size:48px;font-weight:700;color:var(--gold);line-height:1;text-shadow:0 0 40px var(--gglow)}
+#scr-wallet{background:linear-gradient(180deg,#0d0d20,#0a0a14)}
+.w-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#1a1200,#0d0900);border:1px solid rgba(255,215,0,.25);border-radius:20px;padding:28px;text-align:center;margin-bottom:18px}
+.w-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,215,0,.12),transparent 70%);pointer-events:none}
+.wh-lbl{font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px}
+.wh-val{font-size:52px;font-weight:700;color:var(--gold);text-shadow:0 0 40px var(--gglow);line-height:1}
 .wh-sub{font-size:11px;color:#333;margin-top:6px}
-.w-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
-.wa{padding:15px;border-radius:var(--r);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px;text-transform:uppercase;border:none}
-.wa-dep{background:linear-gradient(135deg,#22aa44,#0d6622);color:#fff}
-.wa-dep:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(34,170,68,.3)}
-.wa-wit{background:var(--panel);border:1.5px solid var(--bdr);color:var(--text)}
-.wa-wit:hover{border-color:var(--gdark)}
-.pm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
-.pm{background:var(--panel);border:1.5px solid var(--bdr);border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;transition:all .2s}
-.pm:hover{border-color:var(--gdark);background:var(--bg3);transform:translateY(-2px)}
-.pm-ic{font-size:24px;margin-bottom:4px}
-.pm-nm{font-size:9px;color:var(--muted);font-weight:600}
-.tx-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--bdr)}
+.w-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.wa{padding:16px;border-radius:16px;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px;text-transform:uppercase;border:none}
+.wa-dep{background:linear-gradient(135deg,#00cc44,#006622);color:#fff;box-shadow:0 6px 20px rgba(0,200,68,.3)}
+.wa-dep:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,200,68,.4)}
+.wa-wit{background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);color:var(--text)}
+.wa-wit:hover{border-color:var(--gold)}
+.pm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.pm{background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:14px;padding:12px 6px;text-align:center;cursor:pointer;transition:all .2s}
+.pm:hover{border-color:rgba(255,215,0,.4);background:rgba(255,215,0,.06);transform:translateY(-2px)}
+.pm-ic{font-size:26px;margin-bottom:4px}
+.pm-nm{font-size:9px;color:var(--muted);font-weight:700}
+.tx-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05)}
 .tx-row:last-child{border-bottom:none}
-.tx-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
-.tx-gain{background:rgba(34,204,85,.12);color:#22cc55}
-.tx-loss{background:rgba(255,68,68,.12);color:#ff4444}
-.tx-desc{font-size:13px;font-weight:600;margin-bottom:1px}
+.tx-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.tx-gain{background:rgba(0,204,68,.12);color:#00cc44}
+.tx-loss{background:rgba(255,26,26,.12);color:#ff1a1a}
+.tx-desc{font-size:14px;font-weight:600;margin-bottom:1px}
 .tx-date{font-size:10px;color:var(--muted)}
 .tx-amount{font-size:15px;font-weight:700;flex-shrink:0}
-.tx-pos{color:#22cc55}
-.tx-neg{color:#ff4444}
+.tx-pos{color:#00cc44}
+.tx-neg{color:#ff1a1a}
 
 /* ===== TOURNAMENTS ===== */
-.ti{background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;margin-bottom:10px;cursor:pointer;transition:all .2s}
-.ti:hover{border-color:var(--gdark);transform:translateX(3px)}
-.ti-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-.ti-name{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px}
-.ti-pool{font-size:20px;font-weight:700;color:var(--gold)}
+#scr-tournaments{background:linear-gradient(180deg,#0d0d20,#0a0a14)}
+.ti{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:18px;margin-bottom:12px;cursor:pointer;transition:all .2s}
+.ti:hover{border-color:rgba(255,215,0,.3);transform:translateX(4px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.ti-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.ti-name{font-size:15px;font-weight:700;color:#fff;margin-bottom:5px}
+.ti-pool{font-size:22px;font-weight:700;color:var(--gold);text-shadow:0 0 10px var(--gglow)}
 .ti-info{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--muted)}
-.badge{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase;display:inline-block}
-.badge-live{background:rgba(255,68,68,.15);color:#ff4444;border:1px solid rgba(255,68,68,.3)}
-.badge-soon{background:rgba(170,102,255,.15);color:#aa66ff;border:1px solid rgba(170,102,255,.3)}
+.badge{font-size:9px;padding:3px 10px;border-radius:12px;font-weight:700;text-transform:uppercase;display:inline-block}
+.badge-live{background:rgba(255,26,26,.15);color:#ff4444;border:1px solid rgba(255,26,26,.3)}
+.badge-soon{background:rgba(170,102,255,.15);color:#bb77ff;border:1px solid rgba(170,102,255,.3)}
 
 /* ===== PROFILE ===== */
-.prof-av{width:86px;height:86px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gdark));display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:#000;margin:0 auto 14px;border:3px solid var(--gold);box-shadow:0 0 24px var(--gglow)}
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-.stat-card{background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;text-align:center;transition:all .2s}
-.stat-card:hover{border-color:var(--gdark)}
-.stat-val{font-size:28px;font-weight:700;color:var(--gold)}
-.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+#scr-profile{background:linear-gradient(180deg,#0d0d20,#0a0a14)}
+.prof-av{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:#000;margin:0 auto 14px;border:3px solid var(--gold);box-shadow:0 0 30px var(--gglow)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.stat-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:18px;text-align:center}
+.stat-card:hover{border-color:rgba(255,215,0,.3)}
+.stat-val{font-size:30px;font-weight:700;color:var(--gold);text-shadow:0 0 10px var(--gglow)}
+.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
 
 /* ===== TOAST ===== */
-.toast{position:fixed;bottom:86px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--panel);border:1px solid var(--gdark);border-radius:34px;padding:11px 22px;font-size:13px;font-weight:600;color:var(--gold);z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px var(--gglow)}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(16px);background:rgba(20,20,30,.95);border:1px solid rgba(255,215,0,.3);border-radius:40px;padding:12px 24px;font-size:14px;font-weight:700;color:var(--gold);z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,.5),0 0 0 1px rgba(255,215,0,.1)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ===== MODAL ===== */
-.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9998;align-items:center;justify-content:center}
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9998;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal-ov.open{display:flex}
-.modal-box{background:var(--panel);border:1px solid var(--bdr);border-radius:24px;padding:36px 26px;max-width:360px;width:92%;text-align:center;animation:pop .3s ease}
-@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
-.m-icon{font-size:72px;margin-bottom:18px;display:block}
-.m-title{font-family:'Cinzel Decorative',serif;font-size:22px;color:var(--gold);margin-bottom:8px}
-.m-msg{font-size:14px;color:var(--muted);margin-bottom:10px;line-height:1.6}
-.m-coins{font-size:36px;font-weight:700;color:var(--gold);margin-bottom:26px;text-shadow:0 0 20px var(--gglow)}
+.modal-box{background:linear-gradient(145deg,#1a1a2e,#0d0d1a);border:1px solid rgba(255,215,0,.2);border-radius:28px;padding:40px 28px;max-width:380px;width:92%;text-align:center;animation:pop .3s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(.7) translateY(20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.m-ic{font-size:80px;margin-bottom:20px;display:block;filter:drop-shadow(0 8px 20px rgba(0,0,0,.5))}
+.m-title{font-family:'Cinzel Decorative',serif;font-size:26px;color:var(--gold);margin-bottom:8px;text-shadow:0 0 20px var(--gglow)}
+.m-msg{font-size:15px;color:var(--muted);margin-bottom:12px;line-height:1.6}
+.m-coins{font-size:40px;font-weight:700;color:var(--gold);margin-bottom:28px;text-shadow:0 0 30px var(--gglow)}
 .m-btns{display:flex;gap:10px}
-.m-btn{flex:1;padding:13px;border-radius:34px;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s;border:none}
-.m-primary{background:linear-gradient(135deg,var(--gold),#b8922a);color:#000}
-.m-secondary{background:var(--bg3);color:var(--muted);border:1px solid var(--bdr)}
+.m-btn{flex:1;padding:15px;border-radius:40px;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s;border:none}
+.m-primary{background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;box-shadow:0 6px 20px rgba(255,165,0,.4)}
 .m-primary:hover{transform:translateY(-2px)}
-.m-secondary:hover{border-color:var(--gdark)}
+.m-secondary{background:rgba(255,255,255,.06);color:var(--muted);border:1px solid rgba(255,255,255,.1)}
+.m-secondary:hover{border-color:var(--gold);color:var(--gold)}
 
 /* ===== LOADING ===== */
-.ld-ov{position:fixed;inset:0;background:var(--bg);z-index:9997;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;transition:opacity .4s}
+.ld-ov{position:fixed;inset:0;background:linear-gradient(160deg,#0d0020,#000d30,#001a0d);z-index:9997;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;transition:opacity .5s}
 .ld-ov.hidden{opacity:0;pointer-events:none}
-.ld-logo{font-family:'Cinzel Decorative',serif;font-size:24px;color:var(--gold);letter-spacing:2px;text-shadow:0 0 30px var(--gglow)}
-.ld-bg{width:220px;height:4px;background:var(--bdr);border-radius:2px;overflow:hidden}
-.ld-bar{height:4px;background:linear-gradient(90deg,var(--gdark),var(--gold2));border-radius:2px;width:0%;transition:width .15s}
-.ld-txt{font-size:12px;color:var(--muted)}
+.ld-logo{font-family:'Cinzel Decorative',serif;font-size:26px;color:var(--gold);letter-spacing:3px;text-shadow:0 0 40px var(--gglow)}
+.ld-bg{width:240px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.ld-bar{height:5px;background:linear-gradient(90deg,var(--gold2),var(--gold));border-radius:3px;width:0%;transition:width .15s;box-shadow:0 0 10px var(--gglow)}
+.ld-txt{font-size:13px;color:var(--muted)}
 </style>
 </head>
 <body>
 <canvas id="particles"></canvas>
 
 <div class="ld-ov" id="loading">
-  <div class="ld-logo">CLASH OF COINS</div>
+  <div class="ld-logo">👑 CLASH OF COINS</div>
   <div class="ld-bg"><div class="ld-bar" id="ld-bar"></div></div>
   <div class="ld-txt" id="ld-text">Connexion...</div>
 </div>
@@ -277,7 +275,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 
 <div class="modal-ov" id="modal">
   <div class="modal-box">
-    <span class="m-icon" id="m-icon">🏆</span>
+    <span class="m-ic" id="m-icon">🏆</span>
     <div class="m-title" id="m-title">Victoire!</div>
     <div class="m-msg" id="m-msg">Bravo!</div>
     <div class="m-coins" id="m-coins">+2 000 🪙</div>
@@ -293,23 +291,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 <!-- LOGIN -->
 <div class="screen active" id="scr-login">
   <div class="login-box">
-    <span class="logo-crown">👑</span>
-    <div class="logo-name">
-      <span class="logo-clash">CLASH</span>
-      <span class="logo-of">OF</span>
-      <span class="logo-coins">COINS</span>
+    <div class="logo-wrap">
+      <span class="logo-crown">👑</span>
+      <div class="logo-text">CLASH<span class="logo-of">OF</span>COINS</div>
     </div>
-    <div class="coins-spin"><div class="cs"></div><div class="cs"></div><div class="cs"></div></div>
-    <div class="logo-slogan">Joue · Gagne · Domine</div>
-    <button class="btn-g" onclick="login()">🔵 Continuer avec Google</button>
-    <button class="btn-o" onclick="login()">📱 Continuer avec téléphone</button>
-    <div class="login-div">— ou —</div>
+    <div class="coins-row"><div class="cr"></div><div class="cr"></div><div class="cr"></div></div>
+    <div class="logo-sub">Joue · Gagne · Domine</div>
+    <button class="btn-main" onclick="login()">🔵 Continuer avec Google</button>
+    <button class="btn-sec" onclick="login()">📱 Continuer avec téléphone</button>
     <div class="social-row">
       <div class="sb" onclick="login()">📘</div>
       <div class="sb" onclick="login()">💬</div>
       <div class="sb" onclick="login()">👤</div>
     </div>
-    <div class="login-terms">En continuant, vous acceptez nos <a href="#">Conditions d'utilisation</a></div>
+    <div class="terms">En continuant, vous acceptez nos <a href="#">Conditions d'utilisation</a></div>
   </div>
 </div>
 
@@ -318,7 +313,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   <div class="topbar">
     <div class="tb-logo">⚔ Clash</div>
     <div style="display:flex;align-items:center;gap:8px">
-      <div class="online-badge"><div class="od"></div><span id="online-count">247</span> en ligne</div>
+      <div class="online-b"><div class="od"></div><span id="online-count">247</span> en ligne</div>
       <div class="tb-coins" onclick="showScreen('wallet')"><div class="cd"></div><span id="coins-display">15 350</span></div>
     </div>
     <div class="tb-av" onclick="navTo('profile',null)">SK</div>
@@ -326,46 +321,32 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   <div class="scroll">
     <div class="bal-card">
       <div class="bal-lbl">Solde disponible</div>
-      <div><span class="bal-val" id="bal-display-num">15 350</span><span class="bal-icon">🪙</span></div>
+      <div><span class="bal-num" id="bal-display-num">15 350</span><span class="bal-coin">🪙</span></div>
       <div class="bal-sub">Niveau 24 · 3 200 / 5 000 XP</div>
       <div class="xp-bg"><div class="xp-fill"></div></div>
     </div>
     <div class="qnav">
       <div class="qn" onclick="showScreen('wallet')"><div class="qn-ic">👛</div><div class="qn-lb">Wallet</div></div>
       <div class="qn" onclick="showHistorique()"><div class="qn-ic">📋</div><div class="qn-lb">Historique</div></div>
-      <div class="qn" onclick="showToast('Amis — bientôt!')"><div class="qn-ic">👥</div><div class="qn-lb">Amis</div></div>
+      <div class="qn" onclick="showToast('Amis bientôt!')"><div class="qn-ic">👥</div><div class="qn-lb">Amis</div></div>
       <div class="qn" onclick="showToast('Missions en cours!')"><div class="qn-ic">🎯</div><div class="qn-lb">Missions</div></div>
     </div>
     <div class="sec">Choisir un mode</div>
     <div class="play-grid">
-      <div class="pc pc-free" onclick="startMode('free')">
-        <span class="pc-badge">Gratuit</span>
-        <span class="pc-ic">🎲</span>
-        <div class="pc-title">Gratuit</div>
-        <div class="pc-sub">Gagne des coins</div>
-      </div>
-      <div class="pc pc-comp" onclick="startMode('comp')">
-        <span class="pc-badge">Mise</span>
-        <span class="pc-ic">🏆</span>
-        <div class="pc-title">Compétition</div>
-        <div class="pc-sub">Mise tes coins</div>
-      </div>
+      <div class="pc pc-free" onclick="startMode('free')"><span class="pc-ic">🎲</span><div class="pc-title">Gratuit</div><div class="pc-sub">Gagne des coins</div></div>
+      <div class="pc pc-comp" onclick="startMode('comp')"><span class="pc-ic">🏆</span><div class="pc-title">Compétition</div><div class="pc-sub">Mise tes coins</div></div>
     </div>
     <div class="tourn-card" onclick="navTo('tournaments',null)">
       <div class="tc-ic">🏅</div>
-      <div>
-        <div class="tc-title">Grand Tournoi — Clash of Coins</div>
-        <div class="tc-pool">500 000 🪙</div>
-        <div class="tc-meta">Se termine dans: 02j · 14h · 35min · 120 joueurs</div>
-      </div>
+      <div><div class="tc-title">Grand Tournoi Clash of Coins</div><div class="tc-pool">500 000 🪙</div><div class="tc-meta">02j · 14h · 35min · 120 joueurs</div></div>
     </div>
     <div class="sec">Classement mondial</div>
     <div class="lb-card">
       <div class="lb-hdr"><span>Top joueurs</span><a>Voir tout ›</a></div>
-      <div class="lb-row"><div class="lb-rank">1</div><div class="lb-av" style="background:#2a1a00;color:var(--gold)">🥇</div><div class="lb-name">Champion_01</div><div class="lb-coins">250 000 🪙</div></div>
+      <div class="lb-row"><div class="lb-rank">1</div><div class="lb-av" style="background:#2a1800;color:#FFD700">🥇</div><div class="lb-name">Champion_01</div><div class="lb-coins">250 000 🪙</div></div>
       <div class="lb-row"><div class="lb-rank">2</div><div class="lb-av" style="background:#1a1a1a;color:#aaa">🥈</div><div class="lb-name">LudoMaster</div><div class="lb-coins">180 500 🪙</div></div>
       <div class="lb-row"><div class="lb-rank">3</div><div class="lb-av" style="background:#1a1000;color:#cd7f32">🥉</div><div class="lb-name">ProGamer_CI</div><div class="lb-coins">98 700 🪙</div></div>
-      <div class="lb-row"><div class="lb-rank">4</div><div class="lb-av" style="background:#0d1640;color:var(--blue)">SK</div><div class="lb-name">Vous</div><div class="lb-coins" id="my-lb-coins">15 350 🪙</div></div>
+      <div class="lb-row"><div class="lb-rank">4</div><div class="lb-av" style="background:#0d1640;color:#4d9fff">SK</div><div class="lb-name">Vous</div><div class="lb-coins" id="my-lb-coins">15 350 🪙</div></div>
     </div>
   </div>
   <div class="bnav">
@@ -394,25 +375,21 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
         <div class="mb" id="mb5000" onclick="setMise(5000)">5 000</div>
       </div>
     </div>
-    <div class="gp-box" id="gain-preview">
-      <div class="gp-lbl">Gain potentiel</div>
-      <div class="gp-val" id="gp-val">1 500 🪙</div>
-      <div class="gp-sub">Commission 5% déduite</div>
-    </div>
+    <div class="gp-box" id="gain-preview"><div class="gp-lbl">Gain potentiel</div><div class="gp-val" id="gp-val">1 500 🪙</div><div class="gp-sub">Commission 5% déduite</div></div>
     <button class="btn-find" onclick="findGame()">Trouver une partie ⚡</button>
-    <div class="mfooter">En jouant vous acceptez nos <a href="#">conditions de jeu</a></div>
+    <div class="mfooter">En jouant vous acceptez nos conditions de jeu</div>
   </div>
 </div>
 
 <!-- MATCHMAKING -->
 <div class="screen" id="scr-matchmaking">
-  <div class="shdr"><button class="bk" onclick="cancelMatchmaking()">←</button><h2>Recherche de partie</h2></div>
+  <div class="shdr"><button class="bk" onclick="cancelMatchmaking()">←</button><h2>Recherche</h2></div>
   <div class="mm-body">
-    <div class="mm-icon">🔍</div>
+    <div class="mm-ic">🔍</div>
     <div class="mm-title">Recherche en cours...</div>
-    <div class="mm-status" id="mm-status">Connexion au serveur...</div>
+    <div class="mm-st" id="mm-status">Connexion au serveur...</div>
     <div class="mm-dots"><div class="md"></div><div class="md"></div><div class="md"></div></div>
-    <div class="mm-info">Joueurs trouvés: <span id="mm-found">0</span> / <span id="mm-needed">4</span></div>
+    <div style="font-size:14px;color:var(--muted)">Joueurs: <span id="mm-found" style="color:var(--gold);font-size:18px;font-weight:700">0</span> / <span id="mm-needed">4</span></div>
     <div style="margin-top:8px;font-size:12px;color:#333">Mise: <span id="mm-mise" style="color:var(--gold)">500 🪙</span></div>
   </div>
 </div>
@@ -420,19 +397,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 <!-- GAME -->
 <div class="screen" id="scr-game">
   <div class="ghdr">
-    <button class="bk" onclick="confirmQuit()">←</button>
+    <button class="bk" style="font-size:22px" onclick="confirmQuit()">←</button>
     <div class="gh-title">CLASSIC — <span id="g-np">4</span> JOUEURS</div>
     <div class="gh-mise">Mise: <span id="g-mise">500 🪙</span></div>
   </div>
   <div class="game-body">
     <div class="prow">
-      <div class="pi" id="pi-0"><div class="pav" id="pa-0" style="background:#4d7fff;color:#000">P1</div><div class="pnm" id="pn-0">Vous</div><div class="psc" id="ps-0" style="color:#4d7fff">0 pts</div></div>
-      <div class="pi" id="pi-1"><div class="pav" id="pa-1" style="background:#ff4444;color:#000">P2</div><div class="pnm" id="pn-1">QueenLudo</div><div class="psc" id="ps-1" style="color:#ff4444">0 pts</div></div>
+      <div class="pi" id="pi-0"><div class="pav" id="pa-0" style="background:#1a6fff;box-shadow:0 0 10px rgba(26,111,255,.5)">P1</div><div class="pnm" id="pn-0">Vous</div><div class="psc" id="ps-0" style="color:#4d9fff">0 pts</div></div>
+      <div class="pi" id="pi-1"><div class="pav" id="pa-1" style="background:#ff1a1a;box-shadow:0 0 10px rgba(255,26,26,.5)">P2</div><div class="pnm" id="pn-1">QueenLudo</div><div class="psc" id="ps-1" style="color:#ff6666">0 pts</div></div>
     </div>
     <canvas id="board-canvas"></canvas>
     <div class="prow">
-      <div class="pi" id="pi-2"><div class="pav" id="pa-2" style="background:#22cc55;color:#000">P3</div><div class="pnm" id="pn-2">LuckyStar</div><div class="psc" id="ps-2" style="color:#22cc55">0 pts</div></div>
-      <div class="pi" id="pi-3"><div class="pav" id="pa-3" style="background:#ffcc00;color:#000">P4</div><div class="pnm" id="pn-3">KingLudo</div><div class="psc" id="ps-3" style="color:#ffcc00">0 pts</div></div>
+      <div class="pi" id="pi-2"><div class="pav" id="pa-2" style="background:#00cc44;box-shadow:0 0 10px rgba(0,204,68,.5)">P3</div><div class="pnm" id="pn-2">LuckyStar</div><div class="psc" id="ps-2" style="color:#44ff88">0 pts</div></div>
+      <div class="pi" id="pi-3"><div class="pav" id="pa-3" style="background:#ccaa00;box-shadow:0 0 10px rgba(204,170,0,.5)">P4</div><div class="pnm" id="pn-3">KingLudo</div><div class="psc" id="ps-3" style="color:#ffe566">0 pts</div></div>
     </div>
     <div class="dice-row">
       <div class="dice-el" id="dice-el">⚀</div>
@@ -446,15 +423,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 <div class="screen" id="scr-wallet">
   <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><h2>Wallet</h2></div>
   <div class="scroll">
-    <div class="w-hero">
-      <div class="wh-lbl">Solde total</div>
-      <div><span class="wh-val" id="wallet-amount-num">15 350</span> 🪙</div>
-      <div class="wh-sub">≈ <span id="wallet-amount-num">15 350</span> × 10 FCFA</div>
-    </div>
-    <div class="w-actions">
-      <button class="wa wa-dep" onclick="doDeposit()">💰 Dépôt</button>
-      <button class="wa wa-wit" onclick="doWithdraw()">📤 Retrait</button>
-    </div>
+    <div class="w-hero"><div class="wh-lbl">Solde total</div><div class="wh-val" id="wallet-amount-num">15 350</div><div style="font-size:24px">🪙</div><div class="wh-sub">≈ Solde en FCFA</div></div>
+    <div class="w-actions"><button class="wa wa-dep" onclick="doDeposit()">💰 Dépôt</button><button class="wa wa-wit" onclick="doWithdraw()">📤 Retrait</button></div>
     <div class="sec">Méthodes de paiement</div>
     <div class="pm-grid">
       <div class="pm" onclick="selectPM('orange')"><div class="pm-ic">🟠</div><div class="pm-nm">Orange Money</div></div>
@@ -478,10 +448,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 <div class="screen" id="scr-tournaments">
   <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><h2>Tournois</h2></div>
   <div class="scroll">
-    <div class="ti" onclick="joinTournament()"><div class="ti-top"><div><div class="ti-name">Grand Tournoi Clash of Coins</div><span class="badge badge-live">🔴 En cours</span></div><div class="ti-pool">500 000 🪙</div></div><div class="ti-info"><span>👥 120 joueurs</span><span>⏰ 02j 14h restants</span><span>🎯 Entrée: 2 000 🪙</span></div></div>
-    <div class="ti" onclick="joinTournament()"><div class="ti-top"><div><div class="ti-name">Tournoi du Soir</div><span class="badge badge-soon">🟣 Bientôt</span></div><div class="ti-pool">50 000 🪙</div></div><div class="ti-info"><span>👥 80 joueurs</span><span>⏰ Dans 45min</span><span>🎯 Entrée: 1 000 🪙</span></div></div>
-    <div class="ti" onclick="joinTournament()"><div class="ti-top"><div><div class="ti-name">Clash Rapide</div><span class="badge badge-live">🔴 En cours</span></div><div class="ti-pool">15 000 🪙</div></div><div class="ti-info"><span>👥 32 joueurs</span><span>⏰ 3h restants</span><span>🎯 Entrée: 500 🪙</span></div></div>
-    <div class="ti" onclick="joinTournament()"><div class="ti-top"><div><div class="ti-name">Challenge du Champion</div><span class="badge badge-soon">🟣 Bientôt</span></div><div class="ti-pool">100 000 🪙</div></div><div class="ti-info"><span>👥 60 joueurs max</span><span>⏰ Demain 20h00</span><span>🎯 Entrée: 2 000 🪙</span></div></div>
+    <div class="ti" onclick="joinTournament()"><div class="ti-top"><div><div class="ti-name">Grand Tournoi Clash of Coins</div><span class="badge badge-live">🔴 En cours</span></div><div class="ti-pool">500 000 🪙</div></div><div class="ti-info"><span>👥 120 joueurs</span><span>⏰ 02j 14h</span><span>🎯 2 000 🪙</span></div></div>
+    <div class="ti" onclick="joinTournament()"><div class="ti-top"><div><div class="ti-name">Tournoi du Soir</div><span class="badge badge-soon">🟣 Bientôt</span></div><div class="ti-pool">50 000 🪙</div></div><div class="ti-info"><span>👥 80 joueurs</span><span>⏰ Dans 45min</span><span>🎯 1 000 🪙</span></div></div>
+    <div class="ti" onclick="joinTournament()"><div class="ti-top"><div><div class="ti-name">Clash Rapide</div><span class="badge badge-live">🔴 En cours</span></div><div class="ti-pool">15 000 🪙</div></div><div class="ti-info"><span>👥 32 joueurs</span><span>⏰ 3h restants</span><span>🎯 500 🪙</span></div></div>
+    <div class="ti" onclick="joinTournament()"><div class="ti-top"><div><div class="ti-name">Challenge du Champion</div><span class="badge badge-soon">🟣 Bientôt</span></div><div class="ti-pool">100 000 🪙</div></div><div class="ti-info"><span>👥 60 max</span><span>⏰ Demain 20h</span><span>🎯 2 000 🪙</span></div></div>
   </div>
   <div class="bnav">
     <button class="nav-item" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
@@ -496,19 +466,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 <div class="screen" id="scr-profile">
   <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><h2>Profil</h2></div>
   <div class="scroll">
-    <div style="text-align:center;padding:22px 0 18px">
+    <div style="text-align:center;padding:24px 0 20px">
       <div class="prof-av">SK</div>
-      <div style="font-size:22px;font-weight:700;color:var(--gold)">Sidick Kone</div>
+      <div style="font-size:24px;font-weight:700;color:var(--gold);text-shadow:0 0 20px var(--gglow)">Sidick Kone</div>
       <div style="font-size:12px;color:var(--muted);margin-top:4px">Niveau 24 · Membre depuis Mai 2024</div>
     </div>
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-val">147</div><div class="stat-lbl">Parties</div></div>
       <div class="stat-card"><div class="stat-val">89</div><div class="stat-lbl">Victoires</div></div>
       <div class="stat-card"><div class="stat-val">61%</div><div class="stat-lbl">Taux victoire</div></div>
-      <div class="stat-card"><div class="stat-val" id="profile-coins">15 350</div><div class="stat-lbl">Coins gagnés</div></div>
+      <div class="stat-card"><div class="stat-val" id="profile-coins">15 350</div><div class="stat-lbl">Coins</div></div>
     </div>
-    <button class="btn-find" style="font-size:15px;padding:13px;margin-bottom:10px" onclick="showToast('Paramètres bientôt!')">⚙️ Paramètres</button>
-    <button class="btn-o" style="font-size:15px;padding:12px" onclick="logout()">🚪 Se déconnecter</button>
+    <button class="btn-find" style="font-size:15px;padding:14px;margin-bottom:12px" onclick="showToast('Paramètres bientôt!')">⚙️ Paramètres</button>
+    <button class="btn-sec" style="font-size:15px;padding:13px" onclick="logout()">🚪 Se déconnecter</button>
   </div>
   <div class="bnav">
     <button class="nav-item" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
