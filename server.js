@@ -147,6 +147,58 @@ app.post('/api/wallet/withdraw', async (req, res) => {
   }
 });
 
+
+// ===== AUTH ROUTES =====
+
+// Verify JWT token (called by client to validate session)
+app.post('/api/auth/verify', async (req, res) => {
+  const { token } = req.body;
+  if(!token) return res.status(401).json({ error: 'No token' });
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if(error || !user) return res.status(401).json({ error: 'Invalid token' });
+    res.json({ success: true, user: { id: user.id, email: user.email } });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin check
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@clashofcoins.ci').split(',');
+
+app.get('/api/admin/stats', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if(!token) return res.status(401).json({ error: 'Non autorisé' });
+  const { data: { user } } = await supabase.auth.getUser(token);
+  if(!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+  try {
+    const [players, games, transactions] = await Promise.all([
+      supabase.from('players').select('id, coins, created_at', { count: 'exact' }),
+      supabase.from('games').select('id', { count: 'exact' }),
+      supabase.from('transactions').select('amount, type, created_at').limit(100),
+    ]);
+    res.json({
+      total_players: players.count || 0,
+      total_games: games.count || 0,
+      total_transactions: transactions.data?.length || 0,
+      total_coins: players.data?.reduce((s,p) => s + (p.coins||0), 0) || 0,
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Serve auth page
+app.get('/auth', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'auth.html'));
+});
+
+// Serve admin page (protection handled client-side + server-side)  
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 // ===== SOCKET.IO =====
 
 io.on('connection', (socket) => {

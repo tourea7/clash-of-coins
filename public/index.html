@@ -431,13 +431,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff
     </div>
     <div class="logo-badge"><span class="logo-dice">🎲</span><span class="logo-slogan">Joue · Gagne · Domine</span></div>
     <div class="spinning-coins"><div class="sc"></div><div class="sc"></div><div class="sc"></div></div>
-    <button class="btn-connect" onclick="login()">SE CONNECTER</button>
-    <button class="btn-register" onclick="login()">CRÉER UN COMPTE</button>
+    <button class="btn-connect" onclick="window.location.href='/auth.html'">SE CONNECTER</button>
+    <button class="btn-register" onclick="window.location.href='/auth.html'">CRÉER UN COMPTE</button>
     <div class="login-div"><div class="login-div-line"></div><span class="login-div-txt">ou continuer avec</span><div class="login-div-line"></div></div>
     <div class="social-btns">
-      <div class="soc" onclick="login()">📘</div>
-      <div class="soc" onclick="login()">🔍</div>
-      <div class="soc" onclick="login()">📱</div>
+      <div class="soc" onclick="window.location.href='/auth.html'">📘</div>
+      <div class="soc" onclick="window.location.href='/auth.html'">🔍</div>
+      <div class="soc" onclick="window.location.href='/auth.html'">📱</div>
     </div>
     <div class="login-terms">En continuant, vous acceptez nos <a href="#">Conditions d'utilisation</a> et notre <a href="#">Politique de confidentialité</a></div>
   </div>
@@ -780,7 +780,21 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff
 </div>
 
 </div><!-- #app -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/socket.io/socket.io.js"></script>
+<script src="/js/auth.js"></script>
 <script src="/js/game.js"></script>
+<script>
+// Init auth on load - redirects to /auth.html if not logged in
+// Then loads profile into STATE
+document.addEventListener('DOMContentLoaded', async () => {
+  const ok = await initAuth();
+  if(!ok) return;
+  // Update UI with real profile
+  updateCoinsUI();
+  updateProfileUI();
+  renderRealLeaderboard();
+});
+</script>
 </body>
 </html>

@@ -596,7 +596,12 @@ function updateCUI(){
 }
 function addTx(type,desc,amount){
   const now=new Date();
-  STATE.transactions.unshift({type,desc,date:`${now.getDate()} Mai 2024 · ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`,amount});
+  const date=`${now.getDate()} ${['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][now.getMonth()]} · ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  STATE.transactions.unshift({type,desc,date,amount});
+  // Sync to DB if auth available
+  if(typeof saveTransaction==='function') saveTransaction(type,desc,amount);
+  // Sync coins to DB
+  if(typeof syncCoinsToDb==='function') syncCoinsToDb(STATE.coins);
 }
 function renderTx(){
   const list=document.getElementById('tx-list');if(!list)return;
@@ -739,12 +744,18 @@ function confirmQuit(){
     'CONTINUER',closeModal,'QUITTER',()=>{closeModal();if(STATE.currentMode==='comp'&&!GAME.over){STATE.coins-=STATE.currentMise;addTx('loss','Abandon',-STATE.currentMise);updateCUI();}showScreen('home');}
   );
 }
-function doDeposit(){STATE.coins+=5000;addTx('gain','Dépôt (Orange Money)',5000);updateCUI();renderTx();showToast('✅ +5 000 coins déposés!');}
+function doDeposit(){
+  const amount=5000;
+  STATE.coins+=amount;
+  addTx('gain','Dépôt (Orange Money)',amount);
+  updateCUI();renderTx();
+  showToast('✅ +'+amount.toLocaleString('fr-FR')+' coins déposés!');
+}
 function doWithdraw(){if(STATE.coins<1000){showToast('⚠️ Solde insuffisant!');return;}STATE.coins-=1000;addTx('loss','Retrait vers Wave',-1000);updateCUI();renderTx();showToast('💸 1 000 coins retirés vers Wave');}
 function selectPM(pm){const n={orange:'Orange Money',moov:'Moov Money',mtn:'MTN Money',wave:'Wave'};showToast(`💳 ${n[pm]} sélectionné`);}
 function joinTournament(){showModal('🏅','REJOINDRE','Confirmer votre inscription?','-1 000 🪙','CONFIRMER',()=>{STATE.coins-=1000;addTx('loss','Inscription tournoi',-1000);updateCUI();closeModal();showToast('🏅 Inscrit au tournoi!');},'ANNULER',closeModal);}
 function showHistorique(){showScreen('wallet');}
-function logout(){showModal('🚪','DÉCONNEXION','Se déconnecter de Clash of Coins?','','DÉCONNECTER',()=>{closeModal();showScreen('login');},'ANNULER',closeModal);}
+function logout(){showModal('🚪','DÉCONNEXION','Se déconnecter de Clash of Coins?','','DÉCONNECTER',()=>{closeModal();if(typeof doLogout==='function')doLogout();else window.location.href='/auth.html';},'ANNULER',closeModal);}
 
 function login(){
   showLoading();let i=0,prog=0;

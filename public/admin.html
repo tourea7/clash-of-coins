@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clash of Coins — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Anton&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#FFD700;--gold2:#FFA500;--gdark:#8B5E00;
+  --bg:#07070e;--panel:#0f0f1a;--bdr:rgba(255,255,255,.07);
+  --text:#e8e0d0;--muted:rgba(255,255,255,.4);
+}
+body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+/* SIDEBAR */
+.sidebar{width:220px;min-height:100vh;background:var(--panel);border-right:1px solid var(--bdr);display:flex;flex-direction:column;flex-shrink:0}
+.sb-logo{padding:20px 16px;border-bottom:1px solid var(--bdr)}
+.sb-logo-txt{font-family:'Anton',sans-serif;font-size:18px;color:var(--gold);letter-spacing:2px}
+.sb-logo-sub{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.sb-nav{flex:1;padding:12px 0}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;transition:all .2s;font-size:13px;font-weight:600;color:var(--muted);border-left:3px solid transparent;text-decoration:none}
+.sb-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.sb-item.active{background:rgba(255,215,0,.06);color:var(--gold);border-left-color:var(--gold)}
+.sb-icon{font-size:16px;width:20px;text-align:center}
+.sb-section{font-size:9px;color:rgba(255,255,255,.2);letter-spacing:2px;text-transform:uppercase;padding:12px 16px 4px;font-weight:700}
+.sb-bottom{padding:12px 16px;border-top:1px solid var(--bdr)}
+.admin-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#ff8888;background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.2);border-radius:10px;padding:4px 10px}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;padding:24px}
+.page-title{font-family:'Anton',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);margin-bottom:4px}
+.page-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
+
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-box{background:var(--panel);border:1px solid var(--bdr);border-radius:12px;padding:16px;position:relative;overflow:hidden}
+.stat-box::before{content:'';position:absolute;top:-20px;right:-20px;width:70px;height:70px;border-radius:50%;opacity:.08}
+.stat-box.gold::before{background:var(--gold)}
+.stat-box.green::before{background:#00cc44}
+.stat-box.blue::before{background:#4d7fff}
+.stat-box.red::before{background:#ff4444}
+.sb-lbl{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;font-weight:700}
+.sb-val{font-size:28px;font-weight:700;color:var(--text)}
+.sb-val.gold{color:var(--gold)}
+.sb-val.green{color:#44dd66}
+.sb-val.blue{color:#88aaff}
+.sb-val.red{color:#ff8888}
+.sb-trend{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* TABLES */
+.table-card{background:var(--panel);border:1px solid var(--bdr);border-radius:12px;overflow:hidden;margin-bottom:24px}
+.table-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--bdr)}
+.table-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.5px;text-transform:uppercase}
+.table-actions{display:flex;gap:8px}
+.btn-sm{padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:none;transition:all .2s;font-family:'Rajdhani',sans-serif;letter-spacing:.5px;text-transform:uppercase}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000}
+.btn-outline{background:transparent;border:1px solid var(--bdr);color:var(--muted)}
+.btn-outline:hover{border-color:rgba(255,215,0,.3);color:var(--gold)}
+.btn-danger{background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#ff8888}
+.btn-danger:hover{background:rgba(255,60,60,.25)}
+
+table{width:100%;border-collapse:collapse}
+thead tr{background:rgba(255,255,255,.03)}
+th{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--bdr)}
+td{font-size:13px;padding:11px 14px;border-bottom:1px solid var(--bdr);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+.badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;letter-spacing:.5px}
+.b-active{background:rgba(0,200,68,.12);color:#44dd66;border:1px solid rgba(0,200,68,.2)}
+.b-banned{background:rgba(255,60,60,.12);color:#ff8888;border:1px solid rgba(255,60,60,.2)}
+.b-kyc{background:rgba(255,215,0,.12);color:var(--gold);border:1px solid rgba(255,215,0,.2)}
+.b-pending{background:rgba(255,165,0,.12);color:#ffaa44;border:1px solid rgba(255,165,0,.2)}
+
+/* CHARTS AREA */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.chart-box{background:var(--panel);border:1px solid var(--bdr);border-radius:12px;padding:16px}
+.chart-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px}
+.mini-chart{display:flex;align-items:flex-end;gap:3px;height:60px}
+.bar{flex:1;border-radius:3px 3px 0 0;transition:height .3s;cursor:pointer;min-width:6px}
+.bar:hover{opacity:.8}
+.chart-labels{display:flex;gap:3px;margin-top:4px}
+.cl{flex:1;font-size:8px;color:var(--muted);text-align:center}
+
+/* ALERTS */
+.alerts-list{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.alert-item{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:12px 14px;transition:all .2s}
+.alert-item:hover{border-color:rgba(255,215,0,.2)}
+.alert-icon{font-size:20px;flex-shrink:0}
+.alert-info{flex:1}
+.alert-title{font-size:13px;font-weight:700}
+.alert-desc{font-size:11px;color:var(--muted);margin-top:1px}
+.alert-time{font-size:10px;color:rgba(255,255,255,.25)}
+
+/* SEARCH */
+.search-bar{display:flex;gap:8px;margin-bottom:14px}
+.search-input{flex:1;padding:9px 12px;background:rgba(255,255,255,.04);border:1px solid var(--bdr);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.search-input:focus{border-color:rgba(255,215,0,.3)}
+.search-input::placeholder{color:var(--muted)}
+
+/* LOADING */
+.loading-row{text-align:center;padding:30px;color:var(--muted);font-size:13px}
+
+/* MODAL */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal-box{background:var(--panel);border:1px solid var(--bdr);border-radius:16px;padding:24px;width:400px;max-width:90vw}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px}
+.modal-body{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .charts-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-txt">👑 CLASH</div>
+    <div class="sb-logo-sub">Administration</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section">Vue d'ensemble</div>
+    <a class="sb-item active" onclick="showPage('dashboard')" href="#">
+      <span class="sb-icon">📊</span> Dashboard
+    </a>
+    <div class="sb-section">Joueurs</div>
+    <a class="sb-item" onclick="showPage('players')" href="#">
+      <span class="sb-icon">👥</span> Tous les joueurs
+    </a>
+    <a class="sb-item" onclick="showPage('kyc')" href="#">
+      <span class="sb-icon">🪪</span> KYC en attente
+    </a>
+    <div class="sb-section">Finance</div>
+    <a class="sb-item" onclick="showPage('transactions')" href="#">
+      <span class="sb-icon">💳</span> Transactions
+    </a>
+    <a class="sb-item" onclick="showPage('withdrawals')" href="#">
+      <span class="sb-icon">📤</span> Retraits
+    </a>
+    <div class="sb-section">Jeu</div>
+    <a class="sb-item" onclick="showPage('games')" href="#">
+      <span class="sb-icon">🎲</span> Parties
+    </a>
+    <a class="sb-item" onclick="showPage('tournaments')" href="#">
+      <span class="sb-icon">🏆</span> Tournois
+    </a>
+    <div class="sb-section">Sécurité</div>
+    <a class="sb-item" onclick="showPage('alerts')" href="#">
+      <span class="sb-icon">⚠️</span> Alertes fraude
+    </a>
+    <a class="sb-item" onclick="showPage('logs')" href="#">
+      <span class="sb-icon">📋</span> Logs
+    </a>
+  </nav>
+  <div class="sb-bottom">
+    <div class="admin-badge">🔐 Admin</div>
+    <div style="margin-top:8px;font-size:11px;color:var(--muted)" id="admin-name">Chargement...</div>
+    <a class="sb-item" href="#" onclick="adminLogout()" style="padding:8px 0;margin-top:8px">
+      <span class="sb-icon">🚪</span> Déconnexion
+    </a>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main" id="main-content">
+  <div class="loading-row">Chargement du dashboard...</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-ov" id="modal">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">Confirmer</div>
+    <div class="modal-body" id="modal-body">Êtes-vous sûr?</div>
+    <div class="modal-btns">
+      <button class="btn-sm btn-outline" onclick="closeModal()">Annuler</button>
+      <button class="btn-sm btn-danger" id="modal-confirm">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== SUPABASE =====
+const sb = window.supabase.createClient(
+  'https://zkmlcqrsvzgngvtihakl.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprbWxjcXJzdnpnbmd2dGloYWtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODIxMzMsImV4cCI6MjA5NDE1ODEzM30.m9oRQUdfzT_qTQ5TI14UpP0L2vE2CiATG_-GBzBh_l8'
+);
+
+// ADMIN EMAILS (à configurer)
+const ADMIN_EMAILS = ['admin@clashofcoins.ci', 'sidick@clashofcoins.ci'];
+
+let currentAdmin = null;
+let currentPage = 'dashboard';
+
+// ===== INIT =====
+async function init(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){
+    window.location.href = '/auth.html';
+    return;
+  }
+  if(!ADMIN_EMAILS.includes(session.user.email)){
+    document.getElementById('main-content').innerHTML =
+      '<div style="text-align:center;padding:60px;color:#ff8888"><div style="font-size:48px;margin-bottom:16px">🚫</div><div style="font-size:18px;font-weight:700">Accès refusé</div><div style="color:rgba(255,255,255,.4);margin-top:8px">Vous n\'avez pas les droits administrateur</div><br><a href="/" style="color:var(--gold)">← Retour au jeu</a></div>';
+    return;
+  }
+  currentAdmin = session.user;
+  document.getElementById('admin-name').textContent = session.user.email;
+  showPage('dashboard');
+}
+
+// ===== PAGE ROUTER =====
+function showPage(page){
+  currentPage = page;
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  // Highlight active nav item
+  const pages = { dashboard:'📊',players:'👥',kyc:'🪪',transactions:'💳',withdrawals:'📤',games:'🎲',tournaments:'🏆',alerts:'⚠️',logs:'📋' };
+  document.querySelectorAll('.sb-item').forEach(i => {
+    if(i.querySelector('.sb-icon')?.textContent === pages[page]) i.classList.add('active');
+  });
+  const mc = document.getElementById('main-content');
+  mc.innerHTML = '<div class="loading-row">⏳ Chargement...</div>';
+  switch(page){
+    case 'dashboard': renderDashboard(); break;
+    case 'players': renderPlayers(); break;
+    case 'transactions': renderTransactions(); break;
+    case 'withdrawals': renderWithdrawals(); break;
+    case 'games': renderGames(); break;
+    case 'alerts': renderAlerts(); break;
+    case 'kyc': renderKYC(); break;
+    default: mc.innerHTML = '<div class="loading-row">Page en construction 🚧</div>';
+  }
+}
+
+// ===== DASHBOARD =====
+async function renderDashboard(){
+  const [players, txs, games] = await Promise.all([
+    sb.from('players').select('coins, created_at, wins, games_played'),
+    sb.from('transactions').select('amount, type, created_at').order('created_at',{ascending:false}).limit(100),
+    sb.from('games').select('created_at, prize, status').limit(50),
+  ]);
+
+  const totalPlayers = players.data?.length || 0;
+  const totalCoins = players.data?.reduce((s,p)=>s+(p.coins||0),0) || 0;
+  const todayTxs = txs.data?.filter(t=>new Date(t.created_at).toDateString()===new Date().toDateString()) || [];
+  const commissions = txs.data?.filter(t=>t.type==='commission').reduce((s,t)=>s+(t.amount||0),0) || 0;
+  const totalGames = games.data?.length || 0;
+
+  // Mini bar chart data
+  const days = Array.from({length:7},(_,i)=>{
+    const d = new Date(); d.setDate(d.getDate()-6+i);
+    return d.toLocaleDateString('fr-FR',{weekday:'short'});
+  });
+  const bars = days.map((_,i)=>{
+    const d = new Date(); d.setDate(d.getDate()-6+i);
+    const ds = d.toDateString();
+    return txs.data?.filter(t=>new Date(t.created_at).toDateString()===ds&&t.amount>0).length||0;
+  });
+  const maxBar = Math.max(...bars,1);
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-title">Dashboard</div>
+    <div class="page-sub">Vue d'ensemble de Clash of Coins · Mis à jour maintenant</div>
+
+    <div class="stats-grid">
+      <div class="stat-box gold">
+        <div class="sb-lbl">Joueurs total</div>
+        <div class="sb-val gold">${totalPlayers.toLocaleString('fr-FR')}</div>
+        <div class="sb-trend">Inscriptions actives</div>
+      </div>
+      <div class="stat-box green">
+        <div class="sb-lbl">Coins en circulation</div>
+        <div class="sb-val green">${totalCoins.toLocaleString('fr-FR')}</div>
+        <div class="sb-trend">Dans tous les wallets</div>
+      </div>
+      <div class="stat-box blue">
+        <div class="sb-lbl">Parties jouées</div>
+        <div class="sb-val blue">${totalGames.toLocaleString('fr-FR')}</div>
+        <div class="sb-trend">Toutes périodes</div>
+      </div>
+      <div class="stat-box red">
+        <div class="sb-lbl">Transactions aujourd'hui</div>
+        <div class="sb-val red">${todayTxs.length}</div>
+        <div class="sb-trend">Dépôts + retraits</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-box">
+        <div class="chart-title">Transactions (7 derniers jours)</div>
+        <div class="mini-chart">
+          ${bars.map((b,i)=>`<div class="bar" style="height:${Math.max(4,b/maxBar*56)}px;background:linear-gradient(180deg,#FFD700,#FF8C00)" title="${b} transactions"></div>`).join('')}
+        </div>
+        <div class="chart-labels">
+          ${days.map(d=>`<span class="cl">${d}</span>`).join('')}
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Activité joueurs</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Joueurs avec parties</span><span style="color:#88aaff">${players.data?.filter(p=>(p.games_played||0)>0).length||0}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Taux victoire moyen</span><span style="color:#44dd66">${players.data?.length ? Math.round(players.data.reduce((s,p)=>s+(p.games_played>0?p.wins/p.games_played:0),0)/players.data.length*100)+'%' : '0%'}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Actifs ce mois</span><span style="color:var(--gold)">${players.data?.filter(p=>p.games_played>0).length||0}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Transactions récentes</div>
+        <button class="btn-sm btn-outline" onclick="showPage('transactions')">Voir tout</button>
+      </div>
+      <table>
+        <thead><tr><th>Joueur</th><th>Type</th><th>Montant</th><th>Date</th><th>Statut</th></tr></thead>
+        <tbody>
+          ${(txs.data||[]).slice(0,8).map(t=>`
+            <tr>
+              <td>${t.username||'—'}</td>
+              <td>${t.type||'—'}</td>
+              <td style="color:${t.amount>0?'#44dd66':'#ff8888'}">${t.amount>0?'+':''}${(t.amount||0).toLocaleString('fr-FR')} 🪙</td>
+              <td style="color:var(--muted)">${new Date(t.created_at).toLocaleDateString('fr-FR')}</td>
+              <td><span class="badge b-active">${t.status||'completed'}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ===== PLAYERS TABLE =====
+async function renderPlayers(search=''){
+  let query = sb.from('players').select('*').order('coins',{ascending:false}).limit(50);
+  if(search) query = query.ilike('username',`%${search}%`);
+  const { data } = await query;
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-title">Joueurs</div>
+    <div class="page-sub">${data?.length||0} joueurs trouvés</div>
+    <div class="search-bar">
+      <input class="search-input" placeholder="Rechercher par pseudo..." oninput="renderPlayers(this.value)" value="${search}">
+      <button class="btn-sm btn-gold" onclick="renderPlayers()">Actualiser</button>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Tous les joueurs</div>
+      </div>
+      <table>
+        <thead><tr><th>Avatar</th><th>Pseudo</th><th>Email</th><th>Coins</th><th>Parties</th><th>Victoires</th><th>Statut</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${(data||[]).map(p=>`
+            <tr>
+              <td style="font-size:20px">${p.avatar_url||'👤'}</td>
+              <td><b>${p.username}</b><br><span style="font-size:10px;color:var(--muted)">Niv.${p.level||1}</span></td>
+              <td style="color:var(--muted);font-size:11px">${p.email||'—'}</td>
+              <td style="color:var(--gold);font-weight:700">${(p.coins||0).toLocaleString('fr-FR')} 🪙</td>
+              <td>${p.games_played||0}</td>
+              <td style="color:#44dd66">${p.wins||0}</td>
+              <td><span class="badge b-active">Actif</span></td>
+              <td>
+                <button class="btn-sm btn-outline" onclick="viewPlayer('${p.id}','${p.username}')">Voir</button>
+                <button class="btn-sm btn-danger" onclick="confirmBan('${p.id}','${p.username}')">Bannir</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ===== TRANSACTIONS =====
+async function renderTransactions(){
+  const { data } = await sb.from('transactions').select('*').order('created_at',{ascending:false}).limit(100);
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-title">Transactions</div>
+    <div class="page-sub">${data?.length||0} transactions récentes</div>
+    <div class="table-card">
+      <div class="table-header"><div class="table-title">Historique des transactions</div></div>
+      <table>
+        <thead><tr><th>Joueur</th><th>Type</th><th>Description</th><th>Montant</th><th>Date</th><th>Statut</th></tr></thead>
+        <tbody>
+          ${(data||[]).map(t=>`
+            <tr>
+              <td><b>${t.username||'—'}</b></td>
+              <td><span class="badge ${t.amount>0?'b-active':'b-pending'}">${t.type||'—'}</span></td>
+              <td style="color:var(--muted);font-size:11px">${t.description||'—'}</td>
+              <td style="color:${t.amount>0?'#44dd66':'#ff8888'};font-weight:700">${t.amount>0?'+':''}${(t.amount||0).toLocaleString('fr-FR')} 🪙</td>
+              <td style="color:var(--muted);font-size:11px">${new Date(t.created_at).toLocaleString('fr-FR')}</td>
+              <td><span class="badge b-active">${t.status||'completed'}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ===== WITHDRAWALS =====
+async function renderWithdrawals(){
+  const { data } = await sb.from('transactions').select('*').eq('type','withdrawal').order('created_at',{ascending:false});
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-title">Retraits</div>
+    <div class="page-sub">${data?.length||0} demandes de retrait</div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Demandes en cours</div>
+        <button class="btn-sm btn-gold" onclick="renderWithdrawals()">Actualiser</button>
+      </div>
+      <table>
+        <thead><tr><th>Joueur</th><th>Montant</th><th>Méthode</th><th>Date</th><th>Statut</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${(data||[]).map(t=>`
+            <tr>
+              <td><b>${t.username||'—'}</b></td>
+              <td style="color:#ff8888;font-weight:700">${(Math.abs(t.amount)||0).toLocaleString('fr-FR')} 🪙</td>
+              <td>${t.method||'Mobile Money'}</td>
+              <td style="color:var(--muted);font-size:11px">${new Date(t.created_at).toLocaleString('fr-FR')}</td>
+              <td><span class="badge ${t.status==='completed'?'b-active':'b-pending'}">${t.status||'pending'}</span></td>
+              <td>
+                ${t.status==='pending'?`
+                  <button class="btn-sm btn-gold" onclick="approveWithdrawal('${t.id}')">✓ Approuver</button>
+                  <button class="btn-sm btn-danger" onclick="rejectWithdrawal('${t.id}')">✗ Rejeter</button>
+                `:'—'}
+              </td>
+            </tr>`).join('')}
+          ${!data?.length?'<tr><td colspan="6" class="loading-row">Aucun retrait en attente</td></tr>':''}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ===== GAMES =====
+async function renderGames(){
+  const { data } = await sb.from('games').select('*').order('created_at',{ascending:false}).limit(50);
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-title">Parties</div>
+    <div class="page-sub">${data?.length||0} parties enregistrées</div>
+    <div class="table-card">
+      <div class="table-header"><div class="table-title">Historique des parties</div></div>
+      <table>
+        <thead><tr><th>Salle</th><th>Mode</th><th>Joueurs</th><th>Mise</th><th>Gagnant</th><th>Prize</th><th>Date</th><th>Statut</th></tr></thead>
+        <tbody>
+          ${(data||[]).map(g=>`
+            <tr>
+              <td style="font-size:10px;color:var(--muted)">${(g.room_id||'—').slice(0,12)}...</td>
+              <td><span class="badge ${g.mode==='comp'?'b-kyc':'b-active'}">${g.mode||'free'}</span></td>
+              <td>${(g.players||[]).join(', ')}</td>
+              <td style="color:var(--gold)">${(g.mise||0).toLocaleString('fr-FR')} 🪙</td>
+              <td style="color:#44dd66"><b>${g.winner||'—'}</b></td>
+              <td style="color:var(--gold)">${(g.prize||0).toLocaleString('fr-FR')} 🪙</td>
+              <td style="font-size:10px;color:var(--muted)">${new Date(g.created_at).toLocaleDateString('fr-FR')}</td>
+              <td><span class="badge ${g.status==='completed'?'b-active':'b-pending'}">${g.status||'—'}</span></td>
+            </tr>`).join('')}
+          ${!data?.length?'<tr><td colspan="8" class="loading-row">Aucune partie enregistrée</td></tr>':''}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ===== ALERTS =====
+async function renderAlerts(){
+  // Detect suspicious activity: players with unusually high win rates
+  const { data: players } = await sb.from('players').select('username, wins, games_played, coins').order('coins',{ascending:false});
+  const suspicious = (players||[]).filter(p => p.games_played >= 5 && p.wins/p.games_played > 0.9);
+  const { data: bigTxs } = await sb.from('transactions').select('*').gte('amount',50000).order('created_at',{ascending:false}).limit(10);
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-title">Alertes Fraude</div>
+    <div class="page-sub">${suspicious.length + (bigTxs?.length||0)} alertes détectées</div>
+
+    ${suspicious.length>0?`
+    <div class="table-card" style="margin-bottom:16px">
+      <div class="table-header"><div class="table-title">⚠️ Taux de victoire suspects (>90%)</div></div>
+      <table>
+        <thead><tr><th>Joueur</th><th>Parties</th><th>Victoires</th><th>Taux</th><th>Coins</th><th>Action</th></tr></thead>
+        <tbody>
+          ${suspicious.map(p=>`<tr>
+            <td><b>${p.username}</b></td><td>${p.games_played}</td><td>${p.wins}</td>
+            <td style="color:#ff8888;font-weight:700">${Math.round(p.wins/p.games_played*100)}%</td>
+            <td style="color:var(--gold)">${(p.coins||0).toLocaleString('fr-FR')} 🪙</td>
+            <td><button class="btn-sm btn-danger" onclick="confirmBan('','${p.username}')">Investiguer</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`:''}
+
+    <div class="table-card">
+      <div class="table-header"><div class="table-title">💰 Transactions importantes (>50 000 coins)</div></div>
+      <table>
+        <thead><tr><th>Joueur</th><th>Type</th><th>Montant</th><th>Date</th></tr></thead>
+        <tbody>
+          ${(bigTxs||[]).map(t=>`<tr>
+            <td><b>${t.username||'—'}</b></td>
+            <td>${t.type}</td>
+            <td style="color:var(--gold);font-weight:700">${(t.amount||0).toLocaleString('fr-FR')} 🪙</td>
+            <td style="color:var(--muted);font-size:11px">${new Date(t.created_at).toLocaleString('fr-FR')}</td>
+          </tr>`).join('')}
+          ${!bigTxs?.length?'<tr><td colspan="4" class="loading-row">Aucune alerte</td></tr>':''}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ===== KYC =====
+async function renderKYC(){
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-title">KYC — Vérification d'identité</div>
+    <div class="page-sub">Les joueurs doivent vérifier leur identité avant tout retrait</div>
+    <div class="table-card">
+      <div class="table-header"><div class="table-title">Demandes en attente</div></div>
+      <div class="loading-row">
+        🚧 Système KYC en cours d'intégration.<br>
+        <span style="font-size:11px;color:var(--muted)">Les joueurs devront uploader une pièce d'identité avant de pouvoir effectuer des retraits.</span>
+      </div>
+    </div>
+  `;
+}
+
+// ===== ACTIONS =====
+async function confirmBan(id, username){
+  document.getElementById('modal-title').textContent = 'Bannir ' + username;
+  document.getElementById('modal-body').textContent = `Êtes-vous sûr de vouloir bannir le joueur "${username}"? Cette action est réversible.`;
+  document.getElementById('modal-confirm').onclick = async () => {
+    if(id){
+      await sb.from('players').update({ status:'banned' }).eq('id', id);
+    }
+    closeModal();
+    showPage('players');
+  };
+  document.getElementById('modal').classList.add('open');
+}
+
+async function approveWithdrawal(id){
+  await sb.from('transactions').update({ status:'completed' }).eq('id', id);
+  renderWithdrawals();
+}
+
+async function rejectWithdrawal(id){
+  await sb.from('transactions').update({ status:'rejected' }).eq('id', id);
+  renderWithdrawals();
+}
+
+function viewPlayer(id, username){
+  showToast('Profil de ' + username + ' — page détail bientôt!');
+}
+
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+
+let toastT;
+function showToast(msg){
+  let t = document.getElementById('admin-toast');
+  if(!t){ t=document.createElement('div'); t.id='admin-toast'; t.style.cssText='position:fixed;bottom:20px;right:20px;background:#111118;border:1px solid rgba(255,215,0,.3);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;color:var(--gold);z-index:200;opacity:0;transition:opacity .3s'; document.body.appendChild(t); }
+  t.textContent=msg;t.style.opacity='1';clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity='0',3000);
+}
+
+async function adminLogout(){ await sb.auth.signOut(); window.location.href='/auth.html'; }
+
+// START
+init();
+</script>
+</body>
+</html>
