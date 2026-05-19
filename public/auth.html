@@ -196,7 +196,7 @@ html,body{width:100%;min-height:100%;background:var(--bg);color:#fff;font-family
 // ===== SUPABASE CONFIG =====
 // Ces valeurs sont injectées depuis les variables d'environnement
 const SUPABASE_URL = window.SUPABASE_URL || 'https://zkmlcqrsvzgngvtihakl.supabase.co';
-const SUPABASE_ANON = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprbWxjcXJzdnpnbmd2dGloYWtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODIxMzMsImV4cCI6MjA5NDE1ODEzM30.m9oRQUdfzT_qTQ5TI14UpP0L2vE2CiATG_-GBzBh_l8';
+const SUPABASE_ANON = window.SUPABASE_ANON_KEY || 'CLEF_SUPPRIMEEOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprbWxjcXJzdnpnbmd2dGloYWtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODIxMzMsImV4cCI6MjA5NDE1ODEzM30.m9oRQUdfzT_qTQ5TI14UpP0L2vE2CiATG_-GBzBh_l8';
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -206,6 +206,8 @@ let selectedAvatar = '👑';
 
 function initAvatars(){
   const grid = document.getElementById('avatar-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
   AVATARS.forEach(av => {
     const el = document.createElement('div');
     el.className = 'av-opt' + (av === selectedAvatar ? ' selected' : '');
@@ -218,19 +220,23 @@ function initAvatars(){
     grid.appendChild(el);
   });
 }
-initAvatars();
 
 // ===== CHECK SESSION (redirect if already logged in) =====
 supabase.auth.getSession().then(({ data: { session } }) => {
   if (session) {
+    // Already logged in - redirect to game
     window.location.href = '/';
+    return;
   }
+  // Not logged in - init avatars now that we know we're staying
+  initAvatars();
 });
 
 // Listen for auth changes
 supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_IN' && session) {
-    window.location.href = '/';
+    showLoading(true, 'Connexion réussie...');
+    setTimeout(() => window.location.href = '/', 800);
   }
 });
 
@@ -241,12 +247,21 @@ function switchTab(t){
   document.getElementById('form-login').style.display = t==='login'?'block':'none';
   document.getElementById('form-register').style.display = t==='register'?'block':'none';
   clearMsgs();
+  if(t==='register') {
+    initAvatars();
+    document.getElementById('reg-username').focus();
+  } else {
+    document.getElementById('login-email').focus();
+  }
 }
 
 function showErr(msg){ const el=document.getElementById('msg-err'); el.textContent=msg; el.classList.add('show'); document.getElementById('msg-ok').classList.remove('show'); }
 function showOk(msg){ const el=document.getElementById('msg-ok'); el.textContent=msg; el.classList.add('show'); document.getElementById('msg-err').classList.remove('show'); }
 function clearMsgs(){ document.getElementById('msg-err').classList.remove('show'); document.getElementById('msg-ok').classList.remove('show'); }
-function setLoading(show, msg='Chargement...'){ const el=document.getElementById('ld'); document.getElementById('ld-msg').textContent=msg; el.classList.toggle('show',show); }
+function setLoading(show, msg){
+  if(msg) document.getElementById('ld-msg').textContent=msg;
+  document.getElementById('ld').classList.toggle('show', show);
+}
 
 function togglePwd(id, btn){
   const inp = document.getElementById(id);
@@ -338,20 +353,24 @@ async function doRegister(){
 
     // 2. Create player profile in DB
     if(authData.user) {
-      const { error: profileErr } = await supabase.from('players').insert({
-        id: authData.user.id,
-        username,
-        email,
-        phone: phone || null,
-        avatar_url: selectedAvatar,
-        coins: 1000, // Bonus de bienvenue
-        level: 1,
-        xp: 0,
-        wins: 0,
-        losses: 0,
-        games_played: 0,
-      });
-      // Profile creation error is non-fatal (trigger might handle it)
+      try {
+        await supabase.from('players').upsert({
+          id: authData.user.id,
+          username,
+          email,
+          phone: phone || null,
+          avatar_url: selectedAvatar,
+          coins: 1000,
+          level: 1,
+          xp: 0,
+          wins: 0,
+          losses: 0,
+          games_played: 0,
+        }, { onConflict: 'id' });
+      } catch(profileErr) {
+        console.warn('Profile creation warning:', profileErr);
+        // Non-fatal - profile may be created by DB trigger
+      }
     }
 
     setLoading(false);
