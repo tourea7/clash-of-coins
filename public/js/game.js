@@ -1,5 +1,5 @@
 // CLASH OF COINS — game.js v4.0 — Full Ludo King Style
-const STATE={coins:15350,username:'Sidick Kone',currentMode:'free',currentMise:500,numPlayers:4,socket:null,mmTimeout:null,
+const STATE={coins:15350,username:'Sidick Kone',currentMode:'free',currentMise:500,numPlayers:4,myColor:0,socket:null,mmTimeout:null,
 transactions:[
   {type:'gain',desc:'Partie gagnée',date:"12 Mai 2024 · 14:35",amount:2500},
   {type:'loss',desc:'Mise de partie',date:"12 Mai 2024 · 14:30",amount:-1000},
@@ -8,7 +8,14 @@ transactions:[
   {type:'loss',desc:'Retrait (Wave)',date:"11 Mai 2024 · 18:40",amount:-3000},
 ]};
 
-const GAME={players:4,current:0,dice:1,rolled:false,over:false,pieces:[],finished:[],scores:[0,0,0,0],movable:[],waitMove:false};
+const GAME={
+  players:4,current:0,dice:1,rolled:false,over:false,
+  pieces:[],finished:[],scores:[0,0,0,0],
+  movable:[],waitMove:false,
+  ranking:[],        // order of finish: [playerIndex, ...]
+  eliminated:[],     // players who finished
+  activePlayers:4,   // players still in game
+};
 
 // Ludo King exact colors
 const PC  =['#1a6fff','#ee1111','#00bb33','#ddaa00'];
@@ -21,11 +28,34 @@ const AI=['QueenLudo','LuckyStar','KingLudo','DiceKing'];
 const DF=['⚀','⚁','⚂','⚃','⚄','⚅'];
 
 // Exact Ludo path
-const P52=[[1,6],[2,6],[3,6],[4,6],[5,6],[6,5],[6,4],[6,3],[6,2],[6,1],[6,0],[7,0],[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,6],[9,6],[10,6],[11,6],[12,6],[13,6],[14,6],[14,7],[14,8],[13,8],[12,8],[11,8],[10,8],[9,8],[8,8],[8,9],[8,10],[8,11],[8,12],[8,13],[8,14],[7,14],[6,14],[6,13],[6,12],[6,11],[6,10],[6,9],[6,8],[5,8],[4,8],[3,8],[2,8],[1,8]];
-const HS=[[[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],[[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],[[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]],[[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]]];
-const BP=[[[2,2],[3,2],[2,3],[3,3]],[[10,2],[11,2],[10,3],[11,3]],[[2,10],[3,10],[2,11],[3,11]],[[10,10],[11,10],[10,11],[11,11]]];
-const EN=[0,13,39,26];
-const SF=new Set(['1,8','6,2','8,1','13,6','13,8','8,13','6,13','1,6']);
+const P52=[
+  [1,6],[2,6],[3,6],[4,6],[5,6],
+  [6,5],[6,4],[6,3],[6,2],[6,1],[6,0],
+  [7,0],[8,0],
+  [8,1],[8,2],[8,3],[8,4],[8,5],
+  [9,6],[10,6],[11,6],[12,6],[13,6],
+  [14,6],[14,7],[14,8],
+  [13,8],[12,8],[11,8],[10,8],[9,8],
+  [8,9],[8,10],[8,11],[8,12],[8,13],
+  [8,14],[7,14],[6,14],
+  [6,13],[6,12],[6,11],[6,10],[6,9],
+  [5,8],[4,8],[3,8],[2,8],[1,8],
+  [0,8],[0,7],[0,6],
+];
+const HS=[
+  [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],    // Blue  P0: row7 going right
+  [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],    // Red   P1: col7 going down
+  [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]],// Green P2: row7 going left
+  [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]],// Yellow P3: col7 going up
+];
+const BP=[
+  [[2,2],[3,2],[2,3],[3,3]],       // Blue: top-left
+  [[10,2],[11,2],[10,3],[11,3]],   // Red: top-right
+  [[2,10],[3,10],[2,11],[3,11]],   // Green: bottom-left
+  [[10,10],[11,10],[10,11],[11,11]], // Yellow: bottom-right
+];
+const EN=[0,13,26,39];
+const SF=new Set(['1,6','8,1','13,8','6,13','1,8','0,7','14,7','7,0']);
 
 let canvas,ctx,C;
 
@@ -42,6 +72,7 @@ function setupCanvas(){
 function initGame(n){
   GAME.players=n;GAME.current=0;GAME.dice=1;GAME.rolled=false;GAME.over=false;GAME.waitMove=false;GAME.movable=[];
   GAME.scores=Array(4).fill(0);GAME.pieces=Array.from({length:4},()=>Array(4).fill(-1));GAME.finished=Array(4).fill(0);
+  GAME.ranking=[];GAME.eliminated=[];GAME.activePlayers=n;
 }
 
 // ===== LUDO KING STYLE BOARD =====
@@ -90,45 +121,66 @@ function drawBoard(){
 function drawCell(col,row){
   const x=col*C,y=row*C,s=C;
 
-  // Skip corner home zones - drawn separately
+  // Skip corner home zones - drawn separately as big colored squares
   if((col<6&&row<6)||(col>8&&row<6)||(col<6&&row>8)||(col>8&&row>8))return;
-
-  // Skip center - drawn separately
+  // Skip center 3x3 - drawn separately
   if(col>=6&&col<=8&&row>=6&&row<=8)return;
 
-  let fill='#fff',border='rgba(0,0,0,.08)',bw=.5;
+  // Non-playable cells at path intersections - draw as board background
+  // These are cells that look like they are on corners of the cross but are NOT on path
+  const onMainPath=P52.some(([c,r])=>c===col&&r===row);
+  const onHomeStretch=HS.some(s=>s.some(([c,r])=>c===col&&r===row));
+  const isPlayable=onMainPath||onHomeStretch;
 
-  // Colored home stretch lanes
-  if(col===7&&row>=1&&row<=6)        {fill='#99bbff';border='rgba(26,111,255,.3)';bw=.8;}
-  else if(row===7&&col>=1&&col<=6)   {fill='#ffcc77';border='rgba(221,170,0,.3)';bw=.8;}
-  else if(col===7&&row>=8&&row<=13)  {fill='#99ffbb';border='rgba(0,187,51,.3)';bw=.8;}
-  else if(row===7&&col>=8&&col<=13)  {fill='#ffcc77';border='rgba(221,170,0,.3)';bw=.8;}
+  // Non-playable cross junction cells (the "empty" looking corner cells)
+  // These are in cross shape but not actually path squares
+  const isCrossJunction=(
+    (col===6&&row===6)||(col===8&&row===6)||
+    (col===6&&row===8)||(col===8&&row===8)||
+    (col===0&&row===6)||(col===14&&row===6)||
+    (col===0&&row===8)||(col===14&&row===8)||
+    (col===6&&row===0)||(col===8&&row===0)||
+    (col===6&&row===14)||(col===8&&row===14)
+  );
 
-  // Main path cells - slightly off-white
-  const onPath=P52.some(([c,r])=>c===col&&r===row)||HS.some(s=>s.some(([c,r])=>c===col&&r===row));
-  if(onPath&&fill==='#fff')fill='#f0ecd8';
+  let fill='#f0ede0',border='rgba(180,160,120,.25)',bw=.5;
 
-  // Safe cells (star)
-  if(SF.has(`${col},${row}`)){fill='#fffde0';border='rgba(255,200,0,.4)';bw=1;}
+  if(!isPlayable&&!isCrossJunction){
+    // Off-path cells in the cross arms - light beige
+    fill='#e8e4d4';
+  }
+
+  // Colored home stretch lanes (correct colors per player)
+  // Blue (P0) home stretch: row7, cols 1-6 going right
+  if(row===7&&col>=1&&col<=6)   {fill='#aaccff';border='rgba(26,111,255,.4)';bw=.8;}
+  // Red (P1) home stretch: col7, rows 1-6 going down
+  else if(col===7&&row>=1&&row<=6)  {fill='#ffaaaa';border='rgba(238,17,17,.4)';bw=.8;}
+  // Green (P2) home stretch: row7, cols 8-13 going left
+  else if(row===7&&col>=8&&col<=13) {fill='#aaffbb';border='rgba(0,187,51,.4)';bw=.8;}
+  // Yellow (P3) home stretch: col7, rows 8-13 going up
+  else if(col===7&&row>=8&&row<=13) {fill='#ffeeaa';border='rgba(221,170,0,.4)';bw=.8;}
+
+  // Safe/star squares
+  if(SF.has(`${col},${row}`)){fill='#fffde0';border='rgba(200,170,0,.5)';bw=1.2;}
 
   ctx.fillStyle=fill;
   ctx.fillRect(x+.5,y+.5,s-1,s-1);
   ctx.strokeStyle=border;ctx.lineWidth=bw;
   ctx.strokeRect(x+.5,y+.5,s-1,s-1);
 
-  // Star on safe cells
+  // Star symbol on safe squares
   if(SF.has(`${col},${row}`)&&col!==7&&row!==7){
-    ctx.fillStyle='rgba(200,170,0,.6)';
-    ctx.font=`bold ${Math.floor(C*.45)}px serif`;
+    ctx.fillStyle='rgba(180,140,0,.65)';
+    ctx.font=`bold ${Math.floor(C*.46)}px serif`;
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText('★',x+C/2,y+C/2+1);
   }
 
-  // Directional arrows at player entry points
-  const arrows={'1,6':['→',PC[0]],'8,1':['↓',PC[1]],'13,8':['←',PC[2]],'6,13':['↑',PC[3]]};
+  // Entry arrows
+  const arrows={'1,6':['→','#1a6fff'],'8,1':['↓','#ee1111'],'13,8':['←','#00bb33'],'6,13':['↑','#ddaa00']};
   if(arrows[`${col},${row}`]){
     const[arrow,color]=arrows[`${col},${row}`];
-    ctx.fillStyle=color;ctx.globalAlpha=.6;
+    ctx.fillStyle=color;ctx.globalAlpha=.5;
     ctx.font=`bold ${Math.floor(C*.55)}px sans-serif`;
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(arrow,x+C/2,y+C/2+1);
@@ -356,7 +408,7 @@ function applyMove(player,piece,newPos){
   if(newPos>=58){
     GAME.pieces[player][piece]=58;GAME.finished[player]++;GAME.scores[player]+=50;
     log(`⭐ Pièce ${piece+1} arrivée! +50 pts`,PC[player]);
-    if(GAME.finished[player]>=4){endGame(player);return;}
+    if(GAME.finished[player]>=4){playerFinished(player);return;}
   }
   updateSUI();drawBoard();
   if(GAME.dice===6){
@@ -367,7 +419,7 @@ function applyMove(player,piece,newPos){
 }
 
 function rollDice(){
-  if(GAME.rolled||GAME.over)return;
+  if(GAME.rolled||GAME.over||GAME.current!==STATE.myColor)return;
   GAME.rolled=true;disableRoll();
   const el=document.getElementById('dice-el');
   el.classList.add('rolling');
@@ -379,25 +431,35 @@ function rollDice(){
       const result=Math.floor(Math.random()*6)+1;
       GAME.dice=result;el.textContent=DF[result-1];
       el.style.transform='scale(1.3)';setTimeout(()=>el.style.transform='scale(1)',250);
-      const movable=getMovable(0,result);
+      const movable=getMovable(STATE.myColor,result);
       if(!movable.length){log(`Vous lancez ${result} — aucun mouvement 😕`,'rgba(255,255,255,.4)');setTimeout(nextTurn,1300);}
-      else if(movable.length===1){log(`Vous lancez ${result} 🎯`,PC[0]);setTimeout(()=>applyMove(movable[0].player,movable[0].piece,movable[0].newPos),500);}
+      else if(movable.length===1){log(`Vous lancez ${result} 🎯`,PC[STATE.myColor]);setTimeout(()=>applyMove(movable[0].player,movable[0].piece,movable[0].newPos),500);}
       else{GAME.movable=movable;GAME.waitMove=true;log(`Vous lancez ${result} — touchez un pion ✨`,'#FFD700');drawBoard();}
     }
   },60);
 }
 
 function nextTurn(){
-  GAME.current=(GAME.current+1)%GAME.players;GAME.rolled=false;updateAP();
-  if(GAME.current===0){log('🎲 Votre tour!',PC[0]);enableRoll();}
-  else{log(`Tour de ${AI[GAME.current-1]}...`,PC[GAME.current]);disableRoll();setTimeout(()=>aiTurn(GAME.current),1000);}
+  if(GAME.over) return;
+  let next=(GAME.current+1)%GAME.players;
+  // Skip eliminated players
+  let safety=0;
+  while(GAME.eliminated.includes(next)&&safety<GAME.players){next=(next+1)%GAME.players;safety++;}
+  GAME.current=next;GAME.rolled=false;updateAP();
+  if(GAME.current===STATE.myColor){log('🎲 Votre tour!',PC[STATE.myColor]);enableRoll();}
+  else{
+    const aiIdx=GAME.current>STATE.myColor?GAME.current-1:GAME.current;
+    log(`Tour de ${AI[aiIdx]||'IA'}...`,PC[GAME.current]);
+    disableRoll();setTimeout(()=>aiTurn(GAME.current),1000);
+  }
 }
 
 function aiTurn(player){
-  if(GAME.over||GAME.current!==player)return;
+  if(GAME.over||GAME.current!==player||GAME.eliminated.includes(player))return;
   const result=Math.floor(Math.random()*6)+1;
   GAME.dice=result;document.getElementById('dice-el').textContent=DF[result-1];
-  log(`${AI[player-1]} lance ${result}`,PC[player]);
+  const aiIdx=player>STATE.myColor?player-1:player;
+  log(`${AI[aiIdx]||'IA'} lance ${result}`,PC[player]);
   setTimeout(()=>{
     const movable=getMovable(player,result);
     if(movable.length){
@@ -408,22 +470,101 @@ function aiTurn(player){
   },700);
 }
 
-function endGame(winner){
-  GAME.over=true;
-  const isMe=winner===0;
-  const prize=isMe?Math.floor(STATE.currentMise*STATE.numPlayers*.95):0;
-  if(STATE.currentMode==='comp'){
-    if(isMe){STATE.coins+=prize;addTx('gain','Partie gagnée',prize);}
-    else{STATE.coins-=STATE.currentMise;addTx('loss','Partie perdue',-STATE.currentMise);}
-    updateCUI();
-  }else if(isMe){STATE.coins+=200;addTx('gain','Bonus gratuit',200);updateCUI();}
+// Called when a player finishes all 4 pieces
+function playerFinished(player){
+  if(GAME.eliminated.includes(player)) return;
+  GAME.ranking.push(player);
+  GAME.eliminated.push(player);
+  GAME.activePlayers--;
+
+  const pos=GAME.ranking.length;
+  const posLabels=['🥇 1er','🥈 2e','🥉 3e','💀 Dernier'];
+  const posLabel=posLabels[pos-1]||`${pos}e`;
+  const name=player===STATE.myColor?'Vous':AI[player>STATE.myColor?player-1:player];
+
+  // Score bonus by finish position
+  const bonuses=[200,100,50,0];
+  GAME.scores[player]+=(bonuses[pos-1]||0);
+
+  log(`${posLabel} — ${player===STATE.myColor?'Vous':name} a terminé!`,PC[player]);
+  updateSUI();
+
+  // Check if only 1 player left → game over
+  const remaining=[];
+  for(let i=0;i<GAME.players;i++){
+    if(!GAME.eliminated.includes(i)) remaining.push(i);
+  }
+
+  if(remaining.length<=1){
+    // Last player gets last place
+    if(remaining.length===1) GAME.ranking.push(remaining[0]);
+    GAME.over=true;
+    setTimeout(()=>showFinalRanking(),800);
+    return;
+  }
+
+  // Continue game — next turn
+  // Skip eliminated players in nextTurn
   setTimeout(()=>{
-    showModal(isMe?'🏆':'😤',isMe?'VICTOIRE!':'DÉFAITE',
-      isMe?'Félicitations! Vous avez dominé!':`${winner===0?'Vous':AI[winner-1]} a gagné!`,
-      isMe?(STATE.currentMode==='comp'?`+${prize.toLocaleString('fr-FR')} 🪙`:'+200 🪙'):(STATE.currentMode==='comp'?`-${STATE.currentMise.toLocaleString('fr-FR')} 🪙`:''),
-      'REJOUER',()=>{closeModal();findGame();},'QUITTER',()=>{closeModal();showScreen('home');}
-    );
-  },600);
+    // Move to next non-eliminated player
+    let next=(GAME.current+1)%GAME.players;
+    while(GAME.eliminated.includes(next)) next=(next+1)%GAME.players;
+    GAME.current=next;
+    GAME.rolled=false;
+    updateAP();
+    if(GAME.current===STATE.myColor){log('🎲 Votre tour!',PC[STATE.myColor]);enableRoll();}
+    else{log(`Tour de ${AI[GAME.current>STATE.myColor?GAME.current-1:GAME.current]}...`,PC[GAME.current]);disableRoll();setTimeout(()=>aiTurn(GAME.current),1000);}
+  },1200);
+}
+
+function showFinalRanking(){
+  const posLabels=['🥇','🥈','🥉','💀'];
+  const posNames=['1er','2ème','3ème','Dernier'];
+  const myPos=GAME.ranking.indexOf(STATE.myColor);
+  const isFirst=myPos===0;
+  const isLast=myPos===GAME.ranking.length-1&&GAME.players>2;
+
+  // Calculate coins based on position
+  let coinsChange=0;
+  if(STATE.currentMode==='comp'){
+    const pool=STATE.currentMise*STATE.numPlayers;
+    if(myPos===0) coinsChange=Math.floor(pool*.55);       // 1er: 55%
+    else if(myPos===1) coinsChange=Math.floor(pool*.25);  // 2e: 25%
+    else if(myPos===2) coinsChange=0;                     // 3e: break even
+    else coinsChange=-STATE.currentMise;                   // dernier: perd la mise
+    STATE.coins+=coinsChange;
+    if(coinsChange>0) addTx('gain',`${posNames[myPos]} place`,coinsChange);
+    else if(coinsChange<0) addTx('loss',`${posNames[myPos]} place`,coinsChange);
+    updateCUI();
+  }
+
+  // Build ranking display
+  const rankLines=GAME.ranking.map((p,i)=>{
+    const n=p===STATE.myColor?'Vous':AI[p>STATE.myColor?p-1:p];
+    return `${posLabels[i]} ${posNames[i]}: ${n} (${GAME.scores[p]} pts)`;
+  }).join('\n');
+
+  const icon=isFirst?'🏆':isLast&&GAME.players>2?'😤':'🎯';
+  const title=isFirst?'VICTOIRE!':isLast&&GAME.players>2?'DÉFAITE':'PARTIE TERMINÉE';
+  const coinsStr=coinsChange>0?`+${coinsChange.toLocaleString('fr-FR')} 🪙`:coinsChange<0?`${coinsChange.toLocaleString('fr-FR')} 🪙`:'';
+
+  // Show ranking in modal
+  document.getElementById('m-icon').textContent=icon;
+  document.getElementById('m-title').textContent=title;
+  document.getElementById('m-msg').innerHTML=GAME.ranking.map((p,i)=>{
+    const n=p===STATE.myColor?'<b style="color:#FFD700">Vous</b>':(AI[p>STATE.myColor?p-1:p]||'IA');
+    return `${posLabels[i]} <span style="color:${PC[p]}">${n}</span> — ${GAME.scores[p]} pts`;
+  }).join('<br>');
+  const mc=document.getElementById('m-coins');
+  mc.textContent=coinsStr;mc.style.display=coinsStr?'block':'none';
+  const b1=document.getElementById('m-btn1'),b2=document.getElementById('m-btn2');
+  b1.textContent='REJOUER';b1.onclick=()=>{closeModal();findGame();};
+  b2.textContent='ACCUEIL';b2.onclick=()=>{closeModal();showScreen('home');};
+  document.getElementById('modal').classList.add('open');
+}
+
+function endGame(winner){
+  playerFinished(winner);
 }
 
 let logT;
@@ -438,8 +579,10 @@ function updateAP(){
   for(let i=0;i<4;i++){
     const av=document.getElementById(`pa-${i}`);if(!av)continue;
     const isActive=i===GAME.current;
+    const isElim=GAME.eliminated&&GAME.eliminated.includes(i);
     av.style.boxShadow=isActive?`0 0 0 3px ${PCL[i]},0 0 18px ${PCG[i]}`:`0 0 8px ${PCG[i].replace('.5','.2')}`;
     av.style.transform=isActive?'scale(1.22)':'scale(1)';
+    av.style.opacity=isElim?'0.4':'1';
     av.classList.toggle('myturn',isActive);
   }
 }
@@ -486,17 +629,100 @@ function setModeTab(t){document.getElementById('tab-rapide').classList.toggle('a
 function setPlayers(n){STATE.numPlayers=n;[2,3,4].forEach(x=>document.getElementById(`pb${x}`).classList.toggle('active',x===n));updateGP();}
 function setMise(m){STATE.currentMise=m;[100,500,1000,5000].forEach(x=>document.getElementById(`mb${x}`).classList.toggle('active',x===m));updateGP();}
 function updateGP(){document.getElementById('gp-val').textContent=Math.floor(STATE.currentMise*STATE.numPlayers*.95).toLocaleString('fr-FR')+' 🪙';}
-function findGame(){
-  if(STATE.currentMode==='comp'&&STATE.coins<STATE.currentMise){showToast('⚠️ Solde insuffisant!');return;}
-  if(STATE.socket&&STATE.socket.connected)startMM();else startLocalGame();
+
+// ===== COLOR PICKER =====
+const COLOR_NAMES = ['Bleu','Rouge','Vert','Jaune'];
+const COLOR_PAWNS = ['🔵','🔴','🟢','🟡'];
+
+function openColorPicker(){
+  // Reset all cards
+  for(let i=0;i<4;i++){
+    const card=document.getElementById(`cc-${i}`);
+    if(card){
+      card.classList.remove('selected','taken');
+      const status=document.getElementById(`cc-status-${i}`);
+      if(status) status.textContent='Disponible';
+    }
+  }
+  // Pre-select current color
+  selectColor(STATE.myColor);
+  // Mark colors not available based on player count (optional: all available for now)
+  showScreen('color');
 }
-function startLocalGame(){
+
+function selectColor(idx){
+  // Deselect all
+  for(let i=0;i<4;i++){
+    const card=document.getElementById(`cc-${i}`);
+    if(card) card.classList.remove('selected');
+  }
+  // Select chosen
+  const chosen=document.getElementById(`cc-${idx}`);
+  if(chosen) chosen.classList.add('selected');
+  STATE.myColor=idx;
+  // Update preview
+  const pawn=document.getElementById('cp-pawn');
+  if(pawn) pawn.textContent=COLOR_PAWNS[idx];
+  const name=document.getElementById('cp-name');
+  if(name){name.textContent=COLOR_NAMES[idx];name.style.color=PC[idx];}
+}
+
+function confirmColor(){
+  // Now go to actual game
+  startGameWithColor();
+}
+
+function startGameWithColor(){
   showScreen('game');
   document.getElementById('g-np').textContent=STATE.numPlayers;
   document.getElementById('g-mise').textContent=STATE.currentMode==='free'?'Gratuit':STATE.currentMise.toLocaleString('fr-FR')+' 🪙';
+
   initGame(STATE.numPlayers);
-  for(let i=0;i<4;i++){const pi=document.getElementById(`pi-${i}`);if(pi)pi.style.display=i<STATE.numPlayers?'flex':'none';}
-  setupCanvas();GAME.rolled=false;enableRoll();log('🎲 Votre tour — lancez le dé!',PC[0]);
+
+  // Assign player labels based on chosen color
+  // myColor = index of the color the human player uses
+  // All other colors are AI
+  const colorLabels=COLOR_NAMES;
+  for(let i=0;i<4;i++){
+    const piEl=document.getElementById(`pi-${i}`);
+    const paEl=document.getElementById(`pa-${i}`);
+    const pnEl=document.getElementById(`pn-${i}`);
+    const psEl=document.getElementById(`ps-${i}`);
+    if(!piEl) continue;
+    piEl.style.display=i<STATE.numPlayers?'flex':'none';
+    if(paEl){
+      paEl.style.background=PC[i];
+      paEl.style.boxShadow=`0 0 10px ${PCG[i].replace('.5','.3')}`;
+      paEl.textContent=i===STATE.myColor?'MOI':`P${i+1}`;
+    }
+    if(pnEl) pnEl.textContent=i===STATE.myColor?'Vous':(AI[i>STATE.myColor?i-1:i]||`IA ${i+1}`);
+    if(psEl){psEl.textContent='0 pts';psEl.style.color=PCL[i];}
+  }
+
+  setupCanvas();
+  GAME.rolled=false;
+
+  // Start with human player's color
+  GAME.current=STATE.myColor;
+  updateAP();
+
+  if(GAME.current===STATE.myColor){
+    enableRoll();
+    log('🎲 Votre tour — lancez le dé!',PC[STATE.myColor]);
+  } else {
+    disableRoll();
+    setTimeout(()=>aiTurn(GAME.current),1000);
+  }
+}
+
+function findGame(){
+  if(STATE.currentMode==='comp'&&STATE.coins<STATE.currentMise){showToast('⚠️ Solde insuffisant!');return;}
+  // Show color picker before starting
+  openColorPicker();
+}
+function startLocalGame(){
+  // Called from matchmaking or directly - uses current myColor
+  startGameWithColor();
 }
 function startMM(){
   showScreen('matchmaking');

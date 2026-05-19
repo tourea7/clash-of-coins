@@ -369,6 +369,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff
 .sc-val{font-size:30px;font-weight:700;color:var(--gold);text-shadow:0 0 10px var(--gglow)}
 .sc-lbl{font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
 .prof-btns{padding:0 14px}
+
+/* ===== COLOR PICKER SCREEN ===== */
+#scr-color{background:linear-gradient(180deg,#0d0d18,#080810)}
+.color-pick-wrap{padding:20px 14px;flex:1;display:flex;flex-direction:column;gap:16px}
+.color-pick-title{text-align:center;font-size:13px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;font-weight:700}
+.color-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.color-card{border-radius:20px;padding:20px 14px;text-align:center;cursor:pointer;transition:all .25s;border:3px solid transparent;position:relative;overflow:hidden}
+.color-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.12),transparent 60%);pointer-events:none}
+.color-card:hover{transform:translateY(-4px)}
+.color-card:active{transform:scale(.96)}
+.color-card.selected{border-width:3px}
+.color-card.taken{opacity:.45;cursor:not-allowed}
+.cc-icon{font-size:52px;margin-bottom:8px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6))}
+.cc-name{font-family:'Anton',sans-serif;font-size:16px;letter-spacing:2px;margin-bottom:4px}
+.cc-status{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:1px;text-transform:uppercase}
+.cc-check{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:#FFD700;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#000;opacity:0;transition:all .2s}
+.color-card.selected .cc-check{opacity:1}
+.color-confirm-wrap{padding:0 14px 16px}
+.color-preview{background:rgba(255,255,255,.04);border-radius:16px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.cp-pawn{font-size:32px;transition:all .3s}
+.cp-text{font-size:13px;color:rgba(255,255,255,.5)}.cp-text b{color:#fff;font-size:15px}
 </style>
 </head>
 <body>
@@ -700,6 +721,61 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff
     <button class="ni" onclick="navTo('tournaments',this)"><div class="ni-ic">🏆</div><div class="ni-lb">Tournois</div></button>
     <button class="ni" onclick="navTo('wallet',this)"><div class="ni-ic">👛</div><div class="ni-lb">Wallet</div></button>
     <button class="ni active"><div class="ni-ic">👤</div><div class="ni-lb">Profil</div></button>
+  </div>
+</div>
+
+
+<!-- ===== COLOR PICKER ===== -->
+<div class="screen" id="scr-color">
+  <div class="shdr"><button class="bk" onclick="showScreen('mode')">←</button><div class="shdr-title">CHOISIR SA COULEUR</div></div>
+  <div class="color-pick-wrap">
+    <div class="color-pick-title">Quelle couleur voulez-vous jouer?</div>
+    <div class="color-grid">
+      <div class="color-card" id="cc-0"
+           style="background:linear-gradient(145deg,#0033aa,#1155ee);border-color:rgba(26,111,255,.5)"
+           onclick="selectColor(0)">
+        <div class="cc-check">✓</div>
+        <div class="cc-icon">🔵</div>
+        <div class="cc-name" style="color:#77aaff">BLEU</div>
+        <div class="cc-status" id="cc-status-0">Disponible</div>
+      </div>
+      <div class="color-card" id="cc-1"
+           style="background:linear-gradient(145deg,#aa0000,#dd2222);border-color:rgba(238,17,17,.5)"
+           onclick="selectColor(1)">
+        <div class="cc-check">✓</div>
+        <div class="cc-icon">🔴</div>
+        <div class="cc-name" style="color:#ff7777">ROUGE</div>
+        <div class="cc-status" id="cc-status-1">Disponible</div>
+      </div>
+      <div class="color-card" id="cc-2"
+           style="background:linear-gradient(145deg,#007722,#00aa33);border-color:rgba(0,187,51,.5)"
+           onclick="selectColor(2)">
+        <div class="cc-check">✓</div>
+        <div class="cc-icon">🟢</div>
+        <div class="cc-name" style="color:#66ff88">VERT</div>
+        <div class="cc-status" id="cc-status-2">Disponible</div>
+      </div>
+      <div class="color-card" id="cc-3"
+           style="background:linear-gradient(145deg,#aa7700,#ddaa00);border-color:rgba(221,170,0,.5)"
+           onclick="selectColor(3)">
+        <div class="cc-check">✓</div>
+        <div class="cc-icon">🟡</div>
+        <div class="cc-name" style="color:#ffdd55">JAUNE</div>
+        <div class="cc-status" id="cc-status-3">Disponible</div>
+      </div>
+    </div>
+
+    <div class="color-preview">
+      <div class="cp-pawn" id="cp-pawn">🔵</div>
+      <div class="cp-text">Vous jouez avec la couleur <b id="cp-name">Bleu</b></div>
+    </div>
+
+    <div class="color-confirm-wrap">
+      <button class="btn-find" id="color-confirm-btn" onclick="confirmColor()">
+        CONFIRMER ⚡
+      </button>
+      <div class="mfooter" style="margin-top:12px">Les autres couleurs seront jouées par l'IA</div>
+    </div>
   </div>
 </div>
 
