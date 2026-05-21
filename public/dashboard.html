@@ -674,11 +674,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff
   <div class="scroll" style="padding-bottom:80px">
     <div class="prof-hero">
       <div class="prof-av-wrap">
-        <div class="prof-av">SK</div>
-        <div class="prof-lv-badge">Niveau 24</div>
+        <div class="prof-av" id="prof-av-display">👑</div>
+        <div class="prof-lv-badge" id="prof-lv-display">Niveau 1</div>
       </div>
-      <div class="prof-name">...</div>
-      <div class="prof-since">...</div>
+      <div class="prof-name" id="prof-name-display">Chargement...</div>
+      <div class="prof-since" id="prof-since-display">Membre depuis...</div>
     </div>
     <div class="stat-grid">
       <div class="sc-card"><div class="sc-val"><span id="stat-parties">0</span></div><div class="sc-lbl">Parties jouées</div></div>
@@ -817,6 +817,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Update profile screen with REAL data from Supabase
   if(CURRENT_PROFILE) {
+    // Direct profile screen updates
+    const pavEl = document.getElementById('prof-av-display');
+    if(pavEl) pavEl.textContent = CURRENT_PROFILE.avatar_url || '👑';
+    const plvEl = document.getElementById('prof-lv-display');
+    if(plvEl) plvEl.textContent = 'Niveau ' + (CURRENT_PROFILE.level || 1);
+    const pnmEl = document.getElementById('prof-name-display');
+    if(pnmEl) pnmEl.textContent = CURRENT_PROFILE.username || '...';
+    const psnEl = document.getElementById('prof-since-display');
+    if(psnEl){
+      const d = new Date(CURRENT_USER?.created_at || Date.now());
+      psnEl.textContent = 'Membre depuis ' + d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+    }
     // Name
     const profName = document.querySelector('.prof-name');
     if(profName) profName.textContent = CURRENT_PROFILE.username || '...';
