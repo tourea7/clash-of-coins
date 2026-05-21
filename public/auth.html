@@ -1,365 +1,344 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Clash of Coins — Connexion</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Rajdhani:wght@500;600;700&family=Anton&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--gold:#FFD700;--gold2:#FFA500;--gdark:#8B5E00;--gglow:rgba(255,215,0,.3);--bg:#0a0a0f;--panel:#111118;--bdr:rgba(255,255,255,.07)}
-html,body{width:100%;min-height:100%;background:var(--bg);color:#fff;font-family:'Rajdhani',sans-serif;overflow-x:hidden}
-.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 50% 0%,#1a1000 0%,#07070f 60%)}
-.logo{text-align:center;margin-bottom:28px}
-.logo-crown{font-size:52px;display:block;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 24px var(--gold))}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.logo-text{font-family:'Anton',sans-serif;font-size:46px;letter-spacing:4px;background:linear-gradient(180deg,#fff9cc,#FFD700 40%,#FF8C00 80%,#cc5500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.logo-of{display:block;font-size:11px;color:rgba(255,215,0,.5);letter-spacing:6px;margin:1px 0}
-.logo-slogan{font-size:11px;color:rgba(255,255,255,.3);letter-spacing:3px;text-transform:uppercase;margin-top:8px}
-.auth-card{width:100%;max-width:400px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 24px}
-.tabs{display:flex;background:rgba(255,255,255,.04);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.06);margin-bottom:24px}
-.tab{flex:1;padding:11px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;color:rgba(255,255,255,.4);transition:all .2s;text-transform:uppercase;letter-spacing:.5px;border:none;background:none}
-.tab.active{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000}
-.form-group{margin-bottom:16px}
-.form-label{font-size:11px;color:rgba(255,255,255,.5);letter-spacing:1px;text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px}
-.form-input{width:100%;padding:13px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:500;outline:none;transition:all .2s}
-.form-input:focus{border-color:rgba(255,215,0,.4);background:rgba(255,215,0,.04)}
-.form-input::placeholder{color:rgba(255,255,255,.25)}
-.input-wrap{position:relative}
-.input-wrap .form-input{padding-right:44px}
-.pwd-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,.35);cursor:pointer;font-size:16px;padding:4px}
-.btn-submit{width:100%;padding:16px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-family:'Anton',sans-serif;font-size:19px;letter-spacing:3px;border:none;border-radius:50px;cursor:pointer;transition:all .2s;box-shadow:0 6px 28px rgba(255,165,0,.35),0 2px 0 #8B4000;margin-top:8px;text-transform:uppercase}
-.btn-submit:hover{transform:translateY(-2px)}
-.btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.divider{display:flex;align-items:center;gap:12px;margin:18px 0}
-.div-line{flex:1;height:1px;background:rgba(255,255,255,.08)}
-.div-txt{font-size:11px;color:rgba(255,255,255,.25)}
-.btn-google{width:100%;padding:13px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px}
-.btn-google:hover{border-color:rgba(255,215,0,.3);background:rgba(255,215,0,.05)}
-.msg{padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:16px;display:none}
-.msg.show{display:block}
-.msg-err{background:rgba(255,60,60,.1);border:1px solid rgba(255,60,60,.25);color:#ff8888}
-.msg-ok{background:rgba(0,200,68,.1);border:1px solid rgba(0,200,68,.25);color:#44ff88}
-.forgot{text-align:right;margin-top:-8px;margin-bottom:16px}
-.forgot a{font-size:11px;color:rgba(255,215,0,.5);cursor:pointer;text-decoration:none}
-.terms{font-size:10px;color:rgba(255,255,255,.2);text-align:center;margin-top:16px;line-height:1.6}
-.terms a{color:rgba(255,215,0,.4)}
-.ld-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:14px;backdrop-filter:blur(4px)}
-.ld-overlay.show{display:flex}
-.ld-spinner{width:44px;height:44px;border:3px solid rgba(255,215,0,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.ld-msg{font-size:14px;color:rgba(255,255,255,.6)}
-.avatar-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
-.av-opt{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:2.5px solid transparent;transition:all .2s;background:rgba(255,255,255,.06)}
-.av-opt:hover{transform:scale(1.1)}
-.av-opt.selected{border-color:var(--gold);background:rgba(255,215,0,.12)}
-.strength{margin-top:6px;display:flex;gap:4px;align-items:center}
-.str-seg{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.1);transition:background .3s}
-.str-lbl{font-size:9px;color:rgba(255,255,255,.3);white-space:nowrap}
-</style>
-</head>
-<body>
+// ============================================================
+// CLASH OF COINS — auth.js v2
+// Chargement sécurisé des clés depuis le serveur
+// ============================================================
 
-<div class="ld-overlay" id="ld">
-  <div class="ld-spinner"></div>
-  <div class="ld-msg" id="ld-msg">Connexion en cours...</div>
-</div>
+let _supabase = null;
+let CURRENT_USER = null;
+let CURRENT_PROFILE = null;
 
-<div class="page">
-  <div class="logo">
-    <span class="logo-crown">👑</span>
-    <div class="logo-text">CLASH<span class="logo-of">OF</span>COINS</div>
-    <div class="logo-slogan">Joue · Gagne · Domine</div>
-  </div>
-
-  <div class="auth-card">
-    <div class="tabs">
-      <button class="tab active" id="tab-login" onclick="switchTab('login')">Connexion</button>
-      <button class="tab" id="tab-register" onclick="switchTab('register')">Inscription</button>
-    </div>
-
-    <div class="msg msg-err" id="msg-err"></div>
-    <div class="msg msg-ok" id="msg-ok"></div>
-
-    <!-- LOGIN -->
-    <div id="form-login">
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input class="form-input" id="login-email" type="email" placeholder="votre@email.com" autocomplete="email">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Mot de passe</label>
-        <div class="input-wrap">
-          <input class="form-input" id="login-pwd" type="password" placeholder="••••••••" autocomplete="current-password">
-          <button class="pwd-toggle" onclick="togglePwd('login-pwd',this)" tabindex="-1">👁</button>
-        </div>
-      </div>
-      <div class="forgot"><a onclick="forgotPassword()">Mot de passe oublié?</a></div>
-      <button class="btn-submit" id="btn-login" onclick="doLogin()">SE CONNECTER</button>
-      <div class="divider"><div class="div-line"></div><span class="div-txt">ou</span><div class="div-line"></div></div>
-      <button class="btn-google" onclick="loginGoogle()"><span style="font-size:18px">🔍</span> Continuer avec Google</button>
-    </div>
-
-    <!-- REGISTER -->
-    <div id="form-register" style="display:none">
-      <div class="form-group">
-        <label class="form-label">Nom d'utilisateur</label>
-        <input class="form-input" id="reg-username" type="text" placeholder="MonPseudo123" autocomplete="username" oninput="checkUsername(this.value)">
-        <div style="font-size:10px;color:rgba(255,255,255,.25);margin-top:4px" id="username-hint">3-20 caractères, lettres et chiffres uniquement</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input class="form-input" id="reg-email" type="email" placeholder="votre@email.com" autocomplete="email">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Téléphone (optionnel)</label>
-        <input class="form-input" id="reg-phone" type="tel" placeholder="+225 07 XX XX XX XX">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Mot de passe</label>
-        <div class="input-wrap">
-          <input class="form-input" id="reg-pwd" type="password" placeholder="8 caractères minimum" autocomplete="new-password" oninput="checkStrength(this.value)">
-          <button class="pwd-toggle" onclick="togglePwd('reg-pwd',this)" tabindex="-1">👁</button>
-        </div>
-        <div class="strength">
-          <div class="str-seg" id="s1"></div><div class="str-seg" id="s2"></div>
-          <div class="str-seg" id="s3"></div><div class="str-seg" id="s4"></div>
-          <span class="str-lbl" id="str-lbl"></span>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Confirmer le mot de passe</label>
-        <div class="input-wrap">
-          <input class="form-input" id="reg-pwd2" type="password" placeholder="••••••••" autocomplete="new-password">
-          <button class="pwd-toggle" onclick="togglePwd('reg-pwd2',this)" tabindex="-1">👁</button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Choisir un avatar</label>
-        <div class="avatar-grid" id="avatar-grid"></div>
-      </div>
-      <button class="btn-submit" id="btn-register" onclick="doRegister()">CRÉER MON COMPTE</button>
-      <div class="divider"><div class="div-line"></div><span class="div-txt">ou</span><div class="div-line"></div></div>
-      <button class="btn-google" onclick="loginGoogle()"><span style="font-size:18px">🔍</span> S'inscrire avec Google</button>
-    </div>
-
-    <div class="terms">En continuant, vous acceptez nos <a href="#">Conditions d'utilisation</a></div>
-  </div>
-</div>
-
-<script>
-const AVATARS = ['👑','🦁','🐯','🦊','🐺','🦅','🐲','💎','⚡','🔥','🌙','⭐'];
-let selectedAvatar = '👑';
-let _sb = null;
-
-// Charge Supabase depuis le serveur (pas de clés dans le code)
-async function getSB(){
-  if(_sb) return _sb;
+// Charge la config depuis le serveur (les clés ne sont jamais dans le code)
+async function getSupabase(){
+  if(_supabase) return _supabase;
   try {
     const res = await fetch('/api/config');
-    const cfg = await res.json();
-    _sb = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon);
+    const config = await res.json();
+    _supabase = window.supabase.createClient(config.supabase_url, config.supabase_anon);
   } catch(e) {
-    showErr('Erreur de connexion au serveur. Réessayez dans quelques secondes.');
+    console.error('Config load failed:', e);
+    // Fallback pour développement local
+    _supabase = window.supabase.createClient(
+      'https://zkmlcqrsvzgngvtihakl.supabase.co',
+      window.__SUPABASE_ANON__ || ''
+    );
   }
-  return _sb;
+  return _supabase;
 }
 
-function initAvatars(){
-  const grid = document.getElementById('avatar-grid');
-  if(!grid) return;
-  grid.innerHTML = '';
-  AVATARS.forEach(av => {
+
+// ===== POPUP CHOIX PSEUDO (pour nouveaux joueurs Google) =====
+function showUsernamePopup(user, onComplete){
+  // Create popup overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'username-popup';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:99999;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Rajdhani',sans-serif;
+  `;
+
+  const suggestedName = (user.user_metadata?.full_name || user.email?.split('@')[0] || '')
+    .replace(/[^a-zA-Z0-9_]/g,'_').slice(0,20);
+
+  overlay.innerHTML = `
+    <div style="background:#111118;border:1px solid rgba(255,215,0,.2);border-radius:20px;padding:32px 24px;width:360px;max-width:92vw;text-align:center">
+      <div style="font-size:48px;margin-bottom:12px">👋</div>
+      <div style="font-family:'Anton',sans-serif;font-size:22px;color:#FFD700;letter-spacing:2px;margin-bottom:8px">BIENVENUE!</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:24px;line-height:1.6">
+        Choisissez votre pseudo pour commencer à jouer
+      </div>
+      <div style="margin-bottom:8px">
+        <input id="popup-username" type="text" value="${suggestedName}"
+          style="width:100%;padding:13px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,215,0,.3);border-radius:12px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;outline:none;text-align:center;letter-spacing:1px"
+          maxlength="20" oninput="validatePopupUsername(this.value)">
+        <div id="popup-hint" style="font-size:10px;color:#44ff88;margin-top:6px">✓ Nom d'utilisateur valide</div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:8px">Choisir un avatar</div>
+        <div id="popup-avatars" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"></div>
+      </div>
+      <button id="popup-confirm" onclick="confirmUsernamePopup()"
+        style="width:100%;padding:14px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-family:'Anton',sans-serif;font-size:17px;letter-spacing:2px;border:none;border-radius:40px;cursor:pointer;box-shadow:0 6px 20px rgba(255,165,0,.3)">
+        COMMENCER À JOUER ⚡
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Init avatars in popup
+  const AVTS = ['👑','🦁','🐯','🦊','🐺','🦅','🐲','💎','⚡','🔥','🌙','⭐'];
+  let popupAvatar = '👑';
+  const grid = document.getElementById('popup-avatars');
+  AVTS.forEach(av => {
     const el = document.createElement('div');
-    el.className = 'av-opt' + (av === selectedAvatar ? ' selected' : '');
     el.textContent = av;
+    el.style.cssText = `width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${av==='👑'?'#FFD700':'transparent'};background:rgba(255,255,255,.06);transition:all .2s`;
     el.onclick = () => {
-      document.querySelectorAll('.av-opt').forEach(a => a.classList.remove('selected'));
-      el.classList.add('selected');
-      selectedAvatar = av;
+      document.querySelectorAll('#popup-avatars div').forEach(a => {
+        a.style.borderColor='transparent'; a.style.background='rgba(255,255,255,.06)';
+      });
+      el.style.borderColor='#FFD700'; el.style.background='rgba(255,215,0,.15)';
+      popupAvatar = av;
     };
     grid.appendChild(el);
   });
+
+  window._popupCallback = onComplete;
+  window._popupAvatar = () => popupAvatar;
 }
 
-
-const ADMIN_EMAILS = ['horizonmanagement24@gmail.com'];
-
-async function redirectAfterLogin(user){
-  if(!user) { window.location.href = '/auth.html'; return; }
-
-  if(ADMIN_EMAILS.includes(user.email)){
-    // Admin → go to admin dashboard
-    setLoading(true, 'Accès admin — chargement...');
-    window.location.href = '/admin.html';
-  } else {
-    // Regular player → go to game dashboard
-    setLoading(true, 'Chargement de votre dashboard...');
-    window.location.href = '/dashboard.html';
-  }
+function validatePopupUsername(val){
+  const hint = document.getElementById('popup-hint');
+  const btn = document.getElementById('popup-confirm');
+  const ok = /^[a-zA-Z0-9_]{3,20}$/.test(val);
+  hint.style.color = ok ? '#44ff88' : '#ff6666';
+  hint.textContent = ok ? '✓ Nom valide' : '✗ 3-20 caractères, lettres et chiffres uniquement';
+  if(btn) btn.disabled = !ok;
 }
 
-// Vérifie session au chargement
-async function checkSession(){
-  const sb = await getSB();
-  if(!sb) return;
+async function confirmUsernamePopup(){
+  const username = document.getElementById('popup-username').value.trim();
+  if(!/^[a-zA-Z0-9_]{3,20}$/.test(username)) return;
+  const avatar = window._popupAvatar ? window._popupAvatar() : '👑';
 
-  // Handle OAuth callback (access_token in URL hash)
-  if(window.location.hash.includes('access_token')){
-    setLoading(true, 'Finalisation de la connexion...');
-    // Let Supabase handle the token from URL
-    const { data: { session }, error } = await sb.auth.getSession();
-    if(session){
-      // Create profile if needed
-      await ensureProfile(sb, session.user);
-      setLoading(true, 'Connexion réussie! 🎉');
-      setTimeout(() => { window.location.hash = ''; redirectAfterLogin(session.user); }, 1000);
-      return;
-    }
-  }
+  // Update profile in DB
+  const sb = await getSupabase();
+  await sb.from('players').update({ username, avatar_url: avatar }).eq('id', CURRENT_USER.id);
 
+  // Update local profile
+  if(CURRENT_PROFILE){ CURRENT_PROFILE.username = username; CURRENT_PROFILE.avatar_url = avatar; }
+  if(typeof STATE !== 'undefined'){ STATE.username = username; STATE.initials = username.slice(0,2).toUpperCase(); }
+
+  // Remove popup
+  const popup = document.getElementById('username-popup');
+  if(popup) popup.remove();
+
+  // Execute callback
+  if(window._popupCallback) window._popupCallback();
+}
+
+// Vérifie la session au chargement
+async function initAuth(){
+  const sb = await getSupabase();
   const { data: { session } } = await sb.auth.getSession();
-  if(session){
-    setLoading(true, 'Déjà connecté — redirection...');
-    redirectAfterLogin(session.user);
-    return;
+
+  if(!session){
+    window.location.href = '/auth.html';
+    return false;
   }
 
-  // Écoute les connexions
+  CURRENT_USER = session.user;
+  await loadProfile();
+
   sb.auth.onAuthStateChange(async (event, session) => {
-    if(event === 'SIGNED_IN' && session){
-      await ensureProfile(sb, session.user);
-      setLoading(true, 'Connexion réussie! 🎉');
-      setTimeout(() => redirectAfterLogin(session.user), 800);
+    if(event === 'SIGNED_OUT' || !session){
+      window.location.href = '/auth.html';
+    } else if(event === 'TOKEN_REFRESHED'){
+      CURRENT_USER = session.user;
     }
   });
-  initAvatars();
+
+  return true;
 }
 
-async function ensureProfile(sb, user){
-  const { data } = await sb.from('players').select('id').eq('id', user.id).single();
-  if(!data){
-    const username = user.user_metadata?.full_name?.replace(/\s+/g,'_') ||
-                     user.email?.split('@')[0] ||
+async function loadProfile(){
+  const sb = await getSupabase();
+  const { data, error } = await sb.from('players')
+    .select('*')
+    .eq('id', CURRENT_USER.id)
+    .single();
+
+  if(error || !data){
+    // Build username from Google name or email
+    const googleName = CURRENT_USER.user_metadata?.full_name ||
+                       CURRENT_USER.user_metadata?.name || '';
+    const username = CURRENT_USER.user_metadata?.username ||
+                     googleName.replace(/\s+/g, '_').slice(0, 20) ||
+                     CURRENT_USER.email?.split('@')[0] ||
                      'Player_' + Math.random().toString(36).slice(2,6);
-    await sb.from('players').upsert({
-      id: user.id,
+
+    const avatar = CURRENT_USER.user_metadata?.avatar_url ? '🌐' : '👑';
+
+    const { data: newProfile } = await sb.from('players').upsert({
+      id: CURRENT_USER.id,
       username,
-      email: user.email,
-      avatar_url: user.user_metadata?.avatar_url ? '👑' : '👑',
+      email: CURRENT_USER.email,
+      avatar_url: avatar,
       coins: 1000,
       level: 1, xp: 0, wins: 0, losses: 0, games_played: 0,
-    }, { onConflict: 'id' });
+    }, { onConflict: 'id' }).select().single();
+    CURRENT_PROFILE = newProfile;
+  } else {
+    CURRENT_PROFILE = data;
+  }
+
+  if(typeof STATE !== 'undefined' && CURRENT_PROFILE){
+    STATE.coins        = CURRENT_PROFILE.coins || 1000;
+    STATE.username     = CURRENT_PROFILE.username || 'Joueur';
+    STATE.initials     = (CURRENT_PROFILE.username || 'JR').slice(0,2).toUpperCase();
+    STATE.userId       = CURRENT_PROFILE.id;
+    STATE.avatar       = CURRENT_PROFILE.avatar_url || '👑';
+    STATE.level        = CURRENT_PROFILE.level || 1;
+    STATE.xp           = CURRENT_PROFILE.xp || 0;
+    STATE.wins         = CURRENT_PROFILE.wins || 0;
+    STATE.games_played = CURRENT_PROFILE.games_played || 0;
+    // Update topbar
+    const tbAv = document.getElementById('tb-av');
+    if(tbAv) tbAv.textContent = STATE.initials;
+    const tbName = document.querySelector('.tb-name');
+    if(tbName) tbName.textContent = STATE.username;
+  }
+
+  // Show username popup for new Google users (username contains @ or looks auto-generated)
+  const needsUsername = CURRENT_PROFILE && (
+    !CURRENT_PROFILE.username ||
+    CURRENT_PROFILE.username.includes('@') ||
+    CURRENT_PROFILE.username.startsWith('Player_')
+  );
+
+  if(needsUsername && CURRENT_USER){
+    // Wait for DOM then show popup
+    setTimeout(() => {
+      showUsernamePopup(CURRENT_USER, () => {
+        // After choosing username, update UI
+        if(typeof updateProfileUI === 'function') updateProfileUI();
+        if(typeof updateCoinsUI === 'function') updateCoinsUI();
+      });
+    }, 500);
   }
 }
 
-checkSession();
-
-function switchTab(t){
-  document.getElementById('tab-login').classList.toggle('active', t==='login');
-  document.getElementById('tab-register').classList.toggle('active', t==='register');
-  document.getElementById('form-login').style.display = t==='login' ? 'block' : 'none';
-  document.getElementById('form-register').style.display = t==='register' ? 'block' : 'none';
-  clearMsgs();
-  if(t==='register'){ initAvatars(); setTimeout(()=>document.getElementById('reg-username').focus(), 100); }
-  else setTimeout(()=>document.getElementById('login-email').focus(), 100);
+async function syncCoinsToDb(newAmount){
+  if(!CURRENT_USER || !CURRENT_PROFILE) return;
+  const sb = await getSupabase();
+  await sb.from('players')
+    .update({ coins: Math.max(0, Math.round(newAmount)), updated_at: new Date().toISOString() })
+    .eq('id', CURRENT_USER.id);
+  if(CURRENT_PROFILE) CURRENT_PROFILE.coins = newAmount;
 }
 
-function showErr(msg){ const e=document.getElementById('msg-err'); e.textContent=msg; e.classList.add('show'); document.getElementById('msg-ok').classList.remove('show'); }
-function showOk(msg){ const e=document.getElementById('msg-ok'); e.textContent=msg; e.classList.add('show'); document.getElementById('msg-err').classList.remove('show'); }
-function clearMsgs(){ document.getElementById('msg-err').classList.remove('show'); document.getElementById('msg-ok').classList.remove('show'); }
-function setLoading(show, msg){ if(msg) document.getElementById('ld-msg').textContent=msg; document.getElementById('ld').classList.toggle('show',show); }
-function togglePwd(id,btn){ const i=document.getElementById(id); if(i.type==='password'){i.type='text';btn.textContent='🙈';}else{i.type='password';btn.textContent='👁';} }
-
-function checkStrength(pwd){
-  let s=0;
-  if(pwd.length>=8)s++; if(/[A-Z]/.test(pwd))s++; if(/[0-9]/.test(pwd))s++; if(/[^A-Za-z0-9]/.test(pwd))s++;
-  const c=['#ff4444','#ff8800','#ffcc00','#00cc44'],l=['Faible','Moyen','Bon','Fort'];
-  for(let i=1;i<=4;i++) document.getElementById('s'+i).style.background=i<=s?c[s-1]:'rgba(255,255,255,.1)';
-  const lbl=document.getElementById('str-lbl'); lbl.textContent=s>0?l[s-1]:''; lbl.style.color=s>0?c[s-1]:'rgba(255,255,255,.3)';
+async function saveTransaction(type, desc, amount){
+  if(!CURRENT_USER) return;
+  const sb = await getSupabase();
+  await sb.from('transactions').insert({
+    player_id: CURRENT_USER.id,
+    username: CURRENT_PROFILE?.username || '',
+    type, amount,
+    description: desc,
+    status: 'completed',
+  });
 }
 
-function checkUsername(val){
-  const h=document.getElementById('username-hint'), ok=/^[a-zA-Z0-9_]{3,20}$/.test(val);
-  h.style.color=val.length===0?'rgba(255,255,255,.25)':ok?'#44ff88':'#ff6666';
-  h.textContent=val.length===0?'3-20 caractères, lettres et chiffres uniquement':ok?"✓ Nom d'utilisateur valide":'✗ 3-20 caractères, lettres, chiffres et _ uniquement';
+async function saveGameResult(data){
+  if(!CURRENT_USER) return;
+  const sb = await getSupabase();
+  await sb.from('players').update({
+    games_played: (CURRENT_PROFILE?.games_played || 0) + 1,
+    wins: (CURRENT_PROFILE?.wins || 0) + (data.won ? 1 : 0),
+    losses: (CURRENT_PROFILE?.losses || 0) + (data.won ? 0 : 1),
+    xp: (CURRENT_PROFILE?.xp || 0) + (data.won ? 100 : 25),
+    coins: Math.max(0, (CURRENT_PROFILE?.coins || 0) + data.coinsChange),
+    updated_at: new Date().toISOString(),
+  }).eq('id', CURRENT_USER.id);
 }
 
-async function doLogin(){
-  clearMsgs();
-  const email=document.getElementById('login-email').value.trim();
-  const pwd=document.getElementById('login-pwd').value;
-  if(!email||!pwd){ showErr('Veuillez remplir tous les champs.'); return; }
-  setLoading(true,'Connexion en cours...');
-  document.getElementById('btn-login').disabled=true;
-  try {
-    const sb=await getSB();
-    const { error }=await sb.auth.signInWithPassword({ email, password:pwd });
-    if(error) throw error;
-  } catch(e) {
-    setLoading(false); document.getElementById('btn-login').disabled=false;
-    const msgs={'Invalid login credentials':'Email ou mot de passe incorrect.','Email not confirmed':'Confirmez votre email avant de vous connecter.','Too many requests':'Trop de tentatives. Attendez quelques minutes.'};
-    showErr(msgs[e.message]||'Erreur: '+e.message);
+async function loadLeaderboard(){
+  const sb = await getSupabase();
+  const { data } = await sb.from('players')
+    .select('username, coins, wins, games_played, level, avatar_url')
+    .order('coins', { ascending: false })
+    .limit(10);
+  return data || [];
+}
+
+async function loadTransactions(){
+  if(!CURRENT_USER) return [];
+  const sb = await getSupabase();
+  const { data } = await sb.from('transactions')
+    .select('*')
+    .eq('player_id', CURRENT_USER.id)
+    .order('created_at', { ascending: false })
+    .limit(20);
+  return data || [];
+}
+
+async function doLogout(){
+  const sb = await getSupabase();
+  await sb.auth.signOut();
+  window.location.href = '/auth.html';
+}
+
+function updateProfileUI(){
+  if(!CURRENT_PROFILE) return;
+  const username = CURRENT_PROFILE.username || 'Joueur';
+  const initials = username.slice(0,2).toUpperCase();
+  const avatar = CURRENT_PROFILE.avatar_url || '👑';
+
+  // Topbar avatar - show initials if no emoji avatar
+  const tbAv = document.getElementById('tb-av');
+  if(tbAv) tbAv.textContent = ['👑','🦁','🐯','🦊','🐺','🦅','🐲','💎','⚡','🔥','🌙','⭐','🌐'].includes(avatar) ? avatar : initials;
+
+  const tbName = document.querySelector('.tb-name');
+  if(tbName) tbName.textContent = username;
+  const xpFill = document.querySelector('.xp-fill');
+  if(xpFill) xpFill.style.width = Math.min(100,((CURRENT_PROFILE.xp%1000)/1000)*100)+'%';
+  const xpTxt = document.querySelector('.xp-txt');
+  if(xpTxt) xpTxt.textContent = `${CURRENT_PROFILE.xp%1000}/1000`;
+  const lvBadge = document.querySelector('.tb-lv');
+  if(lvBadge) lvBadge.textContent = 'Niv.'+(CURRENT_PROFILE.level||1);
+  const profAv = document.querySelector('.prof-av');
+  if(profAv) profAv.textContent = CURRENT_PROFILE.avatar_url || '👑';
+  const profName = document.querySelector('.prof-name');
+  if(profName) profName.textContent = CURRENT_PROFILE.username;
+  const profLv = document.querySelector('.prof-lv-badge');
+  if(profLv) profLv.textContent = 'Niveau '+(CURRENT_PROFILE.level||1);
+  const scVals = document.querySelectorAll('.sc-val');
+  if(scVals[0]) scVals[0].textContent = CURRENT_PROFILE.games_played || 0;
+  if(scVals[1]) scVals[1].textContent = CURRENT_PROFILE.wins || 0;
+  if(scVals[2]) scVals[2].textContent = CURRENT_PROFILE.games_played > 0
+    ? Math.round((CURRENT_PROFILE.wins/CURRENT_PROFILE.games_played)*100)+'%' : '0%';
+  if(scVals[3]) scVals[3].textContent = (CURRENT_PROFILE.coins||0).toLocaleString('fr-FR');
+}
+
+async function renderRealLeaderboard(){
+  const lb = await loadLeaderboard();
+  const lbCard = document.querySelector('.lb-card');
+  if(!lbCard || !lb.length) return;
+  const medals = ['🥇','🥈','🥉'];
+  const rows = lb.slice(0,4).map((p,i) => {
+    const isMe = p.username === CURRENT_PROFILE?.username;
+    return `<div class="lb-row" ${isMe?'style="background:rgba(255,215,0,.04)"':''}>
+      <div class="lb-rank">${i+1}</div>
+      <div class="lb-av" style="background:rgba(255,255,255,.06);font-size:${medals[i]?'16':'12'}px">${medals[i]||p.avatar_url||'👤'}</div>
+      <div class="lb-info">
+        <div class="lb-name">${isMe?'<b style="color:var(--gold)">Vous</b>':p.username}</div>
+        <div class="lb-stats">${p.games_played||0} parties · ${p.wins||0} victoires</div>
+      </div>
+      <div class="lb-coins-val">${(p.coins||0).toLocaleString('fr-FR')} 🪙</div>
+    </div>`;
+  }).join('');
+  const hdr = lbCard.querySelector('.lb-hdr');
+  lbCard.innerHTML = '';
+  if(hdr) lbCard.appendChild(hdr);
+  lbCard.insertAdjacentHTML('beforeend', rows);
+}
+
+async function renderRealTransactions(){
+  const txs = await loadTransactions();
+  const list = document.getElementById('tx-list');
+  if(!list) return;
+  if(!txs.length){
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:13px">Aucune transaction</div>';
+    return;
   }
+  list.innerHTML = txs.map(t => {
+    const isGain = t.amount > 0;
+    const date = new Date(t.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    return `<div class="tx-row">
+      <div class="tx-icon ${isGain?'tx-g':'tx-l'}">${isGain?'↑':'↓'}</div>
+      <div class="tx-info"><div class="tx-desc">${t.description||t.type}</div><div class="tx-date">${date}</div></div>
+      <div class="tx-amt ${isGain?'tx-pos':'tx-neg'}">${isGain?'+':''}${t.amount.toLocaleString('fr-FR')} 🪙</div>
+    </div>`;
+  }).join('');
 }
-
-async function doRegister(){
-  clearMsgs();
-  const username=document.getElementById('reg-username').value.trim();
-  const email=document.getElementById('reg-email').value.trim();
-  const phone=document.getElementById('reg-phone').value.trim();
-  const pwd=document.getElementById('reg-pwd').value;
-  const pwd2=document.getElementById('reg-pwd2').value;
-  if(!username||!email||!pwd){ showErr('Veuillez remplir tous les champs obligatoires.'); return; }
-  if(!/^[a-zA-Z0-9_]{3,20}$/.test(username)){ showErr("Nom d'utilisateur invalide."); return; }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showErr('Email invalide.'); return; }
-  if(pwd.length<8){ showErr('Mot de passe trop court (8 caractères minimum).'); return; }
-  if(pwd!==pwd2){ showErr('Les mots de passe ne correspondent pas.'); return; }
-  setLoading(true,'Création du compte...');
-  document.getElementById('btn-register').disabled=true;
-  try {
-    const sb=await getSB();
-    const { data, error }=await sb.auth.signUp({ email, password:pwd, options:{ data:{ username, avatar:selectedAvatar, phone } } });
-    if(error) throw error;
-    if(data.user){
-      try {
-        await sb.from('players').upsert({ id:data.user.id, username, email, phone:phone||null, avatar_url:selectedAvatar, coins:1000, level:1, xp:0, wins:0, losses:0, games_played:0 }, { onConflict:'id' });
-      } catch(pe){ console.warn('Profile warn:',pe); }
-    }
-    setLoading(false); document.getElementById('btn-register').disabled=false;
-    if(data.session){ showOk('Compte créé! Redirection...'); setTimeout(()=>window.location.href='/',1200); }
-    else { showOk('✅ Compte créé! Vérifiez votre email pour confirmer.'); document.getElementById('btn-register').textContent='EMAIL ENVOYÉ ✓'; }
-  } catch(e) {
-    setLoading(false); document.getElementById('btn-register').disabled=false;
-    const msgs={'User already registered':'Un compte existe déjà avec cet email.'};
-    showErr(msgs[e.message]||'Erreur: '+e.message);
-  }
-}
-
-async function loginGoogle(){
-  const sb=await getSB(); if(!sb) return;
-  setLoading(true,'Redirection vers Google...');
-  const { error }=await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo:window.location.origin } });
-  if(error){ setLoading(false); showErr('Erreur Google: '+error.message); }
-}
-
-async function forgotPassword(){
-  const email=document.getElementById('login-email').value.trim();
-  if(!email){ showErr("Entrez votre email d'abord."); return; }
-  setLoading(true,'Envoi du lien...');
-  const sb=await getSB();
-  const { error }=await sb.auth.resetPasswordForEmail(email,{ redirectTo:window.location.origin+'/reset-password' });
-  setLoading(false);
-  if(error) showErr(error.message);
-  else showOk('✅ Lien envoyé à '+email);
-}
-
-document.addEventListener('keydown', e => {
-  if(e.key!=='Enter') return;
-  if(document.getElementById('tab-login').classList.contains('active')) doLogin();
-  else doRegister();
-});
-</script>
-</body>
-</html>
