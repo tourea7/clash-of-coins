@@ -809,26 +809,57 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ✅ Logged in - show player dashboard
   document.getElementById('scr-home').classList.add('active');
 
-  // Update all UI with real profile data
+  // updateCoinsUI and updateProfileUI are already called inside initAuth -> loadProfile
+  // But call them again here to be sure
   updateCoinsUI();
-  updateProfileUI();
-  renderRealLeaderboard();
-  renderRealTransactions();
 
-  // Update profile screen with REAL data from Supabase
-  if(CURRENT_PROFILE) {
-    // Direct profile screen updates
-    const pavEl = document.getElementById('prof-av-display');
-    if(pavEl) pavEl.textContent = CURRENT_PROFILE.avatar_url || '👑';
-    const plvEl = document.getElementById('prof-lv-display');
-    if(plvEl) plvEl.textContent = 'Niveau ' + (CURRENT_PROFILE.level || 1);
-    const pnmEl = document.getElementById('prof-name-display');
-    if(pnmEl) pnmEl.textContent = CURRENT_PROFILE.username || '...';
-    const psnEl = document.getElementById('prof-since-display');
-    if(psnEl){
-      const d = new Date(CURRENT_USER?.created_at || Date.now());
-      psnEl.textContent = 'Membre depuis ' + d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  // Wait a tiny bit for CURRENT_PROFILE to be fully loaded
+  setTimeout(() => {
+    if(CURRENT_PROFILE) {
+      // Topbar
+      updateProfileUI();
+      updateCoinsUI();
+
+      // Profile screen
+      const pavEl = document.getElementById('prof-av-display');
+      if(pavEl) pavEl.textContent = CURRENT_PROFILE.avatar_url || '👑';
+      const plvEl = document.getElementById('prof-lv-display');
+      if(plvEl) plvEl.textContent = 'Niveau ' + (CURRENT_PROFILE.level || 1);
+      const pnmEl = document.getElementById('prof-name-display');
+      if(pnmEl) pnmEl.textContent = CURRENT_PROFILE.username || '...';
+      const psnEl = document.getElementById('prof-since-display');
+      if(psnEl){
+        const d = new Date(CURRENT_USER?.created_at || Date.now());
+        psnEl.textContent = 'Membre depuis ' + d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+      }
     }
+    renderRealLeaderboard();
+    renderRealTransactions();
+  }, 300);
+
+  // Also update profile when scr-profile is shown
+  const origShowScreen = window.showScreen;
+  if(typeof showScreen === 'function'){
+    const _orig = showScreen;
+    window.showScreen = function(name){
+      _orig(name);
+      if(name === 'profile' && CURRENT_PROFILE){
+        const pavEl = document.getElementById('prof-av-display');
+        if(pavEl) pavEl.textContent = CURRENT_PROFILE.avatar_url || '👑';
+        const plvEl = document.getElementById('prof-lv-display');
+        if(plvEl) plvEl.textContent = 'Niveau ' + (CURRENT_PROFILE.level || 1);
+        const pnmEl = document.getElementById('prof-name-display');
+        if(pnmEl) pnmEl.textContent = CURRENT_PROFILE.username || '...';
+        const psnEl = document.getElementById('prof-since-display');
+        if(psnEl){
+          const d = new Date(CURRENT_USER?.created_at || Date.now());
+          psnEl.textContent = 'Membre depuis ' + d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+        }
+      }
+    };
+  }
+
+  if(CURRENT_PROFILE) {
     // Name
     const profName = document.querySelector('.prof-name');
     if(profName) profName.textContent = CURRENT_PROFILE.username || '...';
