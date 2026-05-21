@@ -190,10 +190,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 // ===== SUPABASE =====
-const sb = window.supabase.createClient(
-  'https://zkmlcqrsvzgngvtihakl.supabase.co',
-  'CLEF_SUPPRIMEEOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprbWxjcXJzdnpnbmd2dGloYWtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODIxMzMsImV4cCI6MjA5NDE1ODEzM30.m9oRQUdfzT_qTQ5TI14UpP0L2vE2CiATG_-GBzBh_l8'
-);
+let sb = null;
+async function initSB(){
+  if(sb) return sb;
+  const cfg = await fetch('/api/config').then(r=>r.json());
+  sb = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon);
+  return sb;
+}
 
 // ADMIN EMAILS (à configurer)
 const ADMIN_EMAILS = ['admin@clashofcoins.ci', 'sidick@clashofcoins.ci'];
@@ -203,6 +206,7 @@ let currentPage = 'dashboard';
 
 // ===== INIT =====
 async function init(){
+  await initSB();
   const { data: { session } } = await sb.auth.getSession();
   if(!session){
     window.location.href = '/auth.html';
@@ -563,7 +567,7 @@ function showToast(msg){
   t.textContent=msg;t.style.opacity='1';clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity='0',3000);
 }
 
-async function adminLogout(){ await sb.auth.signOut(); window.location.href='/auth.html'; }
+async function adminLogout(){ await initSB(); await sb.auth.signOut(); window.location.href='/auth.html'; }
 
 // START
 init();

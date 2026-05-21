@@ -28,6 +28,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ===== CONFIG ROUTE (safe - only sends public keys) =====
+app.get('/api/config', (req, res) => {
+  res.json({
+    supabase_url: process.env.SUPABASE_URL || '',
+    supabase_anon: process.env.SUPABASE_ANON_KEY || '',
+    // NEVER send SUPABASE_SERVICE_ROLE_KEY here
+  });
+});
+
+
+
 // ===== IN-MEMORY STATE =====
 const connectedPlayers = new Map(); // socketId -> player info
 const matchQueues = new Map();      // "mode_mise_players" -> [socketId, ...]
