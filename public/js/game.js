@@ -1,5 +1,5 @@
 // CLASH OF COINS — game.js v4.0 — Full Ludo King Style
-const STATE={coins:15350,username:'Sidick Kone',currentMode:'free',currentMise:500,numPlayers:4,myColor:0,socket:null,mmTimeout:null,
+const STATE={coins:1000,username:'Joueur',currentMode:'free',currentMise:500,numPlayers:4,myColor:0,socket:null,mmTimeout:null,
 transactions:[
   {type:'gain',desc:'Partie gagnée',date:"12 Mai 2024 · 14:35",amount:2500},
   {type:'loss',desc:'Mise de partie',date:"12 Mai 2024 · 14:30",amount:-1000},

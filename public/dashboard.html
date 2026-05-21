@@ -428,7 +428,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff
         <div class="tb-lv">Niv.24</div>
       </div>
       <div>
-        <div class="tb-name">Sidick_K</div>
+        <div class="tb-name"><span id="tb-name-txt">...</span></div>
         <div class="xp-row"><div class="xp-bg"><div class="xp-fill"></div></div><span class="xp-txt">3200/5000</span></div>
       </div>
     </div>
@@ -677,13 +677,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff
         <div class="prof-av">SK</div>
         <div class="prof-lv-badge">Niveau 24</div>
       </div>
-      <div class="prof-name">Sidick Kone</div>
-      <div class="prof-since">Membre depuis Mai 2024</div>
+      <div class="prof-name">...</div>
+      <div class="prof-since">...</div>
     </div>
     <div class="stat-grid">
-      <div class="sc-card"><div class="sc-val">147</div><div class="sc-lbl">Parties jouées</div></div>
-      <div class="sc-card"><div class="sc-val">89</div><div class="sc-lbl">Victoires</div></div>
-      <div class="sc-card"><div class="sc-val">61%</div><div class="sc-lbl">Taux victoire</div></div>
+      <div class="sc-card"><div class="sc-val"><span id="stat-parties">0</span></div><div class="sc-lbl">Parties jouées</div></div>
+      <div class="sc-card"><div class="sc-val"><span id="stat-victoires">0</span></div><div class="sc-lbl">Victoires</div></div>
+      <div class="sc-card"><div class="sc-val"><span id="stat-taux">0%</span></div><div class="sc-lbl">Taux victoire</div></div>
       <div class="sc-card"><div class="sc-val" id="profile-coins">15 350</div><div class="sc-lbl">Coins gagnés</div></div>
     </div>
     <div class="prof-btns" style="display:flex;flex-direction:column;gap:10px">
@@ -774,9 +774,64 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ✅ Logged in - show player dashboard
   document.getElementById('scr-home').classList.add('active');
+
+  // Update all UI with real profile data
   updateCoinsUI();
   updateProfileUI();
   renderRealLeaderboard();
+  renderRealTransactions();
+
+  // Update profile screen with REAL data from Supabase
+  if(CURRENT_PROFILE) {
+    // Name
+    const profName = document.querySelector('.prof-name');
+    if(profName) profName.textContent = CURRENT_PROFILE.username || '...';
+
+    // Since text was set to ... above
+    document.querySelectorAll('.prof-name').forEach(el => el.textContent = CURRENT_PROFILE.username || '...');
+
+    // Member since
+    const profSince = document.querySelector('.prof-since');
+    if(profSince) {
+      const d = new Date(CURRENT_USER?.created_at || Date.now());
+      profSince.textContent = 'Membre depuis ' + d.toLocaleDateString('fr-FR', {month:'long', year:'numeric'});
+    }
+
+    // Stats
+    const sp = document.getElementById('stat-parties');
+    if(sp) sp.textContent = CURRENT_PROFILE.games_played || 0;
+    const sv = document.getElementById('stat-victoires');
+    if(sv) sv.textContent = CURRENT_PROFILE.wins || 0;
+    const st = document.getElementById('stat-taux');
+    if(st) st.textContent = CURRENT_PROFILE.games_played > 0
+      ? Math.round((CURRENT_PROFILE.wins/CURRENT_PROFILE.games_played)*100)+'%' : '0%';
+
+    // Level badge
+    const lvBadge = document.querySelector('.prof-lv-badge');
+    if(lvBadge) lvBadge.textContent = 'Niveau ' + (CURRENT_PROFILE.level || 1);
+
+    // Avatar
+    const profAv = document.querySelector('.prof-av');
+    if(profAv) profAv.textContent = CURRENT_PROFILE.avatar_url || '👑';
+
+    // Topbar name
+    const tbName = document.querySelector('.tb-name');
+    if(tbName) tbName.textContent = CURRENT_PROFILE.username || '...';
+    const tbAv = document.getElementById('tb-av');
+    if(tbAv) tbAv.textContent = CURRENT_PROFILE.avatar_url || '👑';
+    const tbLv = document.querySelector('.tb-lv');
+    if(tbLv) tbLv.textContent = 'Niv.' + (CURRENT_PROFILE.level || 1);
+
+    // XP bar
+    const xpFill = document.querySelector('.xp-fill');
+    if(xpFill) xpFill.style.width = Math.min(100, ((CURRENT_PROFILE.xp%1000)/1000)*100) + '%';
+    const xpTxt = document.querySelector('.xp-txt');
+    if(xpTxt) xpTxt.textContent = (CURRENT_PROFILE.xp%1000) + '/1000';
+
+    // Bal display (home screen balance card)
+    const balSub = document.querySelector('.bal-sub');
+    if(balSub) balSub.textContent = 'Niveau ' + (CURRENT_PROFILE.level||1) + ' · ' + (CURRENT_PROFILE.xp%1000) + ' / 1000 XP';
+  }
 });
 </script>
 </body>
