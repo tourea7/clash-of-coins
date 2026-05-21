@@ -57,32 +57,44 @@ async function loadProfile(){
     .single();
 
   if(error || !data){
+    // Build username from Google name or email
+    const googleName = CURRENT_USER.user_metadata?.full_name ||
+                       CURRENT_USER.user_metadata?.name || '';
     const username = CURRENT_USER.user_metadata?.username ||
+                     googleName.replace(/\s+/g, '_').slice(0, 20) ||
                      CURRENT_USER.email?.split('@')[0] ||
                      'Player_' + Math.random().toString(36).slice(2,6);
-    const { data: newProfile } = await sb.from('players').insert({
+
+    const avatar = CURRENT_USER.user_metadata?.avatar_url ? '🌐' : '👑';
+
+    const { data: newProfile } = await sb.from('players').upsert({
       id: CURRENT_USER.id,
       username,
       email: CURRENT_USER.email,
-      avatar_url: CURRENT_USER.user_metadata?.avatar || '👑',
+      avatar_url: avatar,
       coins: 1000,
       level: 1, xp: 0, wins: 0, losses: 0, games_played: 0,
-    }).select().single();
+    }, { onConflict: 'id' }).select().single();
     CURRENT_PROFILE = newProfile;
   } else {
     CURRENT_PROFILE = data;
   }
 
   if(typeof STATE !== 'undefined' && CURRENT_PROFILE){
-    STATE.coins = CURRENT_PROFILE.coins || 1000;
-    STATE.username = CURRENT_PROFILE.username || 'Joueur';
-    STATE.initials = (CURRENT_PROFILE.username || 'JR').slice(0,2).toUpperCase();
-    STATE.userId = CURRENT_PROFILE.id;
-    STATE.avatar = CURRENT_PROFILE.avatar_url || '👑';
-    STATE.level = CURRENT_PROFILE.level || 1;
-    STATE.xp = CURRENT_PROFILE.xp || 0;
-    STATE.wins = CURRENT_PROFILE.wins || 0;
+    STATE.coins        = CURRENT_PROFILE.coins || 1000;
+    STATE.username     = CURRENT_PROFILE.username || 'Joueur';
+    STATE.initials     = (CURRENT_PROFILE.username || 'JR').slice(0,2).toUpperCase();
+    STATE.userId       = CURRENT_PROFILE.id;
+    STATE.avatar       = CURRENT_PROFILE.avatar_url || '👑';
+    STATE.level        = CURRENT_PROFILE.level || 1;
+    STATE.xp           = CURRENT_PROFILE.xp || 0;
+    STATE.wins         = CURRENT_PROFILE.wins || 0;
     STATE.games_played = CURRENT_PROFILE.games_played || 0;
+    // Update topbar avatar initials
+    const tbAv = document.getElementById('tb-av');
+    if(tbAv) tbAv.textContent = STATE.initials;
+    const tbName = document.querySelector('.tb-name');
+    if(tbName) tbName.textContent = STATE.username;
   }
 }
 
@@ -148,10 +160,16 @@ async function doLogout(){
 
 function updateProfileUI(){
   if(!CURRENT_PROFILE) return;
+  const username = CURRENT_PROFILE.username || 'Joueur';
+  const initials = username.slice(0,2).toUpperCase();
+  const avatar = CURRENT_PROFILE.avatar_url || '👑';
+
+  // Topbar avatar - show initials if no emoji avatar
   const tbAv = document.getElementById('tb-av');
-  if(tbAv) tbAv.textContent = CURRENT_PROFILE.avatar_url || '👑';
+  if(tbAv) tbAv.textContent = ['👑','🦁','🐯','🦊','🐺','🦅','🐲','💎','⚡','🔥','🌙','⭐','🌐'].includes(avatar) ? avatar : initials;
+
   const tbName = document.querySelector('.tb-name');
-  if(tbName) tbName.textContent = CURRENT_PROFILE.username;
+  if(tbName) tbName.textContent = username;
   const xpFill = document.querySelector('.xp-fill');
   if(xpFill) xpFill.style.width = Math.min(100,((CURRENT_PROFILE.xp%1000)/1000)*100)+'%';
   const xpTxt = document.querySelector('.xp-txt');
