@@ -183,24 +183,75 @@ function initAvatars(){
   });
 }
 
+
+const ADMIN_EMAILS = ['horizonmanagement24@gmail.com'];
+
+async function redirectAfterLogin(user){
+  if(!user) { window.location.href = '/auth.html'; return; }
+
+  if(ADMIN_EMAILS.includes(user.email)){
+    // Admin → go to admin dashboard
+    setLoading(true, 'Accès admin — chargement...');
+    window.location.href = '/admin.html';
+  } else {
+    // Regular player → go to game dashboard
+    setLoading(true, 'Chargement de votre dashboard...');
+    window.location.href = '/dashboard.html';
+  }
+}
+
 // Vérifie session au chargement
 async function checkSession(){
   const sb = await getSB();
   if(!sb) return;
+
+  // Handle OAuth callback (access_token in URL hash)
+  if(window.location.hash.includes('access_token')){
+    setLoading(true, 'Finalisation de la connexion...');
+    // Let Supabase handle the token from URL
+    const { data: { session }, error } = await sb.auth.getSession();
+    if(session){
+      // Create profile if needed
+      await ensureProfile(sb, session.user);
+      setLoading(true, 'Connexion réussie! 🎉');
+      setTimeout(() => { window.location.hash = ''; redirectAfterLogin(session.user); }, 1000);
+      return;
+    }
+  }
+
   const { data: { session } } = await sb.auth.getSession();
   if(session){
     setLoading(true, 'Déjà connecté — redirection...');
-    window.location.href = '/';
+    redirectAfterLogin(session.user);
     return;
   }
+
   // Écoute les connexions
-  sb.auth.onAuthStateChange((event, session) => {
+  sb.auth.onAuthStateChange(async (event, session) => {
     if(event === 'SIGNED_IN' && session){
+      await ensureProfile(sb, session.user);
       setLoading(true, 'Connexion réussie! 🎉');
-      setTimeout(() => window.location.href = '/', 800);
+      setTimeout(() => redirectAfterLogin(session.user), 800);
     }
   });
   initAvatars();
+}
+
+async function ensureProfile(sb, user){
+  const { data } = await sb.from('players').select('id').eq('id', user.id).single();
+  if(!data){
+    const username = user.user_metadata?.full_name?.replace(/\s+/g,'_') ||
+                     user.email?.split('@')[0] ||
+                     'Player_' + Math.random().toString(36).slice(2,6);
+    await sb.from('players').upsert({
+      id: user.id,
+      username,
+      email: user.email,
+      avatar_url: user.user_metadata?.avatar_url ? '👑' : '👑',
+      coins: 1000,
+      level: 1, xp: 0, wins: 0, losses: 0, games_played: 0,
+    }, { onConflict: 'id' });
+  }
 }
 
 checkSession();

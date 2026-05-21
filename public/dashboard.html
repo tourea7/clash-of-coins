@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Clash of Coins</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Rajdhani:wght@500;600;700&family=Anton&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --gold:#FFD700;--gold2:#FFA500;--gdark:#8B5E00;--gglow:rgba(255,215,0,.35);
+  --bg:#0a0a0f;--panel:#111118;--bdr:rgba(255,255,255,.07);
+  --blue:#1a6fff;--red:#ee1111;--green:#00bb33;--yel:#ddaa00;
+  --r:14px;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff;font-family:'Rajdhani',sans-serif}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+.screen.active{display:flex}
+#particles{position:fixed;inset:0;pointer-events:none;z-index:0}
+
+/* ===== LOADING ===== */
+.ld{position:fixed;inset:0;background:linear-gradient(160deg,#0d0020,#000d30,#001a0d);z-index:9997;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;transition:opacity .5s}
+.ld.hidden{opacity:0;pointer-events:none}
+.ld-logo{font-family:'Cinzel Decorative',serif;font-size:24px;color:var(--gold);letter-spacing:3px;text-shadow:0 0 40px var(--gglow)}
+.ld-bg{width:240px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.ld-fill{height:5px;background:linear-gradient(90deg,var(--gold2),var(--gold));border-radius:3px;width:0%;transition:width .15s}
+.ld-txt{font-size:13px;color:rgba(255,255,255,.4)}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(16px);background:rgba(15,15,25,.96);border:1px solid rgba(255,215,0,.3);border-radius:40px;padding:12px 24px;font-size:14px;font-weight:700;color:var(--gold);z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:92vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ===== MODAL ===== */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9998;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-ov.open{display:flex}
+.modal-box{background:linear-gradient(145deg,#1a1a2e,#0d0d1a);border:1px solid rgba(255,215,0,.2);border-radius:28px;padding:40px 28px;max-width:380px;width:92%;text-align:center;animation:pop .35s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.m-ic{font-size:80px;margin-bottom:18px;display:block}
+.m-title{font-family:'Anton',sans-serif;font-size:28px;color:var(--gold);margin-bottom:8px;letter-spacing:2px;text-shadow:0 0 20px var(--gglow)}
+.m-msg{font-size:15px;color:rgba(255,255,255,.5);margin-bottom:10px;line-height:1.6}
+.m-coins{font-size:40px;font-weight:700;color:var(--gold);margin-bottom:26px;text-shadow:0 0 30px var(--gglow)}
+.m-btns{display:flex;gap:10px}
+.m-btn{flex:1;padding:14px;border-radius:40px;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s;border:none}
+.m-pri{background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;box-shadow:0 6px 20px rgba(255,165,0,.4)}
+.m-pri:hover{transform:translateY(-2px)}
+.m-sec{background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1)}
+.m-sec:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ===== LOGIN SCREEN ===== */
+#scr-login{
+  background:radial-gradient(ellipse at 50% 0%,#1a1000 0%,#070710 55%),
+             linear-gradient(180deg,#0a0a14,#05050a);
+  align-items:center;justify-content:center;z-index:1;overflow-y:auto;
+}
+.login-wrap{text-align:center;width:340px;max-width:92vw;padding:20px 16px;z-index:2;position:relative}
+
+/* Animated coins background */
+.login-coins{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.lc{position:absolute;font-size:20px;animation:fall linear infinite;opacity:0}
+@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:.6}100%{transform:translateY(100vh) rotate(360deg);opacity:0}}
+
+/* Logo 3D style */
+.logo-3d{position:relative;margin-bottom:8px}
+.logo-crown-wrap{font-size:64px;display:block;animation:crown-bob 2.5s ease-in-out infinite;filter:drop-shadow(0 8px 20px rgba(255,165,0,.6)) drop-shadow(0 0 40px rgba(255,215,0,.3))}
+@keyframes crown-bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-12px) rotate(3deg)}}
+.logo-clash{display:block;font-family:'Anton',sans-serif;font-size:58px;letter-spacing:4px;line-height:1;
+  background:linear-gradient(180deg,#fff9cc 0%,#FFD700 40%,#FF8C00 70%,#cc5500 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.8));
+  text-shadow:none;
+}
+.logo-of-wrap{display:flex;align-items:center;gap:10px;justify-content:center;margin:2px 0}
+.logo-line{flex:1;height:1.5px;background:linear-gradient(90deg,transparent,rgba(255,215,0,.4))}
+.logo-of-txt{font-size:13px;color:rgba(255,215,0,.6);letter-spacing:6px;font-weight:600}
+.logo-coins-txt{display:block;font-family:'Anton',sans-serif;font-size:58px;letter-spacing:4px;line-height:1;
+  background:linear-gradient(180deg,#fff9cc 0%,#FFD700 40%,#FF8C00 70%,#cc5500 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.8));
+}
+.logo-badge{display:inline-flex;align-items:center;gap:6px;margin:8px 0 16px;background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.25);border-radius:20px;padding:5px 14px}
+.logo-dice{font-size:18px}
+.logo-slogan{font-size:13px;color:rgba(255,255,255,.7);font-weight:600;letter-spacing:3px;text-transform:uppercase}
+
+.spinning-coins{display:flex;justify-content:center;gap:8px;margin-bottom:24px}
+.sc{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe566,#FF8C00);border:2px solid var(--gold);box-shadow:0 0 8px var(--gglow);animation:spin3d 2s linear infinite}
+.sc:nth-child(2){animation-delay:.3s}.sc:nth-child(3){animation-delay:.6s}
+@keyframes spin3d{0%{transform:rotateY(0) scale(1)}50%{transform:rotateY(180deg) scale(.85)}100%{transform:rotateY(360deg) scale(1)}}
+
+.btn-connect{display:block;width:100%;padding:16px;margin-bottom:12px;
+  background:linear-gradient(135deg,#FFD700 0%,#FF8C00 100%);
+  color:#000;font-family:'Anton',sans-serif;font-size:20px;font-weight:400;
+  border:none;border-radius:50px;cursor:pointer;letter-spacing:3px;
+  box-shadow:0 8px 30px rgba(255,165,0,.45),0 3px 0 #8B4000,inset 0 1px 0 rgba(255,255,255,.3);
+  transition:all .2s;text-transform:uppercase;
+}
+.btn-connect:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(255,165,0,.55),0 3px 0 #8B4000}
+.btn-connect:active{transform:translateY(1px);box-shadow:0 2px 10px rgba(255,165,0,.3),0 1px 0 #8B4000}
+.btn-register{display:block;width:100%;padding:14px;margin-bottom:20px;
+  background:transparent;color:#FFD700;
+  border:2px solid rgba(255,215,0,.5);border-radius:50px;cursor:pointer;
+  font-family:'Anton',sans-serif;font-size:18px;letter-spacing:3px;text-transform:uppercase;
+  transition:all .2s;
+}
+.btn-register:hover{background:rgba(255,215,0,.1);border-color:var(--gold)}
+
+.login-div{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.login-div-line{flex:1;height:1px;background:rgba(255,255,255,.1)}
+.login-div-txt{font-size:11px;color:rgba(255,255,255,.3);white-space:nowrap}
+.social-btns{display:flex;justify-content:center;gap:14px;margin-bottom:20px}
+.soc{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:24px;transition:all .2s}
+.soc:hover{transform:translateY(-3px);border-color:rgba(255,215,0,.4);background:rgba(255,215,0,.08)}
+.login-terms{font-size:10px;color:rgba(255,255,255,.2);line-height:1.6}
+.login-terms a{color:rgba(255,215,0,.5)}
+
+/* ===== TOP BAR ===== */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.7);backdrop-filter:blur(12px);border-bottom:1px solid var(--bdr);flex-shrink:0;z-index:5}
+.tb-player{display:flex;align-items:center;gap:8px}
+.tb-av-wrap{position:relative}
+.tb-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#FF8C00);display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:13px;border:2px solid var(--gold);box-shadow:0 0 12px var(--gglow)}
+.tb-lv{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;white-space:nowrap}
+.tb-name{font-size:13px;font-weight:700;color:#fff}
+.xp-row{display:flex;align-items:center;gap:6px}
+.xp-bg{width:80px;height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+.xp-fill{height:5px;width:64%;background:linear-gradient(90deg,#FFD700,#FF8C00);border-radius:3px}
+.xp-txt{font-size:9px;color:rgba(255,255,255,.4)}
+.tb-right{display:flex;align-items:center;gap:8px}
+.tb-settings{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all .2s}
+.tb-settings:hover{border-color:rgba(255,215,0,.3)}
+.notif-btn{position:relative;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px}
+.notif-dot{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#ff4444;border:1.5px solid var(--bg)}
+
+/* ===== SCROLL ===== */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.scroll::-webkit-scrollbar{width:0}
+
+/* ===== HOME SCREEN ===== */
+#scr-home{background:linear-gradient(180deg,#0d0d18 0%,#080810 100%)}
+
+/* Balance card */
+.bal-card{margin:14px 14px 0;background:linear-gradient(135deg,#1a1300 0%,#0d0c00 100%);border:1px solid rgba(255,215,0,.2);border-radius:18px;padding:16px;position:relative;overflow:hidden}
+.bal-card::before{content:'';position:absolute;top:-30px;right:-30px;width:100px;height:100px;background:radial-gradient(circle,rgba(255,215,0,.15),transparent 70%);pointer-events:none}
+.bal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.bal-lbl{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase}
+.bal-row{display:flex;align-items:center;gap:10px}
+.bal-num{font-size:36px;font-weight:700;color:var(--gold);text-shadow:0 0 30px var(--gglow);line-height:1}
+.bal-coin-icon{font-size:28px}
+.bal-add{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#00cc44,#008822);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 12px rgba(0,200,68,.3);border:none;flex-shrink:0}
+.bal-right{display:flex;flex-direction:column;align-items:center;gap:4px}
+.wallet-icon{font-size:32px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+.online-b{display:flex;align-items:center;gap:5px;font-size:9px;color:#44ff88;padding:2px 8px;border-radius:10px;background:rgba(0,255,100,.08);border:1px solid rgba(0,255,100,.15)}
+.od{width:5px;height:5px;border-radius:50%;background:#44ff88;animation:blink 1.5s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* Quick nav */
+.qnav{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 14px 0}
+.qn{background:rgba(255,255,255,.04);border:1px solid var(--bdr);border-radius:14px;padding:11px 4px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.qn:hover{border-color:rgba(255,215,0,.25);background:rgba(255,215,0,.05);transform:translateY(-2px)}
+.qn-ic{font-size:22px;margin-bottom:3px}
+.qn-lb{font-size:9px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.qn-badge{position:absolute;top:6px;right:6px;background:#ff4444;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px}
+
+/* Play cards */
+.play-section{padding:14px 14px 0}
+.sec-lbl{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+.play-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0}
+
+.pc-free{background:linear-gradient(145deg,#0e2080,#070e50);border:1.5px solid rgba(100,150,255,.4);border-radius:18px;padding:0;overflow:hidden;cursor:pointer;transition:all .2s;position:relative}
+.pc-free:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(77,127,255,.3)}
+.pc-comp{background:linear-gradient(145deg,#801010,#500808);border:1.5px solid rgba(255,80,80,.4);border-radius:18px;padding:0;overflow:hidden;cursor:pointer;transition:all .2s;position:relative}
+.pc-comp:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(255,50,50,.3)}
+
+.pc-inner{padding:14px 12px 10px}
+.pc-title{font-family:'Anton',sans-serif;font-size:18px;letter-spacing:2px;line-height:1;margin-bottom:2px}
+.pc-free .pc-title{color:#7ab4ff}
+.pc-comp .pc-title{color:#ff9999}
+.pc-sub{font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px}
+.pc-img{height:70px;display:flex;align-items:center;justify-content:center;font-size:52px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.6))}
+.pc-comp .pc-img{font-size:46px}
+
+/* Tournament banner */
+.tourn-banner{margin:12px 14px 0;background:linear-gradient(135deg,#1e0d55,#0e0830,#1a0d40);border:1.5px solid rgba(180,100,255,.4);border-radius:18px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.tourn-banner::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.05),transparent 60%);pointer-events:none}
+.tourn-banner:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(120,60,255,.25)}
+.tb-left{flex:1}
+.tb-badge{display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#cc99ff;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.tb-title{font-family:'Anton',sans-serif;font-size:16px;letter-spacing:1px;color:#fff;margin-bottom:4px}
+.tb-pool{font-size:28px;font-weight:700;color:var(--gold);text-shadow:0 0 20px var(--gglow);line-height:1}
+.tb-meta{font-size:10px;color:rgba(255,255,255,.3);margin-top:4px}
+.tb-trophy{font-size:52px;filter:drop-shadow(0 6px 16px rgba(255,215,0,.4))}
+
+/* Leaderboard */
+.lb-section{padding:12px 14px 0}
+.lb-card{background:rgba(255,255,255,.03);border:1px solid var(--bdr);border-radius:18px;overflow:hidden}
+.lb-hdr{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--bdr)}
+.lb-hdr-txt{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;font-weight:700}
+.lb-more{font-size:11px;color:var(--gold);cursor:pointer;font-weight:600}
+.lb-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bdr);cursor:pointer;transition:background .15s}
+.lb-row:last-child{border-bottom:none}
+.lb-row:hover{background:rgba(255,215,0,.04)}
+.lb-rank{font-size:14px;font-weight:700;width:22px;text-align:center;color:var(--gold)}
+.lb-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;border:2px solid rgba(255,255,255,.1)}
+.lb-info{flex:1}
+.lb-name{font-size:13px;font-weight:700;color:#fff}
+.lb-stats{font-size:10px;color:rgba(255,255,255,.3);margin-top:1px}
+.lb-coins-val{font-size:12px;color:var(--gold);font-weight:700;display:flex;align-items:center;gap:3px}
+
+/* Bottom nav */
+.bnav{display:flex;justify-content:space-around;align-items:center;padding:8px 0 max(12px,env(safe-area-inset-bottom));background:rgba(8,8,16,.95);backdrop-filter:blur(20px);border-top:1px solid var(--bdr);flex-shrink:0;z-index:10}
+.ni{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 16px;transition:all .2s;border:none;background:none;position:relative}
+.ni-ic{font-size:22px;transition:all .25s;filter:grayscale(1) opacity(.5)}
+.ni-lb{font-size:8px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;transition:all .2s}
+.ni.active .ni-ic{filter:none;transform:translateY(-4px)}
+.ni.active .ni-lb{color:var(--gold)}
+.ni.active::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:20px;height:3px;background:var(--gold);border-radius:2px}
+
+/* ===== MODE SCREEN ===== */
+#scr-mode{background:linear-gradient(180deg,#0d0d18,#080810)}
+.shdr{display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);border-bottom:1px solid var(--bdr);flex-shrink:0}
+.bk{background:none;border:none;color:var(--gold);font-size:26px;cursor:pointer;padding:0;line-height:1;transition:transform .2s;filter:drop-shadow(0 0 6px var(--gold))}
+.bk:hover{transform:translateX(-4px)}
+.shdr-title{font-family:'Anton',sans-serif;font-size:20px;letter-spacing:2px;color:#fff}
+
+.mode-tabs{display:flex;background:rgba(255,255,255,.04);border-radius:14px;overflow:hidden;border:1px solid var(--bdr);margin:0 0 18px}
+.mt{flex:1;padding:12px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;color:rgba(255,255,255,.4);transition:all .2s;text-transform:uppercase;letter-spacing:.5px}
+.mt.active{background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000}
+
+.mode-sec{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+
+.pbtns{display:flex;gap:8px;margin-bottom:18px}
+.pb{flex:1;padding:11px;text-align:center;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;color:rgba(255,255,255,.4);transition:all .2s;font-family:'Rajdhani',sans-serif}
+.pb.active{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,.1);box-shadow:0 0 16px rgba(255,215,0,.2)}
+
+.mise-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+.mb{padding:12px 4px;text-align:center;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;font-size:15px;font-weight:700;color:rgba(255,255,255,.4);transition:all .2s}
+.mb.active{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,.1);box-shadow:0 0 16px rgba(255,215,0,.2)}
+
+.gain-box{background:linear-gradient(135deg,#1a1200,#0d0900);border:1px solid rgba(255,215,0,.25);border-radius:18px;padding:18px;text-align:center;margin-bottom:22px}
+.gain-lbl{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.gain-val{font-size:34px;font-weight:700;color:var(--gold);text-shadow:0 0 20px var(--gglow)}
+.gain-sub{font-size:10px;color:rgba(255,255,255,.2);margin-top:3px}
+.mise-info{font-size:12px;color:rgba(255,255,255,.35);margin-bottom:18px;line-height:1.6;background:rgba(255,255,255,.03);border-radius:12px;padding:12px}
+
+.btn-find{width:100%;padding:18px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-family:'Anton',sans-serif;font-size:20px;border:none;border-radius:50px;cursor:pointer;letter-spacing:3px;transition:all .2s;box-shadow:0 8px 32px rgba(255,165,0,.4),0 3px 0 #8B4000}
+.btn-find:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(255,165,0,.5)}
+
+.mode-footer{text-align:center;font-size:10px;color:rgba(255,255,255,.15);margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px}
+
+/* ===== MATCHMAKING ===== */
+#scr-matchmaking{background:linear-gradient(180deg,#0d0d18,#080810);justify-content:flex-start}
+.mm-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;gap:16px}
+.mm-ic{font-size:80px;animation:mm-pulse 2s ease-in-out infinite}
+@keyframes mm-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.mm-title{font-family:'Anton',sans-serif;font-size:24px;letter-spacing:2px;color:var(--gold);text-shadow:0 0 20px var(--gglow)}
+.mm-sub{font-size:14px;color:rgba(255,255,255,.4)}
+.mm-dots{display:flex;gap:10px}
+.md{width:12px;height:12px;border-radius:50%;background:var(--gold);animation:bounce .9s ease-in-out infinite}
+.md:nth-child(2){animation-delay:.15s}.md:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-14px);opacity:1}}
+.mm-counter{font-size:16px;color:rgba(255,255,255,.5)}
+.mm-counter span{color:var(--gold);font-size:22px;font-weight:700}
+
+/* ===== GAME SCREEN ===== */
+#scr-game{background:linear-gradient(180deg,#060610,#08080f)}
+.ghdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);border-bottom:1px solid var(--bdr);flex-shrink:0}
+.gh-back{background:none;border:none;color:var(--gold);font-size:22px;cursor:pointer;filter:drop-shadow(0 0 6px var(--gold))}
+.gh-title{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);letter-spacing:1px}
+.gh-mise{font-size:11px;color:rgba(255,255,255,.4)}.gh-mise b{color:var(--gold);font-size:13px}
+
+.game-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 8px;gap:6px;overflow:hidden}
+
+/* Player cards */
+.prow{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:480px;padding:0 2px}
+.pi{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:76px}
+.p-av-wrap{position:relative}
+.p-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;transition:all .35s;border:2.5px solid rgba(255,255,255,.2)}
+.p-av.myturn{animation:player-pulse .8s ease-in-out infinite}
+@keyframes player-pulse{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 6px transparent}}
+.p-score-badge{font-size:10px;font-weight:700;color:rgba(255,255,255,.8)}
+.p-name{font-size:8px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+
+#board-canvas{border-radius:12px;display:block;cursor:pointer;box-shadow:0 20px 60px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.06)}
+
+/* Dice area */
+.dice-area{display:flex;align-items:center;gap:14px}
+.dice-el{width:58px;height:58px;background:linear-gradient(145deg,#fff,#e0e0e0);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:38px;color:#111;box-shadow:0 6px 20px rgba(0,0,0,.6),0 2px 0 rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.9);transition:transform .2s;flex-shrink:0}
+.dice-el.rolling{animation:dice-roll .45s ease-in-out}
+@keyframes dice-roll{0%,100%{transform:rotate(0)}25%{transform:rotate(-25deg) scale(1.15)}75%{transform:rotate(25deg) scale(.9)}}
+
+.roll-btn{padding:14px 32px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-family:'Anton',sans-serif;font-size:17px;border:none;border-radius:40px;cursor:pointer;letter-spacing:2px;transition:all .2s;box-shadow:0 6px 24px rgba(255,165,0,.4),0 2px 0 #8B4000;text-transform:uppercase}
+.roll-btn:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 10px 32px rgba(255,165,0,.5)}
+.roll-btn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none;transform:none}
+.game-log{font-size:12px;color:rgba(255,255,255,.5);text-align:center;min-height:20px;font-weight:600;transition:all .3s;padding:0 10px}
+
+/* ===== WALLET SCREEN ===== */
+#scr-wallet{background:linear-gradient(180deg,#0d0d18,#080810)}
+.w-hero{margin:14px;background:linear-gradient(135deg,#1a1300,#0d0900);border:1px solid rgba(255,215,0,.2);border-radius:20px;padding:24px;position:relative;overflow:hidden}
+.w-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,rgba(255,215,0,.15),transparent 70%);pointer-events:none}
+.w-sol-lbl{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.w-sol-row{display:flex;align-items:center;justify-content:space-between}
+.w-sol-val{font-size:46px;font-weight:700;color:var(--gold);text-shadow:0 0 40px var(--gglow);line-height:1}
+.w-coins-img{font-size:48px;filter:drop-shadow(0 6px 12px rgba(255,165,0,.4))}
+.w-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px}
+.wa{padding:15px;border-radius:16px;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px;text-transform:uppercase;border:none;display:flex;align-items:center;justify-content:center;gap:8px}
+.wa-dep{background:linear-gradient(135deg,#00cc44,#008822);color:#fff;box-shadow:0 6px 20px rgba(0,200,68,.3)}
+.wa-dep:hover{transform:translateY(-2px)}
+.wa-wit{background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);color:#fff}
+.wa-wit:hover{border-color:rgba(255,215,0,.3)}
+
+/* Transaction history */
+.tx-sec-lbl{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;font-weight:700;padding:0 14px;margin-bottom:8px}
+.tx-list{padding:0 14px}
+.tx-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--bdr)}
+.tx-row:last-child{border-bottom:none}
+.tx-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.tx-g{background:rgba(0,204,68,.12);color:#00cc44;border:1px solid rgba(0,204,68,.2)}
+.tx-l{background:rgba(255,50,50,.12);color:#ff4444;border:1px solid rgba(255,50,50,.2)}
+.tx-info{flex:1}
+.tx-desc{font-size:13px;font-weight:700;color:#fff;margin-bottom:1px}
+.tx-date{font-size:10px;color:rgba(255,255,255,.3)}
+.tx-amt{font-size:15px;font-weight:700;flex-shrink:0}
+.tx-pos{color:#00cc44}
+.tx-neg{color:#ff4444}
+
+/* Payment methods */
+.pm-sec{padding:0 14px;margin-bottom:8px}
+.pm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pm{background:rgba(255,255,255,.04);border:1.5px solid var(--bdr);border-radius:14px;padding:12px 6px;text-align:center;cursor:pointer;transition:all .2s}
+.pm:hover{border-color:rgba(255,215,0,.3);background:rgba(255,215,0,.06);transform:translateY(-2px)}
+.pm-ic{font-size:26px;margin-bottom:4px}
+.pm-nm{font-size:9px;color:rgba(255,255,255,.4);font-weight:700}
+
+/* ===== TOURNAMENT SCREEN ===== */
+#scr-tournaments{background:linear-gradient(180deg,#0d0d18,#080810)}
+.tourn-hero{margin:14px;background:linear-gradient(135deg,#1e0a60,#0d0840,#200a50);border:1.5px solid rgba(180,100,255,.35);border-radius:20px;padding:20px;text-align:center;position:relative;overflow:hidden}
+.tourn-hero::before{content:'';position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(180,100,255,.2),transparent 70%);pointer-events:none}
+.th-badge{font-size:11px;color:#cc99ff;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px}
+.th-title{font-family:'Anton',sans-serif;font-size:22px;letter-spacing:2px;color:#fff;margin-bottom:10px}
+.th-pool{font-size:40px;font-weight:700;color:var(--gold);text-shadow:0 0 30px var(--gglow);line-height:1}
+.th-pool-lbl{font-size:11px;color:rgba(255,255,255,.4);margin-top:4px}
+.th-timer{font-size:14px;color:rgba(255,255,255,.5);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px}
+.th-trophy{font-size:50px;margin-bottom:10px;filter:drop-shadow(0 8px 20px rgba(255,215,0,.4))}
+
+.tourn-list{padding:0 14px}
+.ti{background:rgba(255,255,255,.03);border:1px solid var(--bdr);border-radius:18px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px}
+.ti:hover{border-color:rgba(255,215,0,.25);transform:translateX(4px);background:rgba(255,255,255,.04)}
+.ti-ic{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#2a1060,#180840);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.ti-info{flex:1}
+.ti-name{font-size:14px;font-weight:700;color:#fff;margin-bottom:3px}
+.ti-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:10px;color:rgba(255,255,255,.35)}
+.ti-right{text-align:right}
+.ti-pool{font-size:16px;font-weight:700;color:var(--gold)}
+.ti-entry{font-size:10px;color:rgba(255,255,255,.35);margin-top:2px}
+.badge{font-size:8px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase;display:inline-block}
+.bl{background:rgba(255,50,50,.15);color:#ff5555;border:1px solid rgba(255,50,50,.25)}
+.bs{background:rgba(170,100,255,.15);color:#bb77ff;border:1px solid rgba(170,100,255,.25)}
+
+/* ===== PROFILE SCREEN ===== */
+#scr-profile{background:linear-gradient(180deg,#0d0d18,#080810)}
+.prof-hero{padding:24px 14px;text-align:center;position:relative}
+.prof-av-wrap{position:relative;display:inline-block;margin-bottom:12px}
+.prof-av{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#FF8C00);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:#000;border:3px solid var(--gold);box-shadow:0 0 30px var(--gglow)}
+.prof-lv-badge{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-size:10px;font-weight:700;padding:2px 10px;border-radius:12px;white-space:nowrap}
+.prof-name{font-family:'Anton',sans-serif;font-size:24px;letter-spacing:2px;color:#fff;margin-bottom:4px}
+.prof-since{font-size:11px;color:rgba(255,255,255,.3)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px;margin-bottom:16px}
+.sc-card{background:rgba(255,255,255,.04);border:1px solid var(--bdr);border-radius:18px;padding:18px;text-align:center;transition:all .2s}
+.sc-card:hover{border-color:rgba(255,215,0,.25)}
+.sc-val{font-size:30px;font-weight:700;color:var(--gold);text-shadow:0 0 10px var(--gglow)}
+.sc-lbl{font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.prof-btns{padding:0 14px}
+
+/* ===== COLOR PICKER SCREEN ===== */
+#scr-color{background:linear-gradient(180deg,#0d0d18,#080810)}
+.color-pick-wrap{padding:20px 14px;flex:1;display:flex;flex-direction:column;gap:16px}
+.color-pick-title{text-align:center;font-size:13px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;font-weight:700}
+.color-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.color-card{border-radius:20px;padding:20px 14px;text-align:center;cursor:pointer;transition:all .25s;border:3px solid transparent;position:relative;overflow:hidden}
+.color-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.12),transparent 60%);pointer-events:none}
+.color-card:hover{transform:translateY(-4px)}
+.color-card:active{transform:scale(.96)}
+.color-card.selected{border-width:3px}
+.color-card.taken{opacity:.45;cursor:not-allowed}
+.cc-icon{font-size:52px;margin-bottom:8px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6))}
+.cc-name{font-family:'Anton',sans-serif;font-size:16px;letter-spacing:2px;margin-bottom:4px}
+.cc-status{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:1px;text-transform:uppercase}
+.cc-check{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:#FFD700;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#000;opacity:0;transition:all .2s}
+.color-card.selected .cc-check{opacity:1}
+.color-confirm-wrap{padding:0 14px 16px}
+.color-preview{background:rgba(255,255,255,.04);border-radius:16px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.cp-pawn{font-size:32px;transition:all .3s}
+.cp-text{font-size:13px;color:rgba(255,255,255,.5)}.cp-text b{color:#fff;font-size:15px}
+</style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+
+<div class="ld" id="loading">
+  <div style="font-size:60px;animation:crown-bob 2s ease-in-out infinite;filter:drop-shadow(0 0 20px var(--gold))">👑</div>
+  <div class="ld-logo">CLASH OF COINS</div>
+  <div class="ld-bg"><div class="ld-fill" id="ld-bar"></div></div>
+  <div class="ld-txt" id="ld-text">Connexion...</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-ov" id="modal">
+  <div class="modal-box">
+    <span class="m-ic" id="m-icon">🏆</span>
+    <div class="m-title" id="m-title">VICTOIRE!</div>
+    <div class="m-msg" id="m-msg">Félicitations!</div>
+    <div class="m-coins" id="m-coins">+2 000 🪙</div>
+    <div class="m-btns">
+      <button class="m-btn m-sec" id="m-btn2">Quitter</button>
+      <button class="m-btn m-pri" id="m-btn1">Rejouer</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+
+<!-- ===== HOME ===== -->
+<div class="screen" id="scr-home">
+  <div class="topbar">
+    <div class="tb-player">
+      <div class="tb-av-wrap">
+        <div class="tb-av" id="tb-av">SK</div>
+        <div class="tb-lv">Niv.24</div>
+      </div>
+      <div>
+        <div class="tb-name">Sidick_K</div>
+        <div class="xp-row"><div class="xp-bg"><div class="xp-fill"></div></div><span class="xp-txt">3200/5000</span></div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-settings" onclick="showToast('Paramètres bientôt!')">⚙️</div>
+      <div class="notif-btn" onclick="showToast('Pas de nouvelles notifications')"><span>🔔</span><div class="notif-dot"></div></div>
+    </div>
+  </div>
+
+  <div class="scroll" style="padding-bottom:80px">
+    <!-- Balance -->
+    <div class="bal-card">
+      <div class="bal-top"><div class="bal-lbl">Solde actuel</div><div class="online-b"><div class="od"></div><span id="online-count">247</span> en ligne</div></div>
+      <div class="bal-row">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="bal-num" id="bal-display-num">15 350</span>
+            <span class="bal-coin-icon">🪙</span>
+            <button class="bal-add" onclick="doDeposit()">+</button>
+          </div>
+        </div>
+        <div class="bal-right">
+          <div class="wallet-icon">👜</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick nav -->
+    <div class="qnav">
+      <div class="qn" onclick="showScreen('wallet')"><div class="qn-ic">👛</div><div class="qn-lb">Wallet</div></div>
+      <div class="qn" onclick="showHistorique()"><div class="qn-ic">📋</div><div class="qn-lb">Historique</div></div>
+      <div class="qn" onclick="showToast('Amis bientôt!')"><div class="qn-ic">👥</div><div class="qn-lb">Amis</div><div class="qn-badge">2</div></div>
+      <div class="qn" onclick="showToast('Missions en cours!')"><div class="qn-ic">🎯</div><div class="qn-lb">Missions</div></div>
+    </div>
+
+    <!-- Play modes -->
+    <div class="play-section">
+      <div class="play-grid">
+        <div class="pc-free" onclick="startMode('free')">
+          <div class="pc-inner">
+            <div class="pc-title">JOUER<br>GRATUIT</div>
+            <div class="pc-sub">Gagne des coins</div>
+          </div>
+          <div class="pc-img">🎲</div>
+        </div>
+        <div class="pc-comp" onclick="startMode('comp')">
+          <div class="pc-inner">
+            <div class="pc-title">JOUER<br>COMPÉTITION</div>
+            <div class="pc-sub">Mise des coins</div>
+          </div>
+          <div class="pc-img">🏆</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tournament -->
+    <div class="tourn-banner" onclick="navTo('tournaments',null)">
+      <div class="tb-left">
+        <div class="tb-badge">🏅 TOURNOIS</div>
+        <div class="tb-title">Participe et gagne gros</div>
+        <div class="tb-pool">500 000 🪙</div>
+      </div>
+      <div class="tb-trophy">🏆</div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="lb-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="sec-lbl" style="margin-bottom:0">Classement</div>
+        <span class="lb-more">VOIR PLUS ›</span>
+      </div>
+      <div class="lb-card">
+        <div class="lb-row"><div class="lb-rank">1</div><div class="lb-av" style="background:#2a1500;font-size:16px">🥇</div><div class="lb-info"><div class="lb-name">Champion_01</div><div class="lb-stats">450 parties · 69% victoires</div></div><div class="lb-coins-val">250 000 🪙</div></div>
+        <div class="lb-row"><div class="lb-rank">2</div><div class="lb-av" style="background:#1a1a1a;font-size:16px">🥈</div><div class="lb-info"><div class="lb-name">LudoMaster</div><div class="lb-stats">380 parties · 64% victoires</div></div><div class="lb-coins-val">180 500 🪙</div></div>
+        <div class="lb-row"><div class="lb-rank">3</div><div class="lb-av" style="background:#1a1000;font-size:16px">🥉</div><div class="lb-info"><div class="lb-name">ProGamer_CI</div><div class="lb-stats">290 parties · 62% victoires</div></div><div class="lb-coins-val">98 700 🪙</div></div>
+        <div class="lb-row" style="background:rgba(255,215,0,.04)"><div class="lb-rank" style="color:var(--gold)">4</div><div class="lb-av" style="background:#0d1640;color:#4d9fff;border-color:rgba(77,159,255,.3)">SK</div><div class="lb-info"><div class="lb-name">Vous</div><div class="lb-stats">147 parties · 61% victoires</div></div><div class="lb-coins-val" id="my-lb-coins">15 350 🪙</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bnav">
+    <button class="ni active" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
+    <button class="ni" onclick="startMode('free')"><div class="ni-ic">🎲</div><div class="ni-lb">Jouer</div></button>
+    <button class="ni" onclick="navTo('tournaments',this)"><div class="ni-ic">🏆</div><div class="ni-lb">Tournois</div></button>
+    <button class="ni" onclick="navTo('wallet',this)"><div class="ni-ic">👛</div><div class="ni-lb">Wallet</div></button>
+    <button class="ni" onclick="navTo('profile',this)"><div class="ni-ic">👤</div><div class="ni-lb">Profil</div></button>
+  </div>
+</div>
+
+<!-- ===== MODE ===== -->
+<div class="screen" id="scr-mode">
+  <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><div class="shdr-title">JOUER</div></div>
+  <div class="scroll" style="padding:16px 14px 80px">
+    <div class="mode-tabs"><div class="mt active" id="tab-rapide" onclick="setModeTab('rapide')">Partie Rapide</div><div class="mt" id="tab-amis" onclick="setModeTab('amis')">Avec Amis</div></div>
+    <div class="mode-sec">Choisir le mode</div>
+    <div class="pbtns"><button class="pb" id="pb2" onclick="setPlayers(2)">2 Joueurs</button><button class="pb" id="pb3" onclick="setPlayers(3)">3 Joueurs</button><button class="pb active" id="pb4" onclick="setPlayers(4)">4 Joueurs</button></div>
+    <div id="mise-section">
+      <div class="mode-sec">Mise en coins</div>
+      <div class="mise-info">Plus la mise est élevée, plus les gains sont importants.<br>Commission de 5% prélevée sur les gains.</div>
+      <div class="mise-grid">
+        <div class="mb" id="mb100" onclick="setMise(100)">100</div>
+        <div class="mb active" id="mb500" onclick="setMise(500)">500</div>
+        <div class="mb" id="mb1000" onclick="setMise(1000)">1 000</div>
+        <div class="mb" id="mb5000" onclick="setMise(5000)">5 000</div>
+      </div>
+    </div>
+    <div class="gain-box" id="gain-preview">
+      <div class="gain-lbl">Gain potentiel</div>
+      <div class="gain-val" id="gp-val">1 500 🪙</div>
+      <div class="gain-sub">Commission 5% déduite</div>
+    </div>
+    <button class="btn-find" onclick="findGame()">TROUVER UNE PARTIE ⚡</button>
+    <div class="mode-footer">🛡️ En jouant, vous acceptez nos conditions de jeu</div>
+  </div>
+</div>
+
+<!-- ===== MATCHMAKING ===== -->
+<div class="screen" id="scr-matchmaking">
+  <div class="shdr"><button class="bk" onclick="cancelMatchmaking()">←</button><div class="shdr-title">RECHERCHE</div></div>
+  <div class="mm-body">
+    <div class="mm-ic">🔍</div>
+    <div class="mm-title">RECHERCHE EN COURS...</div>
+    <div class="mm-sub" id="mm-status">Connexion au serveur...</div>
+    <div class="mm-dots"><div class="md"></div><div class="md"></div><div class="md"></div></div>
+    <div class="mm-counter">Joueurs trouvés: <span id="mm-found">1</span> / <span id="mm-needed">4</span></div>
+    <div style="font-size:12px;color:rgba(255,255,255,.25);margin-top:6px">Mise: <span id="mm-mise" style="color:var(--gold)">500 🪙</span></div>
+  </div>
+</div>
+
+<!-- ===== GAME ===== -->
+<div class="screen" id="scr-game">
+  <div class="ghdr">
+    <button class="gh-back" onclick="confirmQuit()">←</button>
+    <div class="gh-title">CLASSIC — <span id="g-np">4</span> JOUEURS</div>
+    <div class="gh-mise">Mise: <b id="g-mise">Gratuit</b></div>
+  </div>
+  <div class="game-body">
+    <div class="prow">
+      <div class="pi" id="pi-0">
+        <div class="p-av-wrap"><div class="p-av" id="pa-0" style="background:#1a6fff">P1</div></div>
+        <div class="p-score-badge" id="ps-0" style="color:#6699ff">0 pts</div>
+        <div class="p-name" id="pn-0">Vous</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="dice-el" id="dice-el">⚀</div>
+      </div>
+      <div class="pi" id="pi-1">
+        <div class="p-av-wrap"><div class="p-av" id="pa-1" style="background:#ee1111">P2</div></div>
+        <div class="p-score-badge" id="ps-1" style="color:#ff6666">0 pts</div>
+        <div class="p-name" id="pn-1">QueenLudo</div>
+      </div>
+    </div>
+
+    <canvas id="board-canvas"></canvas>
+
+    <div class="prow">
+      <div class="pi" id="pi-2">
+        <div class="p-av-wrap"><div class="p-av" id="pa-2" style="background:#00bb33">P3</div></div>
+        <div class="p-score-badge" id="ps-2" style="color:#44ff77">0 pts</div>
+        <div class="p-name" id="pn-2">LuckyStar</div>
+      </div>
+      <button class="roll-btn" id="roll-btn" onclick="rollDice()">LANCER LE DÉ ⚡</button>
+      <div class="pi" id="pi-3">
+        <div class="p-av-wrap"><div class="p-av" id="pa-3" style="background:#ddaa00">P4</div></div>
+        <div class="p-score-badge" id="ps-3" style="color:#ffe566">0 pts</div>
+        <div class="p-name" id="pn-3">KingLudo</div>
+      </div>
+    </div>
+    <div class="game-log" id="game-log">Votre tour — lancez le dé!</div>
+  </div>
+</div>
+
+<!-- ===== WALLET ===== -->
+<div class="screen" id="scr-wallet">
+  <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><div class="shdr-title">WALLET</div><span style="font-size:18px;margin-left:auto;cursor:pointer;color:rgba(255,255,255,.4)" onclick="showToast('Info wallet')">ℹ️</span></div>
+  <div class="scroll" style="padding-bottom:80px">
+    <div class="w-hero">
+      <div class="w-sol-lbl">Solde total</div>
+      <div class="w-sol-row">
+        <div><span class="w-sol-val" id="wallet-amount-num">15 350</span><div style="font-size:14px;color:rgba(255,255,255,.3);margin-top:4px">🪙 coins disponibles</div></div>
+        <div class="w-coins-img">🪙</div>
+      </div>
+    </div>
+    <div class="w-actions">
+      <button class="wa wa-dep" onclick="doDeposit()">💰 DÉPÔT</button>
+      <button class="wa wa-wit" onclick="doWithdraw()">📤 RETRAIT</button>
+    </div>
+    <div style="padding:0 14px;margin-bottom:16px">
+      <div class="tx-sec-lbl" style="padding:0;margin-bottom:10px">Historique des transactions</div>
+      <div id="tx-list"></div>
+      <button style="width:100%;padding:12px;background:rgba(255,255,255,.04);border:1px solid var(--bdr);color:rgba(255,255,255,.5);border-radius:12px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;margin-top:10px" onclick="showToast('Historique complet bientôt!')">VOIR PLUS</button>
+    </div>
+    <div class="pm-sec">
+      <div class="tx-sec-lbl" style="padding:0;margin-bottom:10px">Méthodes de paiement</div>
+      <div class="pm-grid">
+        <div class="pm" onclick="selectPM('orange')"><div class="pm-ic">🟠</div><div class="pm-nm">Orange Money</div></div>
+        <div class="pm" onclick="selectPM('moov')"><div class="pm-ic">🔵</div><div class="pm-nm">Moov Money</div></div>
+        <div class="pm" onclick="selectPM('mtn')"><div class="pm-ic">🟡</div><div class="pm-nm">MTN Money</div></div>
+        <div class="pm" onclick="selectPM('wave')"><div class="pm-ic">🌊</div><div class="pm-nm">Wave</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="bnav">
+    <button class="ni" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
+    <button class="ni" onclick="startMode('free')"><div class="ni-ic">🎲</div><div class="ni-lb">Jouer</div></button>
+    <button class="ni" onclick="navTo('tournaments',this)"><div class="ni-ic">🏆</div><div class="ni-lb">Tournois</div></button>
+    <button class="ni active"><div class="ni-ic">👛</div><div class="ni-lb">Wallet</div></button>
+    <button class="ni" onclick="navTo('profile',this)"><div class="ni-ic">👤</div><div class="ni-lb">Profil</div></button>
+  </div>
+</div>
+
+<!-- ===== TOURNAMENTS ===== -->
+<div class="screen" id="scr-tournaments">
+  <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><div class="shdr-title">TOURNOIS</div></div>
+  <div class="scroll" style="padding-bottom:80px">
+    <div class="tourn-hero">
+      <div class="th-trophy">🏆</div>
+      <div class="th-badge">🔥 GRAND TOURNOI</div>
+      <div class="th-title">CLASH OF COINS</div>
+      <div class="th-pool">500 000</div>
+      <div class="th-pool-lbl">🪙 Prize Pool</div>
+      <div class="th-timer">⏱️ Se termine dans: <b style="color:#fff">02j · 14h · 35min</b></div>
+    </div>
+    <div style="padding:12px 14px 8px"><div class="sec-lbl" style="margin-bottom:10px">Autres Tournois</div></div>
+    <div class="tourn-list">
+      <div class="ti" onclick="joinTournament()"><div class="ti-ic">🎯</div><div class="ti-info"><div class="ti-name">Tournoi du Soir</div><div class="ti-meta"><span>👥 120 joueurs</span><span>⏰ 1h:25min</span></div></div><div class="ti-right"><div class="ti-pool">50 000 🪙</div><div class="ti-entry">Entrée: 1 000 🪙</div><span class="badge bl">🔴 En cours</span></div></div>
+      <div class="ti" onclick="joinTournament()"><div class="ti-ic">⚡</div><div class="ti-info"><div class="ti-name">Clash Rapide</div><div class="ti-meta"><span>👥 80 joueurs</span><span>⏰ 45min</span></div></div><div class="ti-right"><div class="ti-pool">15 000 🪙</div><div class="ti-entry">Entrée: 500 🪙</div><span class="badge bs">🟣 Bientôt</span></div></div>
+      <div class="ti" onclick="joinTournament()"><div class="ti-ic">👑</div><div class="ti-info"><div class="ti-name">Challenge du Champion</div><div class="ti-meta"><span>👥 60 joueurs</span><span>⏰ 3h:10min</span></div></div><div class="ti-right"><div class="ti-pool">100 000 🪙</div><div class="ti-entry">Entrée: 2 000 🪙</div><span class="badge bl">🔴 En cours</span></div></div>
+    </div>
+  </div>
+  <div class="bnav">
+    <button class="ni" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
+    <button class="ni" onclick="startMode('free')"><div class="ni-ic">🎲</div><div class="ni-lb">Jouer</div></button>
+    <button class="ni active"><div class="ni-ic">🏆</div><div class="ni-lb">Tournois</div></button>
+    <button class="ni" onclick="navTo('wallet',this)"><div class="ni-ic">👛</div><div class="ni-lb">Wallet</div></button>
+    <button class="ni" onclick="navTo('profile',this)"><div class="ni-ic">👤</div><div class="ni-lb">Profil</div></button>
+  </div>
+</div>
+
+<!-- ===== PROFILE ===== -->
+<div class="screen" id="scr-profile">
+  <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><div class="shdr-title">PROFIL</div></div>
+  <div class="scroll" style="padding-bottom:80px">
+    <div class="prof-hero">
+      <div class="prof-av-wrap">
+        <div class="prof-av">SK</div>
+        <div class="prof-lv-badge">Niveau 24</div>
+      </div>
+      <div class="prof-name">Sidick Kone</div>
+      <div class="prof-since">Membre depuis Mai 2024</div>
+    </div>
+    <div class="stat-grid">
+      <div class="sc-card"><div class="sc-val">147</div><div class="sc-lbl">Parties jouées</div></div>
+      <div class="sc-card"><div class="sc-val">89</div><div class="sc-lbl">Victoires</div></div>
+      <div class="sc-card"><div class="sc-val">61%</div><div class="sc-lbl">Taux victoire</div></div>
+      <div class="sc-card"><div class="sc-val" id="profile-coins">15 350</div><div class="sc-lbl">Coins gagnés</div></div>
+    </div>
+    <div class="prof-btns" style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-find" style="font-size:16px;padding:14px" onclick="showToast('Paramètres bientôt!')">⚙️ PARAMÈTRES</button>
+      <button style="padding:14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);border-radius:50px;cursor:pointer;font-family:'Anton',sans-serif;font-size:16px;letter-spacing:2px;transition:all .2s" onclick="logout()">🚪 SE DÉCONNECTER</button>
+    </div>
+  </div>
+  <div class="bnav">
+    <button class="ni" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
+    <button class="ni" onclick="startMode('free')"><div class="ni-ic">🎲</div><div class="ni-lb">Jouer</div></button>
+    <button class="ni" onclick="navTo('tournaments',this)"><div class="ni-ic">🏆</div><div class="ni-lb">Tournois</div></button>
+    <button class="ni" onclick="navTo('wallet',this)"><div class="ni-ic">👛</div><div class="ni-lb">Wallet</div></button>
+    <button class="ni active"><div class="ni-ic">👤</div><div class="ni-lb">Profil</div></button>
+  </div>
+</div>
+
+
+<!-- ===== COLOR PICKER ===== -->
+<div class="screen" id="scr-color">
+  <div class="shdr"><button class="bk" onclick="showScreen('mode')">←</button><div class="shdr-title">CHOISIR SA COULEUR</div></div>
+  <div class="color-pick-wrap">
+    <div class="color-pick-title">Quelle couleur voulez-vous jouer?</div>
+    <div class="color-grid">
+      <div class="color-card" id="cc-0"
+           style="background:linear-gradient(145deg,#0033aa,#1155ee);border-color:rgba(26,111,255,.5)"
+           onclick="selectColor(0)">
+        <div class="cc-check">✓</div>
+        <div class="cc-icon">🔵</div>
+        <div class="cc-name" style="color:#77aaff">BLEU</div>
+        <div class="cc-status" id="cc-status-0">Disponible</div>
+      </div>
+      <div class="color-card" id="cc-1"
+           style="background:linear-gradient(145deg,#aa0000,#dd2222);border-color:rgba(238,17,17,.5)"
+           onclick="selectColor(1)">
+        <div class="cc-check">✓</div>
+        <div class="cc-icon">🔴</div>
+        <div class="cc-name" style="color:#ff7777">ROUGE</div>
+        <div class="cc-status" id="cc-status-1">Disponible</div>
+      </div>
+      <div class="color-card" id="cc-2"
+           style="background:linear-gradient(145deg,#007722,#00aa33);border-color:rgba(0,187,51,.5)"
+           onclick="selectColor(2)">
+        <div class="cc-check">✓</div>
+        <div class="cc-icon">🟢</div>
+        <div class="cc-name" style="color:#66ff88">VERT</div>
+        <div class="cc-status" id="cc-status-2">Disponible</div>
+      </div>
+      <div class="color-card" id="cc-3"
+           style="background:linear-gradient(145deg,#aa7700,#ddaa00);border-color:rgba(221,170,0,.5)"
+           onclick="selectColor(3)">
+        <div class="cc-check">✓</div>
+        <div class="cc-icon">🟡</div>
+        <div class="cc-name" style="color:#ffdd55">JAUNE</div>
+        <div class="cc-status" id="cc-status-3">Disponible</div>
+      </div>
+    </div>
+
+    <div class="color-preview">
+      <div class="cp-pawn" id="cp-pawn">🔵</div>
+      <div class="cp-text">Vous jouez avec la couleur <b id="cp-name">Bleu</b></div>
+    </div>
+
+    <div class="color-confirm-wrap">
+      <button class="btn-find" id="color-confirm-btn" onclick="confirmColor()">
+        CONFIRMER ⚡
+      </button>
+      <div class="mfooter" style="margin-top:12px">Les autres couleurs seront jouées par l'IA</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- #app -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/game.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  // If OAuth callback lands here, send to auth.html
+  if(window.location.hash.includes('access_token') || window.location.search.includes('code=')){
+    window.location.href = '/auth.html' + window.location.hash + window.location.search;
+    return;
+  }
+
+  // initAuth() redirects to /auth.html if not logged in
+  const ok = await initAuth();
+  if(!ok) return;
+
+  // ✅ Logged in - show player dashboard
+  document.getElementById('scr-home').classList.add('active');
+  updateCoinsUI();
+  updateProfileUI();
+  renderRealLeaderboard();
+});
+</script>
+</body>
+</html>

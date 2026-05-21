@@ -165,7 +165,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="sb-bottom">
     <div class="admin-badge">🔐 Admin</div>
     <div style="margin-top:8px;font-size:11px;color:var(--muted)" id="admin-name">Chargement...</div>
-    <a class="sb-item" href="#" onclick="adminLogout()" style="padding:8px 0;margin-top:8px">
+    <a class="sb-item" href="/dashboard.html" style="padding:8px 0;margin-top:4px">
+      <span class="sb-icon">🎮</span> Voir le jeu
+    </a>
+    <a class="sb-item" href="#" onclick="adminLogout()" style="padding:8px 0">
       <span class="sb-icon">🚪</span> Déconnexion
     </a>
   </div>
@@ -567,7 +570,7 @@ function showToast(msg){
   t.textContent=msg;t.style.opacity='1';clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity='0',3000);
 }
 
-async function adminLogout(){ await initSB(); await sb.auth.signOut(); window.location.href='/auth.html'; }
+async function adminLogout(){ await initSB(); await sb.auth.signOut(); window.location.href='/'; }
 
 // START
 init();
