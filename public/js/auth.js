@@ -25,6 +25,160 @@ async function getSupabase(){
   return _supabase;
 }
 
+
+// ===== POPUP CHOIX PSEUDO (pour nouveaux joueurs Google) =====
+function showUsernamePopup(user, onComplete){
+  // Create popup overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'username-popup';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:99999;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Rajdhani',sans-serif;
+  `;
+
+  const suggestedName = (user.user_metadata?.full_name || user.email?.split('@')[0] || '')
+    .replace(/[^a-zA-Z0-9_]/g,'_').slice(0,20);
+
+  overlay.innerHTML = `
+    <div style="background:#111118;border:1px solid rgba(255,215,0,.2);border-radius:20px;padding:32px 24px;width:360px;max-width:92vw;text-align:center">
+      <div style="font-size:48px;margin-bottom:12px">👋</div>
+      <div style="font-family:'Anton',sans-serif;font-size:22px;color:#FFD700;letter-spacing:2px;margin-bottom:8px">BIENVENUE!</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:24px;line-height:1.6">
+        Choisissez votre pseudo pour commencer à jouer
+      </div>
+      <div style="margin-bottom:8px">
+        <input id="popup-username" type="text" value="${suggestedName}"
+          style="width:100%;padding:13px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,215,0,.3);border-radius:12px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;outline:none;text-align:center;letter-spacing:1px"
+          maxlength="20" oninput="validatePopupUsername(this.value)">
+        <div id="popup-hint" style="font-size:10px;color:#44ff88;margin-top:6px">✓ Nom d'utilisateur valide</div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:8px">Choisir un avatar</div>
+        <div id="popup-avatars" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"></div>
+      </div>
+      <button id="popup-confirm" onclick="confirmUsernamePopup()"
+        style="width:100%;padding:14px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-family:'Anton',sans-serif;font-size:17px;letter-spacing:2px;border:none;border-radius:40px;cursor:pointer;box-shadow:0 6px 20px rgba(255,165,0,.3)">
+        COMMENCER À JOUER ⚡
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Init avatars in popup
+  const AVTS = ['👑','🦁','🐯','🦊','🐺','🦅','🐲','💎','⚡','🔥','🌙','⭐'];
+  let popupAvatar = '👑';
+  const grid = document.getElementById('popup-avatars');
+  AVTS.forEach(av => {
+    const el = document.createElement('div');
+    el.textContent = av;
+    el.style.cssText = `width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${av==='👑'?'#FFD700':'transparent'};background:rgba(255,255,255,.06);transition:all .2s`;
+    el.onclick = () => {
+      document.querySelectorAll('#popup-avatars div').forEach(a => {
+        a.style.borderColor='transparent'; a.style.background='rgba(255,255,255,.06)';
+      });
+      el.style.borderColor='#FFD700'; el.style.background='rgba(255,215,0,.15)';
+      popupAvatar = av;
+    };
+    grid.appendChild(el);
+  });
+
+  window._popupCallback = onComplete;
+  window._popupAvatar = () => popupAvatar;
+}
+
+function validatePopupUsername(val){
+  const hint = document.getElementById('popup-hint');
+  const btn = document.getElementById('popup-confirm');
+  const ok = /^[a-zA-Z0-9_]{3,20}$/.test(val);
+  hint.style.color = ok ? '#44ff88' : '#ff6666';
+  hint.textContent = ok ? '✓ Nom valide' : '✗ 3-20 caractères, lettres et chiffres uniquement';
+  if(btn) btn.disabled = !ok;
+}
+
+async function confirmUsernamePopup(){
+  const username = document.getElementById('popup-username').value.trim();
+  if(!/^[a-zA-Z0-9_]{3,20}$/.test(username)) return;
+  const avatar = window._popupAvatar ? window._popupAvatar() : '👑';
+
+  // Update profile in DB
+  const sb = await getSupabase();
+  await sb.from('players').update({ username, avatar_url: avatar }).eq('id', CURRENT_USER.id);
+
+  // Update local profile
+  if(CURRENT_PROFILE){ CURRENT_PROFILE.username = username; CURRENT_PROFILE.avatar_url = avatar; }
+  if(typeof STATE !== 'undefined'){ STATE.username = username; STATE.initials = username.slice(0,2).toUpperCase(); }
+
+  // Remove popup
+  const popup = document.getElementById('username-popup');
+  if(popup) popup.remove();
+
+  // Execute callback
+  if(window._popupCallback) window._popupCallback();
+}
+
+
+// Update ALL profile displays across the page
+function updateAllProfileDisplays(){
+  if(!CURRENT_PROFILE) return;
+  const p = CURRENT_PROFILE;
+  const u = CURRENT_USER;
+
+  // Topbar
+  const tbAv = document.getElementById('tb-av');
+  if(tbAv) tbAv.textContent = p.avatar_url || p.username?.slice(0,2).toUpperCase() || '👑';
+  const tbName = document.querySelector('.tb-name');
+  if(tbName) tbName.textContent = p.username || '...';
+  const tbLv = document.querySelector('.tb-lv');
+  if(tbLv) tbLv.textContent = 'Niv.' + (p.level||1);
+
+  // Profile screen elements (with IDs)
+  const els = {
+    'prof-av-display': p.avatar_url || '👑',
+    'prof-lv-display': 'Niveau ' + (p.level||1),
+    'prof-name-display': p.username || '...',
+  };
+  Object.entries(els).forEach(([id,val]) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = val;
+  });
+
+  // Profile screen elements (with classes)
+  const profAv = document.querySelector('.prof-av');
+  if(profAv) profAv.textContent = p.avatar_url || '👑';
+  const profName = document.querySelector('.prof-name');
+  if(profName) profName.textContent = p.username || '...';
+  const profLv = document.querySelector('.prof-lv-badge');
+  if(profLv) profLv.textContent = 'Niveau ' + (p.level||1);
+
+  // Member since
+  const profSince = document.querySelector('.prof-since');
+  const sinceEl = document.getElementById('prof-since-display');
+  const sinceDate = u?.created_at
+    ? new Date(u.created_at).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})
+    : 'récemment';
+  const sinceText = 'Membre depuis ' + sinceDate;
+  if(profSince) profSince.textContent = sinceText;
+  if(sinceEl) sinceEl.textContent = sinceText;
+
+  // Stats
+  const scVals = document.querySelectorAll('.sc-val');
+  if(scVals[0]) scVals[0].textContent = p.games_played || 0;
+  if(scVals[1]) scVals[1].textContent = p.wins || 0;
+  if(scVals[2]) scVals[2].textContent = p.games_played > 0
+    ? Math.round((p.wins/p.games_played)*100)+'%' : '0%';
+  if(scVals[3]) scVals[3].textContent = (p.coins||0).toLocaleString('fr-FR');
+
+  // Also call every second for 3 seconds to catch late renders
+  if(!window._profileUpdateDone){
+    window._profileUpdateDone = true;
+    [500,1000,2000].forEach(delay => {
+      setTimeout(updateAllProfileDisplays, delay);
+    });
+  }
+}
+
 // Vérifie la session au chargement
 async function initAuth(){
   const sb = await getSupabase();
@@ -90,11 +244,32 @@ async function loadProfile(){
     STATE.xp           = CURRENT_PROFILE.xp || 0;
     STATE.wins         = CURRENT_PROFILE.wins || 0;
     STATE.games_played = CURRENT_PROFILE.games_played || 0;
-    // Update topbar avatar initials
+    // Update topbar
     const tbAv = document.getElementById('tb-av');
     if(tbAv) tbAv.textContent = STATE.initials;
     const tbName = document.querySelector('.tb-name');
     if(tbName) tbName.textContent = STATE.username;
+  }
+
+  // Update profile screen immediately
+  updateAllProfileDisplays();
+
+  // Show username popup for new Google users (username contains @ or looks auto-generated)
+  const needsUsername = CURRENT_PROFILE && (
+    !CURRENT_PROFILE.username ||
+    CURRENT_PROFILE.username.includes('@') ||
+    CURRENT_PROFILE.username.startsWith('Player_')
+  );
+
+  if(needsUsername && CURRENT_USER){
+    // Wait for DOM then show popup
+    setTimeout(() => {
+      showUsernamePopup(CURRENT_USER, () => {
+        // After choosing username, update UI
+        if(typeof updateProfileUI === 'function') updateProfileUI();
+        if(typeof updateCoinsUI === 'function') updateCoinsUI();
+      });
+    }, 500);
   }
 }
 
