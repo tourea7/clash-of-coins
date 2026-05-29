@@ -271,9 +271,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff
 
 /* Player cards */
 .prow{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:480px;padding:0 2px}
-.pi{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:76px}
-.p-av-wrap{position:relative}
-.p-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;transition:all .35s;border:2.5px solid rgba(255,255,255,.2)}
+.pi{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:64px}
+.p-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;transition:all .35s;border:2.5px solid rgba(255,255,255,.2);flex-shrink:0}
 .p-av.myturn{animation:player-pulse .8s ease-in-out infinite}
 @keyframes player-pulse{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 6px transparent}}
 .p-score-badge{font-size:10px;font-weight:700;color:rgba(255,255,255,.8)}
@@ -283,14 +282,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff
 
 /* Dice area */
 .dice-area{display:flex;align-items:center;gap:14px}
-.dice-el{width:58px;height:58px;background:linear-gradient(145deg,#fff,#e0e0e0);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:38px;color:#111;box-shadow:0 6px 20px rgba(0,0,0,.6),0 2px 0 rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.9);transition:transform .2s;flex-shrink:0}
+.dice-el{width:68px;height:68px;background:linear-gradient(145deg,#ffffff,#e8e8e8);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:44px;color:#111;box-shadow:0 8px 24px rgba(0,0,0,.7),0 3px 0 rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.9);transition:all .2s;flex-shrink:0;cursor:pointer;border:2px solid rgba(255,215,0,.3)}
+.dice-el:hover{transform:scale(1.1) translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.8),0 4px 0 rgba(0,0,0,.5),0 0 20px rgba(255,215,0,.3)}
+.dice-el:active{transform:scale(.95);box-shadow:0 4px 12px rgba(0,0,0,.6)}
 .dice-el.rolling{animation:dice-roll .45s ease-in-out}
 @keyframes dice-roll{0%,100%{transform:rotate(0)}25%{transform:rotate(-25deg) scale(1.15)}75%{transform:rotate(25deg) scale(.9)}}
 
 .roll-btn{padding:14px 32px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-family:'Anton',sans-serif;font-size:17px;border:none;border-radius:40px;cursor:pointer;letter-spacing:2px;transition:all .2s;box-shadow:0 6px 24px rgba(255,165,0,.4),0 2px 0 #8B4000;text-transform:uppercase}
 .roll-btn:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 10px 32px rgba(255,165,0,.5)}
 .roll-btn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none;transform:none}
-.game-log{font-size:12px;color:rgba(255,255,255,.5);text-align:center;min-height:20px;font-weight:600;transition:all .3s;padding:0 10px}
+.game-log{font-size:11px;color:rgba(255,255,255,.5);text-align:center;font-weight:700;transition:all .3s;padding:4px 8px;background:rgba(255,255,255,.04);border-radius:20px;border:1px solid rgba(255,255,255,.06);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ===== WALLET SCREEN ===== */
 #scr-wallet{background:linear-gradient(180deg,#0d0d18,#080810)}
@@ -566,38 +567,46 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff
     <div class="gh-mise">Mise: <b id="g-mise">Gratuit</b></div>
   </div>
   <div class="game-body">
+    <!-- Top players row -->
     <div class="prow">
       <div class="pi" id="pi-0">
-        <div class="p-av-wrap"><div class="p-av" id="pa-0" style="background:#1a6fff">P1</div></div>
-        <div class="p-score-badge" id="ps-0" style="color:#6699ff">0 pts</div>
+        <div class="p-av" id="pa-0" style="background:#1a6fff">P1</div>
+        <div class="p-score-badge" id="ps-0" style="color:#88bbff">0 pts</div>
         <div class="p-name" id="pn-0">Vous</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="dice-el" id="dice-el">⚀</div>
+
+      <!-- DICE - clickable, centered, big -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div class="dice-el" id="dice-el" onclick="rollDice()" title="Cliquez pour lancer!">⚀</div>
+        <div id="dice-hint" style="font-size:9px;color:rgba(255,215,0,.6);font-weight:700;text-transform:uppercase;letter-spacing:1px">CLIQUER</div>
       </div>
+
       <div class="pi" id="pi-1">
-        <div class="p-av-wrap"><div class="p-av" id="pa-1" style="background:#ee1111">P2</div></div>
-        <div class="p-score-badge" id="ps-1" style="color:#ff6666">0 pts</div>
+        <div class="p-av" id="pa-1" style="background:#ee1111">P2</div>
+        <div class="p-score-badge" id="ps-1" style="color:#ff8888">0 pts</div>
         <div class="p-name" id="pn-1">QueenLudo</div>
       </div>
     </div>
 
     <canvas id="board-canvas"></canvas>
 
+    <!-- Bottom players row -->
     <div class="prow">
       <div class="pi" id="pi-2">
-        <div class="p-av-wrap"><div class="p-av" id="pa-2" style="background:#00bb33">P3</div></div>
-        <div class="p-score-badge" id="ps-2" style="color:#44ff77">0 pts</div>
+        <div class="p-av" id="pa-2" style="background:#00cc44">P3</div>
+        <div class="p-score-badge" id="ps-2" style="color:#66ff88">0 pts</div>
         <div class="p-name" id="pn-2">LuckyStar</div>
       </div>
-      <button class="roll-btn" id="roll-btn" onclick="rollDice()">LANCER LE DÉ ⚡</button>
+      <div id="game-log" class="game-log">🎲 Votre tour!</div>
       <div class="pi" id="pi-3">
-        <div class="p-av-wrap"><div class="p-av" id="pa-3" style="background:#ddaa00">P4</div></div>
-        <div class="p-score-badge" id="ps-3" style="color:#ffe566">0 pts</div>
+        <div class="p-av" id="pa-3" style="background:#ddaa00">P4</div>
+        <div class="p-score-badge" id="ps-3" style="color:#ffdd66">0 pts</div>
         <div class="p-name" id="pn-3">KingLudo</div>
       </div>
     </div>
-    <div class="game-log" id="game-log">Votre tour — lancez le dé!</div>
+
+    <!-- Hidden roll button (kept for JS compatibility) -->
+    <button id="roll-btn" style="display:none" onclick="rollDice()"></button>
   </div>
 </div>
 
