@@ -243,9 +243,9 @@ function drawCell(col,row){
     ctx.closePath();ctx.fill();
     ctx.restore();
   }
-}
 
-nction drawHomeZone(p,startCol,startRow){
+
+function drawHomeZone(p,startCol,startRow){
   const x=startCol*C,y=startRow*C,w=6*C,h=6*C;
 
   // Gradient background
