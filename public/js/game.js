@@ -158,91 +158,74 @@ function drawBoard(){
 }
 
 function drawCell(col,row){
-  const x=col*C,y=row*C;
+  const x=col*C, y=row*C;
 
-  // Skip home zone corners (drawn separately)
-  if((col<6&&row<6)||(col>8&&row<6)||(col<6&&row>8)||(col>8&&row>8))return;
-  // Skip center (drawn separately)
-  if(col>=6&&col<=8&&row>=6&&row<=8)return;
+  // Skip home corners and center
+  if((col<6&&row<6)||(col>8&&row<6)||(col<6&&row>8)||(col>8&&row>8)) return;
+  if(col>=6&&col<=8&&row>=6&&row<=8) return;
 
-  // Determine cell type
-  let fill='#f0e8d0',border='rgba(180,150,100,.2)',bw=.5;
+  // Default cell color
+  let fill='#f0e8d0', border='rgba(180,150,100,.15)', bw=.5;
 
-  // Home stretch lanes (colored corridors toward center)
-  if(row===7&&col>=1&&col<=6)       {fill='#c4d4ff';border='rgba(26,111,255,.3)';bw=.8;}  // Blue corridor
-  else if(col===7&&row>=1&&row<=6)  {fill='#ffc4c4';border='rgba(238,17,17,.3)';bw=.8;}   // Red corridor
-  else if(row===7&&col>=8&&col<=13) {fill='#c4ffcc';border='rgba(0,204,68,.3)';bw=.8;}    // Green corridor
-  else if(col===7&&row>=8&&row<=13) {fill='#fff0a0';border='rgba(221,170,0,.3)';bw=.8;}   // Yellow corridor
-  // First step out of home = same color as home zone (no arrow, just colored)
-  else if(col===1&&row===6)  {fill=HOME_MID[0];border='rgba(26,111,255,.4)';bw=1;}   // Blue exit
-  else if(col===8&&row===1)  {fill=HOME_MID[1];border='rgba(238,17,17,.4)';bw=1;}    // Red exit
-  else if(col===13&&row===8) {fill=HOME_MID[2];border='rgba(0,204,68,.4)';bw=1;}     // Green exit
-  else if(col===6&&row===13) {fill=HOME_MID[3];border='rgba(221,170,0,.4)';bw=1;}    // Yellow exit
+  // Home stretch corridors
+  if(row===7&&col>=1&&col<=6)       {fill='#c4d4ff';border='rgba(26,111,255,.3)';bw=.8;}
+  else if(col===7&&row>=1&&row<=6)  {fill='#ffc4c4';border='rgba(238,17,17,.3)';bw=.8;}
+  else if(row===7&&col>=8&&col<=13) {fill='#c4ffcc';border='rgba(0,204,68,.3)';bw=.8;}
+  else if(col===7&&row>=8&&row<=13) {fill='#fff0a0';border='rgba(221,170,0,.3)';bw=.8;}
 
-  // Entry squares - same color as home
+  // Entry squares — same strong color as home zone
   if(ENTRY.has(`${col},${row}`)){
-    const pc=ENTRY_COLORS[`${col},${row}`];
-    const hc=['#4488ff','#ff4444','#44cc66','#ffcc22'];
-    const hb=['rgba(26,111,255,.7)','rgba(238,17,17,.7)','rgba(0,204,68,.7)','rgba(221,170,0,.7)'];
-    fill=hc[pc];border=hb[pc];bw=1.5;
-  }
-  // Safe/star squares
-  if(SF.has(`${col},${row}`)){
-    fill='#fffef5';border='rgba(180,150,80,.25)';bw=.8;
+    const p=ENTRY_COLORS[`${col},${row}`];
+    fill=[HOME_MID[0],HOME_MID[1],HOME_MID[2],HOME_MID[3]][p];
+    border=['rgba(26,111,255,.6)','rgba(238,17,17,.6)','rgba(0,204,68,.6)','rgba(221,170,0,.6)'][p];
+    bw=1.5;
   }
 
+  // Safe squares — cream
+  if(SF.has(`${col},${row}`)){
+    fill='#fffef5'; border='rgba(180,150,80,.25)'; bw=.8;
+  }
+
+  // Draw cell
   ctx.fillStyle=fill;
-  ctx.fillRect(x+.5,y+.5,C-1,C-1);
-  ctx.strokeStyle=border;ctx.lineWidth=bw;
-  ctx.strokeRect(x+.5,y+.5,C-1,C-1);
+  ctx.fillRect(x, y, C, C);
+  ctx.strokeStyle=border; ctx.lineWidth=bw;
+  ctx.strokeRect(x+.5, y+.5, C-1, C-1);
 
-    // Star - 6-pointed Ludo King style
+  // 6-pointed star on safe squares
   if(SF.has(`${col},${row}`)){
-    const cx3=x+C/2, cy3=y+C/2;
-    const outerR=C*.26, innerR=C*.12;
-    const pts=6;
+    const cx=x+C/2, cy=y+C/2;
+    const ro=C*.24, ri=C*.11;
     ctx.save();
     ctx.fillStyle='rgba(210,160,0,.85)';
-    ctx.shadowColor='rgba(255,200,0,.4)';ctx.shadowBlur=4;
+    ctx.shadowColor='rgba(255,200,0,.4)'; ctx.shadowBlur=4;
     ctx.beginPath();
-    for(let i=0;i<pts*2;i++){
-      const angle=i*Math.PI/pts - Math.PI/2;
-      const r=i%2===0?outerR:innerR;
-      const px=cx3+r*Math.cos(angle);
-      const py=cy3+r*Math.sin(angle);
-      if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+    for(let i=0;i<12;i++){
+      const a=i*Math.PI/6 - Math.PI/2;
+      const r=i%2===0?ro:ri;
+      i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));
     }
-    ctx.closePath();ctx.fill();
-    ctx.restore();
-  }
-    // Actually draw a proper 12-point star
-    ctx.restore();
-    // Use emoji star for crisp look
-    ctx.save();
-    ctx.fillStyle='rgba(200,155,0,.75)';
-    ctx.font=`bold ${Math.floor(C*.5)}px serif`;
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.shadowColor='rgba(255,220,0,.3)';ctx.shadowBlur=3;
-    ctx.fillText('★',cx3,cy3+1);
+    ctx.closePath(); ctx.fill();
     ctx.restore();
   }
 
-    // Entry arrows - white triangle on colored entry square
+  // White triangle arrow on entry squares
   if(ENTRY.has(`${col},${row}`)){
-    const dirs={'1,6':'right','8,1':'down','13,8':'left','6,13':'up'};
-    const dir=dirs[`${col},${row}`];
-    const cx2=x+C/2, cy2=y+C/2, s=C*.26;
+    const dirs={'1,6':'r','8,1':'d','13,8':'l','6,13':'u'};
+    const d=dirs[`${col},${row}`];
+    const cx=x+C/2, cy=y+C/2, s=C*.28;
     ctx.save();
-    ctx.fillStyle='rgba(255,255,255,.9)';
-    ctx.shadowColor='rgba(0,0,0,.3)';ctx.shadowBlur=2;
+    ctx.fillStyle='rgba(255,255,255,.88)';
+    ctx.shadowColor='rgba(0,0,0,.25)'; ctx.shadowBlur=2;
     ctx.beginPath();
-    if(dir==='right'){ctx.moveTo(cx2-s*.8,cy2-s);ctx.lineTo(cx2+s,cy2);ctx.lineTo(cx2-s*.8,cy2+s);}
-    else if(dir==='down'){ctx.moveTo(cx2-s,cy2-s*.8);ctx.lineTo(cx2+s,cy2-s*.8);ctx.lineTo(cx2,cy2+s);}
-    else if(dir==='left'){ctx.moveTo(cx2+s*.8,cy2-s);ctx.lineTo(cx2-s,cy2);ctx.lineTo(cx2+s*.8,cy2+s);}
-    else{ctx.moveTo(cx2-s,cy2+s*.8);ctx.lineTo(cx2+s,cy2+s*.8);ctx.lineTo(cx2,cy2-s);}
-    ctx.closePath();ctx.fill();
+    if(d==='r'){ctx.moveTo(cx-s*.8,cy-s);ctx.lineTo(cx+s,cy);ctx.lineTo(cx-s*.8,cy+s);}
+    else if(d==='d'){ctx.moveTo(cx-s,cy-s*.8);ctx.lineTo(cx+s,cy-s*.8);ctx.lineTo(cx,cy+s);}
+    else if(d==='l'){ctx.moveTo(cx+s*.8,cy-s);ctx.lineTo(cx-s,cy);ctx.lineTo(cx+s*.8,cy+s);}
+    else{ctx.moveTo(cx-s,cy+s*.8);ctx.lineTo(cx+s,cy+s*.8);ctx.lineTo(cx,cy-s);}
+    ctx.closePath(); ctx.fill();
     ctx.restore();
   }
+}
 
 
 function drawHomeZone(p,startCol,startRow){
