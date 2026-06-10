@@ -811,113 +811,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  // Safety timeout - if loading takes more than 8 seconds, redirect to auth
+  const loadingTimeout = setTimeout(() => {
+    window.location.href = '/auth.html';
+  }, 8000);
+  
+  // Animate loading bar
+  let prog = 0;
+  const bar = document.getElementById('ld-bar');
+  const txt = document.getElementById('ld-text');
+  const barIv = setInterval(() => {
+    prog = Math.min(prog + Math.random()*15, 90);
+    if(bar) bar.style.width = prog + '%';
+    if(txt) {
+      if(prog > 30) txt.textContent = 'Vérification de la session...';
+      if(prog > 60) txt.textContent = 'Chargement du profil...';
+      if(prog > 80) txt.textContent = 'Presque prêt...';
+    }
+  }, 200);
+
   // initAuth() redirects to /auth.html if not logged in
   const ok = await initAuth();
   if(!ok) return;
 
-  // ✅ Logged in - show player dashboard
-  document.getElementById('scr-home').classList.add('active');
+  clearTimeout(loadingTimeout);
+  clearInterval(barIv);
+  if(bar) bar.style.width = '100%';
+  if(txt) txt.textContent = 'Prêt! 🎉';
 
-  // updateCoinsUI and updateProfileUI are already called inside initAuth -> loadProfile
-  // But call them again here to be sure
-  updateCoinsUI();
-
-  // Wait a tiny bit for CURRENT_PROFILE to be fully loaded
+  // ✅ Logged in - hide loading, show dashboard
+  const loadEl = document.getElementById('loading');
   setTimeout(() => {
-    if(CURRENT_PROFILE) {
-      // Topbar
-      updateProfileUI();
-      updateCoinsUI();
+    if(loadEl){ loadEl.style.opacity='0'; setTimeout(()=>{loadEl.style.display='none';},400); }
+    document.getElementById('scr-home').classList.add('active');
+    updateCoinsUI();
 
-      // Profile screen
-      const pavEl = document.getElementById('prof-av-display');
-      if(pavEl) pavEl.textContent = CURRENT_PROFILE.avatar_url || '👑';
-      const plvEl = document.getElementById('prof-lv-display');
-      if(plvEl) plvEl.textContent = 'Niveau ' + (CURRENT_PROFILE.level || 1);
-      const pnmEl = document.getElementById('prof-name-display');
-      if(pnmEl) pnmEl.textContent = CURRENT_PROFILE.username || '...';
-      const psnEl = document.getElementById('prof-since-display');
-      if(psnEl){
-        const d = new Date(CURRENT_USER?.created_at || Date.now());
-        psnEl.textContent = 'Membre depuis ' + d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
-      }
-    }
-    renderRealLeaderboard();
-    renderRealTransactions();
-  }, 300);
-
-  // Also update profile when scr-profile is shown
-  const origShowScreen = window.showScreen;
-  if(typeof showScreen === 'function'){
-    const _orig = showScreen;
-    window.showScreen = function(name){
-      _orig(name);
-      if(name === 'profile' && CURRENT_PROFILE){
-        const pavEl = document.getElementById('prof-av-display');
-        if(pavEl) pavEl.textContent = CURRENT_PROFILE.avatar_url || '👑';
-        const plvEl = document.getElementById('prof-lv-display');
-        if(plvEl) plvEl.textContent = 'Niveau ' + (CURRENT_PROFILE.level || 1);
-        const pnmEl = document.getElementById('prof-name-display');
-        if(pnmEl) pnmEl.textContent = CURRENT_PROFILE.username || '...';
-        const psnEl = document.getElementById('prof-since-display');
-        if(psnEl){
-          const d = new Date(CURRENT_USER?.created_at || Date.now());
-          psnEl.textContent = 'Membre depuis ' + d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
-        }
-      }
-    };
-  }
-
-  if(CURRENT_PROFILE) {
-    // Name
-    const profName = document.querySelector('.prof-name');
-    if(profName) profName.textContent = CURRENT_PROFILE.username || '...';
-
-    // Since text was set to ... above
-    document.querySelectorAll('.prof-name').forEach(el => el.textContent = CURRENT_PROFILE.username || '...');
-
-    // Member since
-    const profSince = document.querySelector('.prof-since');
-    if(profSince) {
-      const d = new Date(CURRENT_USER?.created_at || Date.now());
-      profSince.textContent = 'Membre depuis ' + d.toLocaleDateString('fr-FR', {month:'long', year:'numeric'});
-    }
-
-    // Stats
-    const sp = document.getElementById('stat-parties');
-    if(sp) sp.textContent = CURRENT_PROFILE.games_played || 0;
-    const sv = document.getElementById('stat-victoires');
-    if(sv) sv.textContent = CURRENT_PROFILE.wins || 0;
-    const st = document.getElementById('stat-taux');
-    if(st) st.textContent = CURRENT_PROFILE.games_played > 0
-      ? Math.round((CURRENT_PROFILE.wins/CURRENT_PROFILE.games_played)*100)+'%' : '0%';
-
-    // Level badge
-    const lvBadge = document.querySelector('.prof-lv-badge');
-    if(lvBadge) lvBadge.textContent = 'Niveau ' + (CURRENT_PROFILE.level || 1);
-
-    // Avatar
-    const profAv = document.querySelector('.prof-av');
-    if(profAv) profAv.textContent = CURRENT_PROFILE.avatar_url || '👑';
-
-    // Topbar name
-    const tbName = document.querySelector('.tb-name');
-    if(tbName) tbName.textContent = CURRENT_PROFILE.username || '...';
-    const tbAv = document.getElementById('tb-av');
-    if(tbAv) tbAv.textContent = CURRENT_PROFILE.avatar_url || '👑';
-    const tbLv = document.querySelector('.tb-lv');
-    if(tbLv) tbLv.textContent = 'Niv.' + (CURRENT_PROFILE.level || 1);
-
-    // XP bar
-    const xpFill = document.querySelector('.xp-fill');
-    if(xpFill) xpFill.style.width = Math.min(100, ((CURRENT_PROFILE.xp%1000)/1000)*100) + '%';
-    const xpTxt = document.querySelector('.xp-txt');
-    if(xpTxt) xpTxt.textContent = (CURRENT_PROFILE.xp%1000) + '/1000';
-
-    // Bal display (home screen balance card)
-    const balSub = document.querySelector('.bal-sub');
-    if(balSub) balSub.textContent = 'Niveau ' + (CURRENT_PROFILE.level||1) + ' · ' + (CURRENT_PROFILE.xp%1000) + ' / 1000 XP';
-  }
+    // Update profile displays after short delay
+    setTimeout(() => {
+      if(typeof updateAllProfileDisplays === 'function') updateAllProfileDisplays();
+      if(typeof updateProfileUI === 'function') updateProfileUI();
+      if(typeof updateCoinsUI === 'function') updateCoinsUI();
+      if(typeof renderRealLeaderboard === 'function') renderRealLeaderboard();
+      if(typeof renderRealTransactions === 'function') renderRealTransactions();
+    }, 400);
+  }, 200);
 });
 </script>
 
