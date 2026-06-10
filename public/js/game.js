@@ -65,7 +65,13 @@ const BP=[
 const EN=[0,13,26,39];
 
 // Safe squares (star squares)
-const SF=new Set(['1,6','8,1','13,8','6,13','1,8','6,2','8,13','13,6','0,7','14,7','7,0','7,14']);
+// Safe squares: entry points + standard safe squares on path
+const SF=new Set([
+  '1,6','8,1','13,8','6,13',   // Entry points (colored triangles)
+  '2,6','6,2',                  // Near Blue home
+  '12,8','8,12',                // Near Green/Yellow
+  '2,8','8,2',                  // Cross-safe squares
+]);
 
 let canvas,ctx,C;
 let animFrame=null;
@@ -104,9 +110,18 @@ function drawBoard(){
   if(!ctx)return;
   const W=canvas.width;
 
-  // Board background
-  ctx.fillStyle='#f5efe0';
+  // Board background - Ludo King warm cream
+  const bgGrad = ctx.createLinearGradient(0,0,W,W);
+  bgGrad.addColorStop(0,'#f8f2e0');
+  bgGrad.addColorStop(1,'#f0e8cc');
+  ctx.fillStyle=bgGrad;
   roundRect(ctx,0,0,W,W,14);ctx.fill();
+  // Subtle grid background
+  ctx.strokeStyle='rgba(180,150,100,.08)';ctx.lineWidth=.5;
+  for(let i=1;i<15;i++){
+    ctx.beginPath();ctx.moveTo(i*C,0);ctx.lineTo(i*C,W);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,i*C);ctx.lineTo(W,i*C);ctx.stroke();
+  }
 
   // Draw all path cells
   for(let r=0;r<15;r++)for(let c=0;c<15;c++) drawCell(c,r);
@@ -157,10 +172,10 @@ function drawCell(col,row){
   let fill='#f0e8d0',border='rgba(180,150,100,.2)',bw=.5;
 
   // Home stretch lanes — correct colors per player
-  if(row===7&&col>=1&&col<=6)       {fill='#bbccff';border='rgba(26,111,255,.5)';bw=1;}  // Blue
-  else if(col===7&&row>=1&&row<=6)  {fill='#ffbbbb';border='rgba(238,17,17,.5)';bw=1;}   // Red
-  else if(row===7&&col>=8&&col<=13) {fill='#bbffcc';border='rgba(0,204,68,.5)';bw=1;}    // Green
-  else if(col===7&&row>=8&&row<=13) {fill='#ffeeaa';border='rgba(221,170,0,.5)';bw=1;}   // Yellow
+  if(row===7&&col>=1&&col<=6)       {fill='#c4d4ff';border='rgba(26,111,255,.3)';bw=.8;}  // Blue  (left)
+  else if(col===7&&row>=1&&row<=6)  {fill='#ffc4c4';border='rgba(238,17,17,.3)';bw=.8;}   // Red   (top)
+  else if(row===7&&col>=8&&col<=13) {fill='#c4ffcc';border='rgba(0,204,68,.3)';bw=.8;}    // Green (right)
+  else if(col===7&&row>=8&&row<=13) {fill='#fff0a0';border='rgba(221,170,0,.3)';bw=.8;}   // Yellow (bottom)
 
   // Safe/star squares
   if(SF.has(`${col},${row}`)&&col!==7&&row!==7){
@@ -172,28 +187,53 @@ function drawCell(col,row){
   ctx.strokeStyle=border;ctx.lineWidth=bw;
   ctx.strokeRect(x+.5,y+.5,C-1,C-1);
 
-  // Star symbol on safe squares
+  // Star symbol - Ludo King style 6-pointed star
   if(SF.has(`${col},${row}`)&&col!==7&&row!==7){
-    ctx.fillStyle='rgba(180,140,0,.7)';
-    ctx.font=`bold ${Math.floor(C*.44)}px serif`;
+    const cx3=x+C/2, cy3=y+C/2, sr=C*.22;
+    ctx.save();
+    ctx.fillStyle='rgba(200,160,0,.8)';
+    ctx.shadowColor='rgba(255,200,0,.4)';ctx.shadowBlur=4;
+    // Draw 6-pointed star
+    ctx.beginPath();
+    for(let pt=0;pt<6;pt++){
+      const angle=pt*Math.PI/3-Math.PI/6;
+      const r2=pt%2===0?sr:sr*.5;
+      const ax=cx3+sr*Math.cos(angle);
+      const ay=cy3+sr*Math.sin(angle);
+      if(pt===0)ctx.moveTo(ax,ay);else ctx.lineTo(ax,ay);
+    }
+    // Actually draw a proper 12-point star
+    ctx.restore();
+    // Use emoji star for crisp look
+    ctx.save();
+    ctx.fillStyle='rgba(200,155,0,.75)';
+    ctx.font=`bold ${Math.floor(C*.5)}px serif`;
     ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('★',x+C/2,y+C/2+1);
+    ctx.shadowColor='rgba(255,220,0,.3)';ctx.shadowBlur=3;
+    ctx.fillText('★',cx3,cy3+1);
+    ctx.restore();
   }
 
-  // Entry arrows
-  const arrows={
-    '1,6': ['→',PC[0]],
-    '8,1': ['↓',PC[1]],
-    '13,8':['←',PC[2]],
-    '6,13':['↑',PC[3]],
+  // Entry arrows - Ludo King style colored triangles
+  const arrowData={
+    '1,6':  {dir:'right', color:PC[0]},
+    '8,1':  {dir:'down',  color:PC[1]},
+    '13,8': {dir:'left',  color:PC[2]},
+    '6,13': {dir:'up',    color:PC[3]},
   };
-  if(arrows[`${col},${row}`]){
-    const[arrow,color]=arrows[`${col},${row}`];
-    ctx.save();ctx.globalAlpha=.65;
-    ctx.fillStyle=color;
-    ctx.font=`bold ${Math.floor(C*.6)}px sans-serif`;
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(arrow,x+C/2,y+C/2+1);
+  const ad = arrowData[`${col},${row}`];
+  if(ad){
+    const cx2=x+C/2, cy2=y+C/2, s=C*.32;
+    ctx.save();
+    ctx.fillStyle=ad.color;
+    ctx.shadowColor=ad.color;
+    ctx.shadowBlur=6;
+    ctx.beginPath();
+    if(ad.dir==='right'){ctx.moveTo(cx2-s,cy2-s);ctx.lineTo(cx2+s,cy2);ctx.lineTo(cx2-s,cy2+s);}
+    else if(ad.dir==='down'){ctx.moveTo(cx2-s,cy2-s);ctx.lineTo(cx2+s,cy2-s);ctx.lineTo(cx2,cy2+s);}
+    else if(ad.dir==='left'){ctx.moveTo(cx2+s,cy2-s);ctx.lineTo(cx2-s,cy2);ctx.lineTo(cx2+s,cy2+s);}
+    else if(ad.dir==='up'){ctx.moveTo(cx2-s,cy2+s);ctx.lineTo(cx2+s,cy2+s);ctx.lineTo(cx2,cy2-s);}
+    ctx.closePath();ctx.fill();
     ctx.restore();
   }
 }
@@ -210,10 +250,12 @@ function drawHomeZone(p,startCol,startRow){
   roundRect(ctx,x,y,w,h,p===0?'12 0 0 0':p===1?'0 12 0 0':p===2?'0 0 0 12':'0 0 12 0');
   ctx.fill();
 
-  // Inner white rounded area
-  const m=C*.6;
-  ctx.fillStyle='rgba(255,255,255,.15)';
-  roundRect(ctx,x+m,y+m,w-m*2,h-m*2,8);ctx.fill();
+  // Inner lighter area for the 4 circles
+  const m=C*.5;
+  ctx.fillStyle='rgba(255,255,255,.12)';
+  roundRect(ctx,x+m,y+m,w-m*2,h-m*2,10);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.2)';ctx.lineWidth=1;
+  ctx.stroke();
 
   // 4 base circles — properly centered in 2x2 grid
   // Grid centers within the 6x6 zone
