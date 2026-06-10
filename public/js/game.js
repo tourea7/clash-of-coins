@@ -55,10 +55,10 @@ const HS=[
 
 // Base positions in home zones
 const BP=[
-  [[2,2],[3,2],[2,3],[3,3]],           // Blue: top-left
-  [[10,2],[11,2],[10,3],[11,3]],       // Red: top-right
-  [[10,10],[11,10],[10,11],[11,11]],   // Green: bottom-RIGHT (enters from right side)
-  [[2,10],[3,10],[2,11],[3,11]],       // Yellow: bottom-LEFT (enters from bottom)
+  [[2,2],[4,2],[2,4],[4,4]],
+  [[11,2],[13,2],[11,4],[13,4]],
+  [[11,11],[13,11],[11,13],[13,13]],
+  [[2,11],[4,11],[2,13],[4,13]],
 ];
 
 // Entry indices in P52
@@ -66,7 +66,7 @@ const EN=[0,13,26,39];
 
 // Safe squares (star squares)
 // Safe squares (star squares - protected from capture)
-const SF=new Set(['2,6','6,2','12,6','6,12','8,2','2,8','8,12','12,8']);
+const SF=new Set(['3,8','8,3','11,6','6,11']);
 const ENTRY=new Set(['1,6','8,1','13,8','6,13']);
 const ENTRY_COLORS={'1,6':0,'8,1':1,'13,8':2,'6,13':3};
 
@@ -249,10 +249,10 @@ function drawHomeZone(p,startCol,startRow){
 
   // 4 base circles — properly centered in 2x2 grid
   // Grid centers within the 6x6 zone
-  const cx0=startCol*C+C*1.75, cy0=startRow*C+C*1.75;
-  const cx1=startCol*C+C*4.25, cy1=startRow*C+C*1.75;
-  const cx2=startCol*C+C*1.75, cy2=startRow*C+C*4.25;
-  const cx3=startCol*C+C*4.25, cy3=startRow*C+C*4.25;
+  const cx0=(startCol+2.5)*C, cy0=(startRow+2.5)*C;
+  const cx1=(startCol+4.5)*C, cy1=(startRow+2.5)*C;
+  const cx2=(startCol+2.5)*C, cy2=(startRow+4.5)*C;
+  const cx3=(startCol+4.5)*C, cy3=(startRow+4.5)*C;
   const centers=[[cx0,cy0],[cx1,cy1],[cx2,cy2],[cx3,cy3]];
   const r=C*.52;
 
