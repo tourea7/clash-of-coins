@@ -342,24 +342,48 @@ function drawPiece(p,i){
 }
 
 function drawPawnShape(x,y,r,color,light,dark){
-  const hr=r,bw=r*1.3,bh=r*.65,sh=r*.4;
+  const hr=r, bw=r*1.25, bh=r*.6, sh=r*.35;
 
-  const g=ctx.createRadialGradient(x-hr*.35,y-hr*.9,hr*.05,x,y-hr*.8,hr*1.1);
-  g.addColorStop(0,light);g.addColorStop(.5,color);g.addColorStop(1,dark);
+  // BODY - 3D gradient from top-left bright to bottom-right dark
+  const g=ctx.createRadialGradient(x-hr*.4,y-hr*1.0,hr*.02,x+hr*.1,y-hr*.3,hr*1.6);
+  g.addColorStop(0,'#fff');
+  g.addColorStop(0.15,light);
+  g.addColorStop(0.5,color);
+  g.addColorStop(0.85,dark);
+  g.addColorStop(1,'rgba(0,0,0,.6)');
 
   ctx.beginPath();
   ctx.arc(x,y-hr*.8,hr,Math.PI,2*Math.PI);
-  ctx.lineTo(x+hr*.55,y);
-  ctx.bezierCurveTo(x+bw*.8,y+sh*.3,x+bw,y+sh,x+bw*.5,y+sh+bh*.5);
-  ctx.bezierCurveTo(x+bw*.3,y+sh+bh,x-bw*.3,y+sh+bh,x-bw*.5,y+sh+bh*.5);
-  ctx.bezierCurveTo(x-bw,y+sh,x-bw*.8,y+sh*.3,x-hr*.55,y);
+  ctx.lineTo(x+hr*.5,y);
+  ctx.bezierCurveTo(x+bw*.8,y+sh*.3,x+bw,y+sh,x+bw*.45,y+sh+bh*.5);
+  ctx.bezierCurveTo(x+bw*.25,y+sh+bh,x-bw*.25,y+sh+bh,x-bw*.45,y+sh+bh*.5);
+  ctx.bezierCurveTo(x-bw,y+sh,x-bw*.8,y+sh*.3,x-hr*.5,y);
   ctx.lineTo(x-hr,y-hr*.8);
   ctx.fillStyle=g;ctx.fill();
-  ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1;ctx.stroke();
 
-  // Head shine
-  ctx.beginPath();ctx.arc(x-hr*.3,y-hr*1.1,hr*.28,0,Math.PI*2);
-  ctx.fillStyle='rgba(255,255,255,.5)';ctx.fill();
+  // Dark outline
+  ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1.2;ctx.stroke();
+
+  // White rim highlight (top edge)
+  ctx.beginPath();
+  ctx.arc(x,y-hr*.8,hr,Math.PI,0);
+  ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1.5;ctx.stroke();
+
+  // Main head shine - large
+  const sg=ctx.createRadialGradient(x-hr*.35,y-hr*1.15,0,x-hr*.35,y-hr*1.15,hr*.55);
+  sg.addColorStop(0,'rgba(255,255,255,.75)');
+  sg.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.beginPath();ctx.arc(x-hr*.3,y-hr*1.1,hr*.45,0,Math.PI*2);
+  ctx.fillStyle=sg;ctx.fill();
+
+  // Small secondary shine
+  ctx.beginPath();ctx.arc(x-hr*.15,y-hr*1.35,hr*.14,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.fill();
+
+  // Base shadow/highlight
+  ctx.beginPath();
+  ctx.ellipse(x,y+sh+bh*.8,bw*.4,bh*.15,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,.2)';ctx.fill();
 }
 
 // ===== GET PIXEL POSITION =====
@@ -493,6 +517,7 @@ function rollDice(){
   const diceEl=document.getElementById('dice-el');
   if(diceEl){
     diceEl.classList.add('rolling');
+      const diceWrap=diceEl.parentElement; if(diceWrap) diceWrap.style.pointerEvents='none';
     diceEl.style.transform='scale(1.3)';
   }
 
@@ -902,6 +927,83 @@ function initParticles(){
   window.addEventListener('resize',()=>{c.width=window.innerWidth;c.height=window.innerHeight;});
 }
 
+
+// ===== ANIMATED BACKGROUND =====
+function initBackground(){
+  const canvas = document.getElementById('bg-canvas');
+  if(!canvas) return;
+  const ctx2 = canvas.getContext('2d');
+  
+  function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Falling elements
+  const EMOJIS = ['🪙','🎲','👑','⭐','💎','🃏','🎯'];
+  const particles = Array.from({length:35}, () => ({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    size: 14 + Math.random() * 22,
+    speed: 0.4 + Math.random() * 1.2,
+    rot: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 0.04,
+    sway: Math.random() * 0.8,
+    swayOffset: Math.random() * Math.PI * 2,
+    opacity: 0.06 + Math.random() * 0.12,
+    emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
+  }));
+
+  // Background gradient colors - cycle slowly
+  let hue = 240;
+  let frame = 0;
+
+  function drawBg(){
+    const w = canvas.width, h = canvas.height;
+    frame++;
+
+    // Dynamic gradient background
+    hue = 220 + Math.sin(frame * 0.003) * 20;
+    const grad = ctx2.createRadialGradient(w*.5, h*.3, 0, w*.5, h*.5, Math.max(w,h));
+    grad.addColorStop(0, `hsl(${hue},45%,10%)`);
+    grad.addColorStop(0.5, `hsl(${hue+20},35%,7%)`);
+    grad.addColorStop(1, `hsl(${hue-20},50%,4%)`);
+    ctx2.fillStyle = grad;
+    ctx2.fillRect(0, 0, w, h);
+
+    // Subtle gold shimmer at top
+    const shimmer = ctx2.createLinearGradient(0,0,w,0);
+    shimmer.addColorStop(0,'transparent');
+    shimmer.addColorStop(0.3+0.2*Math.sin(frame*.01),'rgba(255,215,0,.03)');
+    shimmer.addColorStop(1,'transparent');
+    ctx2.fillStyle = shimmer;
+    ctx2.fillRect(0, 0, w, h*.4);
+
+    // Falling particles
+    ctx2.save();
+    particles.forEach(p => {
+      p.y += p.speed;
+      p.x += Math.sin(frame * 0.02 + p.swayOffset) * p.sway;
+      p.rot += p.rotSpeed;
+      if(p.y > h + 40){ p.y = -40; p.x = Math.random() * w; }
+
+      ctx2.save();
+      ctx2.globalAlpha = p.opacity;
+      ctx2.translate(p.x, p.y);
+      ctx2.rotate(p.rot);
+      ctx2.font = `${p.size}px serif`;
+      ctx2.textAlign = 'center';
+      ctx2.textBaseline = 'middle';
+      ctx2.fillText(p.emoji, 0, 0);
+      ctx2.restore();
+    });
+    ctx2.restore();
+
+    requestAnimationFrame(drawBg);
+  }
+  drawBg();
+}
+
 // ===== INIT =====
 updateCUI();
+initBackground();
 initParticles();
