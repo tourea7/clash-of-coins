@@ -66,7 +66,7 @@ const EN=[0,13,26,39];
 
 // Safe squares (star squares)
 // Safe squares (star squares - protected from capture)
-const SF=new Set(['3,8','8,3','11,6','6,11']);
+const SF=new Set(['2,6','2,8','6,2','8,2','12,6','12,8','6,12','8,12']);
 const ENTRY=new Set(['1,6','8,1','13,8','6,13']);
 const ENTRY_COLORS={'1,6':0,'8,1':1,'13,8':2,'6,13':3};
 
@@ -321,13 +321,15 @@ function drawPiece(p,i){
   const r=C*.3;
   const isActive=(p===GAME.current&&!GAME.rolled&&!GAME.over);
 
+  // Shift pawn up slightly so it centers in the circle visually
+  const drawY = y - r*0.35;
   ctx.save();
   if(isActive){
     ctx.shadowColor=PC[p];ctx.shadowBlur=14;
   } else {
     ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=6;ctx.shadowOffsetY=2;
   }
-  drawPawnShape(x,y,r,PC[p],PCL[p],PCD[p]);
+  drawPawnShape(x,drawY,r,PC[p],PCL[p],PCD[p]);
   ctx.restore();
 
   // Active pulse ring
@@ -366,13 +368,13 @@ function getPXY(p,i){
   let col,row;
 
   if(pos===-1){
-    // In home base — use the 4 circle positions we calculated
-    const homeCol=[0,9,0,9][p];
+    // In home base — use same positions as drawHomeZone circles
+    const homeCol=[0,9,9,0][p];
     const homeRow=[0,0,9,9][p];
-    const cx0=homeCol+1.75,cy0=homeRow+1.75;
-    const cx1=homeCol+4.25,cy1=homeRow+1.75;
-    const cx2=homeCol+1.75,cy2=homeRow+4.25;
-    const cx3=homeCol+4.25,cy3=homeRow+4.25;
+    const cx0=homeCol+2.5,cy0=homeRow+2.5;
+    const cx1=homeCol+4.5,cy1=homeRow+2.5;
+    const cx2=homeCol+2.5,cy2=homeRow+4.5;
+    const cx3=homeCol+4.5,cy3=homeRow+4.5;
     const bases=[[cx0,cy0],[cx1,cy1],[cx2,cy2],[cx3,cy3]];
     return{x:bases[i][0]*C,y:bases[i][1]*C};
   } else if(pos>=52){
