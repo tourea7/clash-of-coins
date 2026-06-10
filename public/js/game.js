@@ -57,21 +57,18 @@ const HS=[
 const BP=[
   [[2,2],[3,2],[2,3],[3,3]],           // Blue: top-left
   [[10,2],[11,2],[10,3],[11,3]],       // Red: top-right
-  [[2,10],[3,10],[2,11],[3,11]],       // Green: bottom-left
-  [[10,10],[11,10],[10,11],[11,11]],   // Yellow: bottom-right
+  [[10,10],[11,10],[10,11],[11,11]],   // Green: bottom-RIGHT (enters from right side)
+  [[2,10],[3,10],[2,11],[3,11]],       // Yellow: bottom-LEFT (enters from bottom)
 ];
 
 // Entry indices in P52
 const EN=[0,13,26,39];
 
 // Safe squares (star squares)
-// Safe squares: entry points + standard safe squares on path
-const SF=new Set([
-  '1,6','8,1','13,8','6,13',   // Entry points (colored triangles)
-  '2,6','6,2',                  // Near Blue home
-  '12,8','8,12',                // Near Green/Yellow
-  '2,8','8,2',                  // Cross-safe squares
-]);
+// Safe squares (star squares - protected from capture)
+const SF=new Set(['2,6','6,2','12,6','6,12','8,2','2,8','8,12','12,8']);
+const ENTRY=new Set(['1,6','8,1','13,8','6,13']);
+const ENTRY_COLORS={'1,6':0,'8,1':1,'13,8':2,'6,13':3};
 
 let canvas,ctx,C;
 let animFrame=null;
@@ -129,8 +126,8 @@ function drawBoard(){
   // Draw home zones (colored corners)
   drawHomeZone(0,0,0);   // Blue: top-left
   drawHomeZone(1,9,0);   // Red: top-right
-  drawHomeZone(2,0,9);   // Green: bottom-left
-  drawHomeZone(3,9,9);   // Yellow: bottom-right
+  drawHomeZone(2,9,9);   // Green: bottom-RIGHT
+  drawHomeZone(3,0,9);   // Yellow: bottom-LEFT
 
   // Draw center star
   drawCenter();
@@ -171,15 +168,27 @@ function drawCell(col,row){
   // Determine cell type
   let fill='#f0e8d0',border='rgba(180,150,100,.2)',bw=.5;
 
-  // Home stretch lanes — correct colors per player
-  if(row===7&&col>=1&&col<=6)       {fill='#c4d4ff';border='rgba(26,111,255,.3)';bw=.8;}  // Blue  (left)
-  else if(col===7&&row>=1&&row<=6)  {fill='#ffc4c4';border='rgba(238,17,17,.3)';bw=.8;}   // Red   (top)
-  else if(row===7&&col>=8&&col<=13) {fill='#c4ffcc';border='rgba(0,204,68,.3)';bw=.8;}    // Green (right)
-  else if(col===7&&row>=8&&row<=13) {fill='#fff0a0';border='rgba(221,170,0,.3)';bw=.8;}   // Yellow (bottom)
+  // Home stretch lanes (colored corridors toward center)
+  if(row===7&&col>=1&&col<=6)       {fill='#c4d4ff';border='rgba(26,111,255,.3)';bw=.8;}  // Blue corridor
+  else if(col===7&&row>=1&&row<=6)  {fill='#ffc4c4';border='rgba(238,17,17,.3)';bw=.8;}   // Red corridor
+  else if(row===7&&col>=8&&col<=13) {fill='#c4ffcc';border='rgba(0,204,68,.3)';bw=.8;}    // Green corridor
+  else if(col===7&&row>=8&&row<=13) {fill='#fff0a0';border='rgba(221,170,0,.3)';bw=.8;}   // Yellow corridor
+  // First step out of home = same color as home zone (no arrow, just colored)
+  else if(col===1&&row===6)  {fill=HOME_MID[0];border='rgba(26,111,255,.4)';bw=1;}   // Blue exit
+  else if(col===8&&row===1)  {fill=HOME_MID[1];border='rgba(238,17,17,.4)';bw=1;}    // Red exit
+  else if(col===13&&row===8) {fill=HOME_MID[2];border='rgba(0,204,68,.4)';bw=1;}     // Green exit
+  else if(col===6&&row===13) {fill=HOME_MID[3];border='rgba(221,170,0,.4)';bw=1;}    // Yellow exit
 
+  // Entry squares - same color as home
+  if(ENTRY.has(`${col},${row}`)){
+    const pc=ENTRY_COLORS[`${col},${row}`];
+    const hc=['#4488ff','#ff4444','#44cc66','#ffcc22'];
+    const hb=['rgba(26,111,255,.7)','rgba(238,17,17,.7)','rgba(0,204,68,.7)','rgba(221,170,0,.7)'];
+    fill=hc[pc];border=hb[pc];bw=1.5;
+  }
   // Safe/star squares
-  if(SF.has(`${col},${row}`)&&col!==7&&row!==7){
-    fill='#fffde0';border='rgba(200,160,0,.5)';bw=1;
+  if(SF.has(`${col},${row}`)){
+    fill='#fffef5';border='rgba(180,150,80,.25)';bw=.8;
   }
 
   ctx.fillStyle=fill;
@@ -187,21 +196,25 @@ function drawCell(col,row){
   ctx.strokeStyle=border;ctx.lineWidth=bw;
   ctx.strokeRect(x+.5,y+.5,C-1,C-1);
 
-  // Star symbol - Ludo King style 6-pointed star
-  if(SF.has(`${col},${row}`)&&col!==7&&row!==7){
-    const cx3=x+C/2, cy3=y+C/2, sr=C*.22;
+    // Star - 6-pointed Ludo King style
+  if(SF.has(`${col},${row}`)){
+    const cx3=x+C/2, cy3=y+C/2;
+    const outerR=C*.26, innerR=C*.12;
+    const pts=6;
     ctx.save();
-    ctx.fillStyle='rgba(200,160,0,.8)';
+    ctx.fillStyle='rgba(210,160,0,.85)';
     ctx.shadowColor='rgba(255,200,0,.4)';ctx.shadowBlur=4;
-    // Draw 6-pointed star
     ctx.beginPath();
-    for(let pt=0;pt<6;pt++){
-      const angle=pt*Math.PI/3-Math.PI/6;
-      const r2=pt%2===0?sr:sr*.5;
-      const ax=cx3+sr*Math.cos(angle);
-      const ay=cy3+sr*Math.sin(angle);
-      if(pt===0)ctx.moveTo(ax,ay);else ctx.lineTo(ax,ay);
+    for(let i=0;i<pts*2;i++){
+      const angle=i*Math.PI/pts - Math.PI/2;
+      const r=i%2===0?outerR:innerR;
+      const px=cx3+r*Math.cos(angle);
+      const py=cy3+r*Math.sin(angle);
+      if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
     }
+    ctx.closePath();ctx.fill();
+    ctx.restore();
+  }
     // Actually draw a proper 12-point star
     ctx.restore();
     // Use emoji star for crisp look
@@ -214,31 +227,25 @@ function drawCell(col,row){
     ctx.restore();
   }
 
-  // Entry arrows - Ludo King style colored triangles
-  const arrowData={
-    '1,6':  {dir:'right', color:PC[0]},
-    '8,1':  {dir:'down',  color:PC[1]},
-    '13,8': {dir:'left',  color:PC[2]},
-    '6,13': {dir:'up',    color:PC[3]},
-  };
-  const ad = arrowData[`${col},${row}`];
-  if(ad){
-    const cx2=x+C/2, cy2=y+C/2, s=C*.32;
+    // Entry arrows - white triangle on colored entry square
+  if(ENTRY.has(`${col},${row}`)){
+    const dirs={'1,6':'right','8,1':'down','13,8':'left','6,13':'up'};
+    const dir=dirs[`${col},${row}`];
+    const cx2=x+C/2, cy2=y+C/2, s=C*.26;
     ctx.save();
-    ctx.fillStyle=ad.color;
-    ctx.shadowColor=ad.color;
-    ctx.shadowBlur=6;
+    ctx.fillStyle='rgba(255,255,255,.9)';
+    ctx.shadowColor='rgba(0,0,0,.3)';ctx.shadowBlur=2;
     ctx.beginPath();
-    if(ad.dir==='right'){ctx.moveTo(cx2-s,cy2-s);ctx.lineTo(cx2+s,cy2);ctx.lineTo(cx2-s,cy2+s);}
-    else if(ad.dir==='down'){ctx.moveTo(cx2-s,cy2-s);ctx.lineTo(cx2+s,cy2-s);ctx.lineTo(cx2,cy2+s);}
-    else if(ad.dir==='left'){ctx.moveTo(cx2+s,cy2-s);ctx.lineTo(cx2-s,cy2);ctx.lineTo(cx2+s,cy2+s);}
-    else if(ad.dir==='up'){ctx.moveTo(cx2-s,cy2+s);ctx.lineTo(cx2+s,cy2+s);ctx.lineTo(cx2,cy2-s);}
+    if(dir==='right'){ctx.moveTo(cx2-s*.8,cy2-s);ctx.lineTo(cx2+s,cy2);ctx.lineTo(cx2-s*.8,cy2+s);}
+    else if(dir==='down'){ctx.moveTo(cx2-s,cy2-s*.8);ctx.lineTo(cx2+s,cy2-s*.8);ctx.lineTo(cx2,cy2+s);}
+    else if(dir==='left'){ctx.moveTo(cx2+s*.8,cy2-s);ctx.lineTo(cx2-s,cy2);ctx.lineTo(cx2+s*.8,cy2+s);}
+    else{ctx.moveTo(cx2-s,cy2+s*.8);ctx.lineTo(cx2+s,cy2+s*.8);ctx.lineTo(cx2,cy2-s);}
     ctx.closePath();ctx.fill();
     ctx.restore();
   }
 }
 
-function drawHomeZone(p,startCol,startRow){
+nction drawHomeZone(p,startCol,startRow){
   const x=startCol*C,y=startRow*C,w=6*C,h=6*C;
 
   // Gradient background
@@ -285,16 +292,24 @@ function drawCenter(){
   ctx.fillStyle='#fff';
   ctx.fillRect(6*C,6*C,3*C,3*C);
 
-  // 4 triangles (one per player color)
+  // 4 triangles pointing toward each home corner
   const tri=(x1,y1,x2,y2,x3,y3,color)=>{
-    ctx.save();ctx.globalAlpha=.9;
+    ctx.save();ctx.globalAlpha=.92;
     ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.lineTo(x3,y3);
     ctx.closePath();ctx.fillStyle=color;ctx.fill();ctx.restore();
   };
-  tri(cx,cy-s, cx-s*.7,cy, cx+s*.7,cy, PC[0]);  // Blue top
-  tri(cx+s,cy, cx,cy-s*.7, cx,cy+s*.7, PC[1]);  // Red right
-  tri(cx,cy+s, cx+s*.7,cy, cx-s*.7,cy, PC[2]);  // Green bottom
-  tri(cx-s,cy, cx,cy+s*.7, cx,cy-s*.7, PC[3]);  // Yellow left
+  // Blue top-left → triangle points UP-LEFT
+  tri(cx,cy, cx-s,cy-s, cx,cy-s*.8, PC[0]);
+  tri(cx,cy, cx-s,cy-s, cx-s*.8,cy, PC[0]);
+  // Red top-right → triangle points UP-RIGHT  
+  tri(cx,cy, cx+s,cy-s, cx,cy-s*.8, PC[1]);
+  tri(cx,cy, cx+s,cy-s, cx+s*.8,cy, PC[1]);
+  // Green bottom-right → triangle points DOWN-RIGHT
+  tri(cx,cy, cx+s,cy+s, cx,cy+s*.8, PC[2]);
+  tri(cx,cy, cx+s,cy+s, cx+s*.8,cy, PC[2]);
+  // Yellow bottom-left → triangle points DOWN-LEFT
+  tri(cx,cy, cx-s,cy+s, cx,cy+s*.8, PC[3]);
+  tri(cx,cy, cx-s,cy+s, cx-s*.8,cy, PC[3]);
 
   // Dividers
   ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=1.5;
