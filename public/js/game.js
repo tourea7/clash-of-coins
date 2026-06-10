@@ -66,7 +66,7 @@ const EN=[0,13,26,39];
 
 // Safe squares (star squares)
 // Safe squares (star squares - protected from capture)
-const SF=new Set(['2,6','2,8','6,2','8,2','12,6','12,8','6,12','8,12']);
+const SF=new Set(['2,8','6,2','12,6','8,12']);
 const ENTRY=new Set(['1,6','8,1','13,8','6,13']);
 const ENTRY_COLORS={'1,6':0,'8,1':1,'13,8':2,'6,13':3};
 
@@ -318,11 +318,11 @@ function drawCenter(){
 function drawPiece(p,i){
   if(GAME.pieces[p][i]===58) return; // finished
   const{x,y}=getPXY(p,i);
-  const r=C*.3;
+  const r=C*.28;
   const isActive=(p===GAME.current&&!GAME.rolled&&!GAME.over);
 
   // Shift pawn up slightly so it centers in the circle visually
-  const drawY = y - r*0.35;
+  const drawY = y - r*0.55;
   ctx.save();
   if(isActive){
     ctx.shadowColor=PC[p];ctx.shadowBlur=14;
