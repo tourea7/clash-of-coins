@@ -55,10 +55,10 @@ const HS=[
 
 // Base positions in home zones
 const BP=[
-  [[2,2],[4,2],[2,4],[4,4]],
-  [[11,2],[13,2],[11,4],[13,4]],
-  [[11,11],[13,11],[11,13],[13,13]],
-  [[2,11],[4,11],[2,13],[4,13]],
+  [[1,1],[4,1],[1,4],[4,4]],           // Blue: 4 corners top-left
+  [[10,1],[13,1],[10,4],[13,4]],       // Red: 4 corners top-right
+  [[10,10],[13,10],[10,13],[13,13]],   // Green: 4 corners bottom-right
+  [[1,10],[4,10],[1,13],[4,13]],       // Yellow: 4 corners bottom-left
 ];
 
 // Entry indices in P52
@@ -249,9 +249,9 @@ function drawHomeZone(p,startCol,startRow){
 
   // 4 base circles — properly centered in 2x2 grid
   // Grid centers within the 6x6 zone
-  const cx0=(startCol+2.5)*C, cy0=(startRow+2.5)*C;
-  const cx1=(startCol+4.5)*C, cy1=(startRow+2.5)*C;
-  const cx2=(startCol+2.5)*C, cy2=(startRow+4.5)*C;
+  const cx0=(startCol+1.5)*C, cy0=(startRow+1.5)*C;
+  const cx1=(startCol+4.5)*C, cy1=(startRow+1.5)*C;
+  const cx2=(startCol+1.5)*C, cy2=(startRow+4.5)*C;
   const cx3=(startCol+4.5)*C, cy3=(startRow+4.5)*C;
   const centers=[[cx0,cy0],[cx1,cy1],[cx2,cy2],[cx3,cy3]];
   const r=C*.52;
@@ -371,9 +371,9 @@ function getPXY(p,i){
     // In home base — use same positions as drawHomeZone circles
     const homeCol=[0,9,9,0][p];
     const homeRow=[0,0,9,9][p];
-    const cx0=homeCol+2.5,cy0=homeRow+2.5;
-    const cx1=homeCol+4.5,cy1=homeRow+2.5;
-    const cx2=homeCol+2.5,cy2=homeRow+4.5;
+    const cx0=homeCol+1.5,cy0=homeRow+1.5;
+    const cx1=homeCol+4.5,cy1=homeRow+1.5;
+    const cx2=homeCol+1.5,cy2=homeRow+4.5;
     const cx3=homeCol+4.5,cy3=homeRow+4.5;
     const bases=[[cx0,cy0],[cx1,cy1],[cx2,cy2],[cx3,cy3]];
     return{x:bases[i][0]*C,y:bases[i][1]*C};
