@@ -318,11 +318,11 @@ function drawCenter(){
 function drawPiece(p,i){
   if(GAME.pieces[p][i]===58) return; // finished
   const{x,y}=getPXY(p,i);
-  const r=C*.28;
+  const r=C*.27;
   const isActive=(p===GAME.current&&!GAME.rolled&&!GAME.over);
 
-  // Shift pawn up slightly so it centers in the circle visually
-  const drawY = y - r*0.55;
+  // Center pawn visually in circle (head is above center, base below)
+  const drawY = y + r*0.38;
   ctx.save();
   if(isActive){
     ctx.shadowColor=PC[p];ctx.shadowBlur=14;
@@ -336,7 +336,7 @@ function drawPiece(p,i){
   if(isActive){
     const t=Date.now()/600;
     const alpha=0.3+0.3*Math.sin(t);
-    ctx.beginPath();ctx.arc(x,y-r*.6,r+3,0,Math.PI*2);
+    ctx.beginPath();ctx.arc(x,drawY-r*.4,r+3,0,Math.PI*2);
     ctx.strokeStyle=`rgba(255,215,0,${alpha})`;ctx.lineWidth=2;ctx.stroke();
   }
 }
