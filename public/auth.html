@@ -10,20 +10,30 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--gold:#FFD700;--gold2:#FFA500;--gdark:#8B5E00;--gglow:rgba(255,215,0,.3);--bg:#0a0a0f;--panel:#111118;--bdr:rgba(255,255,255,.07)}
 html,body{width:100%;min-height:100%;background:var(--bg);color:#fff;font-family:'Rajdhani',sans-serif;overflow-x:hidden}
-.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:url('/Bg.png') center/cover no-repeat fixed;}
+.page{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;
+  background:url('/Bg.png') center/cover no-repeat fixed;
+  position:relative;
+}
+.page::before{
+  content:'';position:fixed;inset:0;
+  background:linear-gradient(180deg,rgba(0,0,10,.55) 0%,rgba(0,0,20,.7) 100%);
+  pointer-events:none;z-index:0;
+}
+.page > *{position:relative;z-index:1;}
 .logo{text-align:center;margin-bottom:28px}
 .logo-crown{font-size:52px;display:block;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 24px var(--gold))}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.logo-text{font-family:'Anton',sans-serif;font-size:46px;letter-spacing:4px;background:linear-gradient(180deg,#fff9cc,#FFD700 40%,#FF8C00 80%,#cc5500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-text{font-family:'Anton',sans-serif;font-size:46px;letter-spacing:4px;background:linear-gradient(180deg,#fff9cc,#FFD700 40%,#FF8C00 80%,#cc5500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 3px 8px rgba(0,0,0,.8))}
 .logo-of{display:block;font-size:11px;color:rgba(255,215,0,.5);letter-spacing:6px;margin:1px 0}
 .logo-slogan{font-size:11px;color:rgba(255,255,255,.3);letter-spacing:3px;text-transform:uppercase;margin-top:8px}
 .auth-card{width:100%;max-width:400px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 24px}
-.tabs{display:flex;background:rgba(255,255,255,.04);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.06);margin-bottom:24px}
-.tab{flex:1;padding:11px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;color:rgba(255,255,255,.4);transition:all .2s;text-transform:uppercase;letter-spacing:.5px;border:none;background:none}
+.tabs{display:flex;background:rgba(0,0,20,.5);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.06);margin-bottom:24px}
+.tab{flex:1;padding:11px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;color:rgba(255,255,255,.8);transition:all .2s;text-transform:uppercase;letter-spacing:.5px;border:none;background:none}
 .tab.active{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000}
 .form-group{margin-bottom:16px}
-.form-label{font-size:11px;color:rgba(255,255,255,.5);letter-spacing:1px;text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px}
-.form-input{width:100%;padding:13px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:500;outline:none;transition:all .2s}
+.form-label{font-size:11px;color:rgba(255,255,255,.9);letter-spacing:1px;text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px}
+.form-input{width:100%;padding:13px 14px;background:rgba(0,0,20,.6);border:1.5px solid rgba(255,255,255,.15);border-radius:12px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:500;outline:none;transition:all .2s}
 .form-input:focus{border-color:rgba(255,215,0,.4);background:rgba(255,215,0,.04)}
 .form-input::placeholder{color:rgba(255,255,255,.25)}
 .input-wrap{position:relative}
@@ -35,7 +45,7 @@ html,body{width:100%;min-height:100%;background:var(--bg);color:#fff;font-family
 .divider{display:flex;align-items:center;gap:12px;margin:18px 0}
 .div-line{flex:1;height:1px;background:rgba(255,255,255,.08)}
 .div-txt{font-size:11px;color:rgba(255,255,255,.25)}
-.btn-google{width:100%;padding:13px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-google{width:100%;padding:13px;background:rgba(0,0,20,.55);border:1.5px solid rgba(255,255,255,.2);border-radius:12px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px}
 .btn-google:hover{border-color:rgba(255,215,0,.3);background:rgba(255,215,0,.05)}
 .msg{padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:16px;display:none}
 .msg.show{display:block}
@@ -43,7 +53,7 @@ html,body{width:100%;min-height:100%;background:var(--bg);color:#fff;font-family
 .msg-ok{background:rgba(0,200,68,.1);border:1px solid rgba(0,200,68,.25);color:#44ff88}
 .forgot{text-align:right;margin-top:-8px;margin-bottom:16px}
 .forgot a{font-size:11px;color:rgba(255,215,0,.5);cursor:pointer;text-decoration:none}
-.terms{font-size:10px;color:rgba(255,255,255,.2);text-align:center;margin-top:16px;line-height:1.6}
+.terms{font-size:10px;color:rgba(255,255,255,.6);text-align:center;margin-top:16px;line-height:1.6}
 .terms a{color:rgba(255,215,0,.4)}
 .ld-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:14px;backdrop-filter:blur(4px)}
 .ld-overlay.show{display:flex}
