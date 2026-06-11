@@ -515,11 +515,7 @@ function rollDice(){
   GAME.rolled=true;disableRoll();
 
   const diceEl=document.getElementById('dice-el');
-  if(diceEl){
-    diceEl.classList.add('rolling');
-      const diceWrap=diceEl.parentElement; if(diceWrap) diceWrap.style.pointerEvents='none';
-    diceEl.style.transform='scale(1.3)';
-  }
+  if(diceEl) diceEl.classList.add('rolling');
 
   let count=0;
   const iv=setInterval(()=>{
@@ -570,6 +566,7 @@ function nextTurn(){
 
 function aiTurn(player){
   if(GAME.over||GAME.current!==player||GAME.eliminated.includes(player)) return;
+  if(player===STATE.myColor) return; // Never run AI for human player
   const result=Math.floor(Math.random()*6)+1;
   GAME.dice=result;
   const diceEl=document.getElementById('dice-el');
@@ -665,8 +662,16 @@ function log(msg,color='rgba(255,255,255,.5)'){
   el.style.transform='scale(1.08)';
   clearTimeout(logT);logT=setTimeout(()=>el.style.transform='scale(1)',300);
 }
-function enableRoll(){const b=document.getElementById('roll-btn');if(b)b.disabled=false;}
-function disableRoll(){const b=document.getElementById('roll-btn');if(b)b.disabled=true;}
+function enableRoll(){
+  const b=document.getElementById('roll-btn');if(b)b.disabled=false;
+  const d=document.getElementById('dice-el');
+  if(d){ d.classList.remove('rolling'); d.style.transform=''; d.style.opacity='1'; }
+}
+function disableRoll(){
+  const b=document.getElementById('roll-btn');if(b)b.disabled=true;
+  const d=document.getElementById('dice-el');
+  if(d) d.style.opacity='0.45';
+}
 function updateAP(){
   for(let i=0;i<4;i++){
     const av=document.getElementById(`pa-${i}`);if(!av)continue;
@@ -1005,5 +1010,10 @@ function initBackground(){
 
 // ===== INIT =====
 updateCUI();
-initBackground();
-initParticles();
+// Init background after DOM ready
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',()=>{initBackground();initParticles();});
+} else {
+  initBackground();
+  initParticles();
+}
