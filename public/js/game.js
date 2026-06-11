@@ -66,7 +66,7 @@ const EN=[0,13,26,39];
 
 // Safe squares (star squares)
 // Safe squares (star squares - protected from capture)
-const SF=new Set(['2,8','6,2','12,6','8,12']);
+const SF=new Set(['2,8','6,2','12,6','8,12','1,6','8,1','13,8','6,13']);
 const ENTRY=new Set(['1,6','8,1','13,8','6,13']);
 const ENTRY_COLORS={'1,6':0,'8,1':1,'13,8':2,'6,13':3};
 
@@ -623,6 +623,10 @@ function showFinalRanking(){
   const myPos=GAME.ranking.indexOf(STATE.myColor);
   const posLabels=['🥇','🥈','🥉','💀'];
   const posNames=['1er','2ème','3ème','Dernier'];
+  const isFirst=myPos===0;
+  const isWin=myPos===0;
+
+  // Calculate coins change
   let coinsChange=0;
   if(STATE.currentMode==='comp'){
     const pool=STATE.currentMise*STATE.numPlayers;
@@ -630,15 +634,32 @@ function showFinalRanking(){
     else if(myPos===1) coinsChange=Math.floor(pool*.25);
     else if(myPos===2) coinsChange=0;
     else coinsChange=-STATE.currentMise;
-    STATE.coins+=coinsChange;
-    if(coinsChange>0) addTx('gain',`${posNames[myPos]} place`,coinsChange);
-    else if(coinsChange<0) addTx('loss',`${posNames[myPos]} place`,coinsChange);
-    updateCUI();
+  } else {
+    // Free mode: small bonus for winning
+    if(myPos===0) coinsChange=200;
+    else if(myPos===1) coinsChange=100;
+    else if(myPos===2) coinsChange=50;
   }
-  const isFirst=myPos===0;
+
+  // Update local coins
+  STATE.coins = Math.max(0, STATE.coins + coinsChange);
+  updateCUI();
+
+  // Save transaction
+  if(coinsChange !== 0){
+    const desc = STATE.currentMode==='comp'
+      ? `${posNames[myPos]} place (compétition)`
+      : `${posNames[myPos]} place (gratuit)`;
+    addTx(coinsChange>0?'gain':'loss', desc, coinsChange);
+  }
+
+  // ===== SYNC TO SUPABASE =====
+  saveGameStats(myPos, coinsChange);
+
+  // Show modal
   const coinsStr=coinsChange>0?`+${coinsChange.toLocaleString('fr-FR')} 🪙`:coinsChange<0?`${coinsChange.toLocaleString('fr-FR')} 🪙`:'';
-  document.getElementById('m-icon').textContent=isFirst?'🏆':'🎯';
-  document.getElementById('m-title').textContent=isFirst?'VICTOIRE!':'PARTIE TERMINÉE';
+  document.getElementById('m-icon').textContent=isFirst?'🏆':myPos===GAME.players-1?'😤':'🎯';
+  document.getElementById('m-title').textContent=isFirst?'VICTOIRE!':myPos===GAME.players-1?'DÉFAITE':'BIEN JOUÉ!';
   document.getElementById('m-msg').innerHTML=GAME.ranking.map((p,i)=>{
     const n=p===STATE.myColor?'<b style="color:#FFD700">Vous</b>':(AI[p>STATE.myColor?p-1:p]||'IA');
     return `${posLabels[i]} <span style="color:${PC[p]}">${n}</span> — ${GAME.scores[p]} pts`;
@@ -650,6 +671,74 @@ function showFinalRanking(){
   document.getElementById('m-btn2').textContent='ACCUEIL';
   document.getElementById('m-btn2').onclick=()=>{closeModal();showScreen('home');};
   document.getElementById('modal').classList.add('open');
+}
+
+// Save game result to Supabase
+async function saveGameStats(myPos, coinsChange){
+  try {
+    if(typeof CURRENT_USER === 'undefined' || !CURRENT_USER) return;
+    if(typeof getSupabase !== 'function') return;
+
+    const sb = await getSupabase();
+    const isWin = myPos === 0;
+    const newCoins = Math.max(0, STATE.coins);
+    const newGamesPlayed = (CURRENT_PROFILE?.games_played || 0) + 1;
+    const newWins = (CURRENT_PROFILE?.wins || 0) + (isWin ? 1 : 0);
+    const newLosses = (CURRENT_PROFILE?.losses || 0) + (!isWin ? 1 : 0);
+    const xpGain = isWin ? 100 : myPos===1 ? 60 : myPos===2 ? 30 : 10;
+    const newXp = (CURRENT_PROFILE?.xp || 0) + xpGain;
+    // Level up every 1000 XP
+    const newLevel = Math.floor(newXp / 1000) + 1;
+
+    // Update players table
+    const { error } = await sb.from('players').update({
+      coins: newCoins,
+      games_played: newGamesPlayed,
+      wins: newWins,
+      losses: newLosses,
+      xp: newXp,
+      level: newLevel,
+      updated_at: new Date().toISOString(),
+    }).eq('id', CURRENT_USER.id);
+
+    if(error){ console.error('Stats update error:', error); return; }
+
+    // Update local profile
+    if(CURRENT_PROFILE){
+      CURRENT_PROFILE.coins = newCoins;
+      CURRENT_PROFILE.games_played = newGamesPlayed;
+      CURRENT_PROFILE.wins = newWins;
+      CURRENT_PROFILE.losses = newLosses;
+      CURRENT_PROFILE.xp = newXp;
+      CURRENT_PROFILE.level = newLevel;
+    }
+
+    // Save to game_history table
+    await sb.from('game_history').insert({
+      player_id: CURRENT_USER.id,
+      username: CURRENT_PROFILE?.username || '',
+      mode: STATE.currentMode,
+      mise: STATE.currentMise,
+      players: STATE.numPlayers,
+      position: myPos + 1,
+      coins_change: coinsChange,
+      score: GAME.scores[STATE.myColor] || 0,
+    }).catch(()=>{}); // Non-fatal if table doesn't exist
+
+    // Update UI with new stats
+    if(typeof updateAllProfileDisplays === 'function') updateAllProfileDisplays();
+    if(typeof renderRealLeaderboard === 'function') renderRealLeaderboard();
+
+    console.log(`✅ Stats saved: pos=${myPos+1}, coins=${newCoins}, wins=${newWins}, xp=${newXp}, level=${newLevel}`);
+
+    // Show level up notification if leveled up
+    if(newLevel > (CURRENT_PROFILE?.level || 1)){
+      setTimeout(()=> showToast(`🎉 Niveau ${newLevel} atteint!`), 2000);
+    }
+
+  } catch(e){
+    console.error('saveGameStats error:', e);
+  }
 }
 
 function endGame(winner){playerFinished(winner);}
