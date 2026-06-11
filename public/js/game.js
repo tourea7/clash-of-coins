@@ -713,17 +713,18 @@ async function saveGameStats(myPos, coinsChange){
       CURRENT_PROFILE.level = newLevel;
     }
 
-    // Save to game_history table
+    // Save to game_history table (matching real schema)
     await sb.from('game_history').insert({
-      player_id: CURRENT_USER.id,
       username: CURRENT_PROFILE?.username || '',
-      mode: STATE.currentMode,
-      mise: STATE.currentMise,
-      players: STATE.numPlayers,
-      position: myPos + 1,
-      coins_change: coinsChange,
+      player_index: STATE.myColor,
       score: GAME.scores[STATE.myColor] || 0,
-    }).catch(()=>{}); // Non-fatal if table doesn't exist
+      pieces_done: GAME.finished[STATE.myColor] || 0,
+      captures: GAME.scores[STATE.myColor] ? Math.floor(GAME.scores[STATE.myColor]/20) : 0,
+      won: myPos === 0,
+      coins_change: coinsChange,
+      mise: STATE.currentMise,
+      mode: STATE.currentMode,
+    }).catch(e => console.warn('game_history insert:', e.message));
 
     // Update UI with new stats
     if(typeof updateAllProfileDisplays === 'function') updateAllProfileDisplays();
