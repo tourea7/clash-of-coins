@@ -518,7 +518,7 @@ function applyMove(player,piece,newPos){
             const[oc,or2]=P52[(op+EN[p2])%52];
             if(oc===myC&&or2===myR){
               GAME.pieces[p2][i2]=-1;GAME.scores[player]+=20;
-              log(`💥 Capture! +20 pts`,PC[player]);
+              log(`💥 ${player===STATE.myColor?'Vous capturez':'Capture! '}+20 pts`,PC[player]);
               if(typeof SFX!=='undefined') SFX.capture();
             }
           }
@@ -532,7 +532,10 @@ function applyMove(player,piece,newPos){
     GAME.pieces[player][piece]=58;GAME.finished[player]++;GAME.scores[player]+=50;
     log(`⭐ Pièce ${piece+1} arrivée! +50 pts`,PC[player]);
     if(typeof SFX!=='undefined') SFX.pieceDone();
-    if(GAME.finished[player]>=4){playerFinished(player);return;}
+    if(GAME.finished[player]>=4){
+      if(typeof SFX!=='undefined') SFX.allDone();
+      playerFinished(player);return;
+    }
   }
 
   updateSUI();drawBoard();
@@ -578,9 +581,11 @@ function rollDice(){
       const movable=getMovable(STATE.myColor,result);
       if(!movable.length){
         log(`Vous lancez ${result} — aucun mouvement 😕`,'rgba(255,255,255,.4)');
+        if(typeof SFX!=='undefined') SFX.invalid();
         setTimeout(nextTurn,1300);
       } else if(movable.length===1){
         log(`Vous lancez ${result} 🎯`,PC[STATE.myColor]);
+        if(typeof SFX!=='undefined') SFX.valid();
         setTimeout(()=>applyMove(movable[0].player,movable[0].piece,movable[0].newPos),500);
       } else {
         GAME.movable=movable;GAME.waitMove=true;
@@ -604,10 +609,11 @@ function nextTurn(){
   GAME.current=next;GAME.rolled=false;updateAP();
   if(GAME.current===STATE.myColor){
     log('🎲 Votre tour!',PC[STATE.myColor]);enableRoll();
-    if(typeof SFX!=='undefined') SFX.myTurn();
+    if(typeof SFX!=='undefined'){ SFX.myTurn(); }
   } else {
     const aiIdx=GAME.current>STATE.myColor?GAME.current-1:GAME.current;
     log(`Tour de ${AI[aiIdx]||'IA'}...`,PC[GAME.current]);
+    if(typeof SFX!=='undefined') SFX.turnChange();
     disableRoll();setTimeout(()=>aiTurn(GAME.current),1000);
   }
 }
@@ -664,7 +670,8 @@ function playerFinished(player){
     else{
       const aiIdx=GAME.current>STATE.myColor?GAME.current-1:GAME.current;
       log(`Tour de ${AI[aiIdx]||'IA'}...`,PC[GAME.current]);
-      disableRoll();setTimeout(()=>aiTurn(GAME.current),1000);
+      if(typeof SFX!=='undefined') SFX.turnChange();
+    disableRoll();setTimeout(()=>aiTurn(GAME.current),1000);
     }
   },1200);
 }
@@ -852,6 +859,15 @@ function addTx(type,desc,amount){
   STATE.transactions.unshift({type,desc,date,amount});
   if(typeof saveTransaction==='function') saveTransaction(type,desc,amount);
   if(typeof syncCoinsToDb==='function') syncCoinsToDb(STATE.coins);
+  // Coin sounds
+  if(typeof SFX !== 'undefined' && amount > 0){
+    if(amount >= 5000) setTimeout(()=>SFX.bigWin(),200);
+    else if(amount >= 1000) setTimeout(()=>SFX.coinRain(),100);
+    else setTimeout(()=>SFX.coinCling(),50);
+  }
+  if(typeof SFX !== 'undefined' && amount < 0){
+    SFX.betDeducted();
+  }
 }
 function renderTx(){
   const list=document.getElementById('tx-list');if(!list)return;
@@ -986,6 +1002,7 @@ function startGameWithColor(){
   const gnp=document.getElementById('g-np');if(gnp) gnp.textContent=STATE.numPlayers;
   const gm=document.getElementById('g-mise');
   if(gm) gm.textContent=STATE.currentMode==='free'?'Gratuit':STATE.currentMise.toLocaleString('fr-FR')+' 🪙';
+  if(STATE.currentMode==='comp' && typeof SFX!=='undefined') SFX.betPlaced();
   initGame(STATE.numPlayers);
 
   for(let i=0;i<4;i++){
@@ -1009,6 +1026,7 @@ function startGameWithColor(){
   updateAP();
   enableRoll();
   log('🎲 Votre tour — lancez le dé!',PC[STATE.myColor]);
+  if(typeof SFX!=='undefined') setTimeout(()=>SFX.gameStart(),500);
 }
 
 function confirmQuit(){
@@ -1022,6 +1040,7 @@ function confirmQuit(){
       if(STATE.currentMode==='comp'&&!GAME.over){
         STATE.coins-=STATE.currentMise;addTx('loss','Abandon',-STATE.currentMise);updateCUI();
       }
+      if(typeof SFX!=='undefined') SFX.menuBack();
       showScreen('home');
     }
   );
@@ -1055,6 +1074,7 @@ function logout(){
 
 // ===== MODAL & TOAST =====
 function showModal(icon,title,msg,coins,b1t,b1f,b2t,b2f){
+  if(typeof SFX!=='undefined') SFX.modalOpen();
   document.getElementById('m-icon').textContent=icon;
   document.getElementById('m-title').textContent=title;
   document.getElementById('m-msg').textContent=msg;
@@ -1064,7 +1084,7 @@ function showModal(icon,title,msg,coins,b1t,b1f,b2t,b2f){
   if(b2){b2.textContent=b2t;b2.onclick=b2f;}
   document.getElementById('modal').classList.add('open');
 }
-function closeModal(){document.getElementById('modal').classList.remove('open');}
+function closeModal(){document.getElementById('modal').classList.remove('open');if(typeof SFX!=='undefined') SFX.modalClose();}
 let toastT;
 function showToast(msg){
   const t=document.getElementById('toast');
@@ -1115,6 +1135,7 @@ function initSocket(){
       STATE.myColor = myIndex;
 
       showToast('🎮 Partie trouvée! Démarrage...');
+      if(typeof SFX!=='undefined') SFX.playerJoin();
 
       // Start game with real players
       showScreen('game');
@@ -1227,6 +1248,7 @@ function initSocket(){
     // Player disconnected
     STATE.socket.on('player_disconnected', ({player, username}) => {
       showToast(`⚠️ ${username} s'est déconnecté(e)`);
+      if(typeof SFX!=='undefined') SFX.playerLeave();
       log(`⚠️ ${username} déconnecté - 30s pour revenir`, '#ff8888');
     });
 
@@ -1388,14 +1410,8 @@ function initBackground(){
 }
 
 // ===== SOUND TOGGLE =====
-let soundEnabled = true;
 function toggleSound(){
-  soundEnabled = !soundEnabled;
-  const btn = document.getElementById('sound-btn');
-  if(btn) btn.textContent = soundEnabled ? '🔊' : '🔇';
-  if(soundEnabled && typeof SFX !== 'undefined') SFX.click();
-  // Patch SFX to respect toggle
-  if(typeof SFX !== 'undefined') SFX.setVol(soundEnabled ? 0.5 : 0);
+  if(typeof SFX !== 'undefined') SFX.toggleMute();
 }
 
 // ===== INIT =====
