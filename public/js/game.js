@@ -963,7 +963,7 @@ function findGame(){
 
     // Timeout after 30s → play vs AI
     STATE.mmTimeout = setTimeout(() => {
-      showToast('⏳ Pas de joueurs trouvés - partie contre l'IA');
+      showToast("⏳ Pas de joueurs trouvés - partie contre l'IA");
       if(STATE.socket) STATE.socket.emit('cancel_search');
       openColorPicker();
     }, 30000);
