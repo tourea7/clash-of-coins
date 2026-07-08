@@ -1,13 +1,12 @@
 // ============================================================
-// CLASH OF COINS — server.js
-// Backend Node.js + Socket.io + Express
+// CLASH OF COINS — server.js v2.0
+// Multijoueur temps réel complet
 // ============================================================
 
 const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const { createClient } = require('@supabase/supabase-js');
-const cors = require('cors');
 const path = require('path');
 
 const app = express();
@@ -15,455 +14,489 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: { origin: '*', methods: ['GET','POST'] },
   transports: ['websocket', 'polling'],
+  pingTimeout: 30000,
+  pingInterval: 10000,
 });
 
 // ===== SUPABASE =====
 const supabase = createClient(
-  process.env.SUPABASE_URL || 'https://YOUR_PROJECT.supabase.co',
-  process.env.SUPABASE_ANON_KEY || 'YOUR_ANON_KEY'
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
 // ===== MIDDLEWARE =====
-app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ===== CONFIG ROUTE (safe - only sends public keys) =====
+// ===== CONFIG API =====
 app.get('/api/config', (req, res) => {
   res.json({
     supabase_url: process.env.SUPABASE_URL || '',
     supabase_anon: process.env.SUPABASE_ANON_KEY || '',
-    // NEVER send SUPABASE_SERVICE_ROLE_KEY here
   });
 });
 
-
-
-// ===== IN-MEMORY STATE =====
-const connectedPlayers = new Map(); // socketId -> player info
-const matchQueues = new Map();      // "mode_mise_players" -> [socketId, ...]
-const activeRooms = new Map();      // roomId -> room state
-
-// ===== LUDO CONSTANTS =====
-const ENTRY = [0, 13, 26, 39];
-
-// ===== REST API =====
-
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     players_online: connectedPlayers.size,
     active_rooms: activeRooms.size,
+    queues: Object.fromEntries([...matchQueues.entries()].map(([k,v]) => [k, v.length])),
     timestamp: new Date().toISOString(),
   });
 });
 
-// Leaderboard
-app.get('/api/leaderboard', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('players')
-      .select('username, coins, wins, games_played')
-      .order('coins', { ascending: false })
-      .limit(20);
-    if (error) throw error;
-    res.json({ success: true, data });
-  } catch (e) {
-    // Fallback demo data
-    res.json({
-      success: true,
-      data: [
-        { username: 'Champion_01', coins: 250000, wins: 312, games_played: 450 },
-        { username: 'LudoMaster',  coins: 180500, wins: 245, games_played: 380 },
-        { username: 'ProGamer_CI', coins: 98700,  wins: 180, games_played: 290 },
-      ]
-    });
-  }
-});
+// ===== STATE =====
+const connectedPlayers = new Map(); // socketId -> { username, coins, userId, inGame, roomId }
+const matchQueues      = new Map(); // "mode_mise_numPlayers" -> [socketId, ...]
+const activeRooms      = new Map(); // roomId -> roomState
 
-// Player profile
-app.get('/api/player/:username', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('players')
-      .select('*')
-      .eq('username', req.params.username)
-      .single();
-    if (error) throw error;
-    res.json({ success: true, data });
-  } catch (e) {
-    res.status(404).json({ success: false, message: 'Joueur introuvable' });
-  }
-});
-
-// Game history
-app.get('/api/history/:username', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('game_history')
-      .select('*')
-      .eq('username', req.params.username)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    if (error) throw error;
-    res.json({ success: true, data });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
-  }
-});
-
-// Wallet: deposit
-app.post('/api/wallet/deposit', async (req, res) => {
-  const { username, amount, method, phone } = req.body;
-  if (!username || !amount || amount < 100) {
-    return res.status(400).json({ success: false, message: 'Paramètres invalides' });
-  }
-
-  // TODO: Integrate real Mobile Money API (Orange, Wave, MTN, Moov)
-  // For now: simulate success
-  try {
-    const { data, error } = await supabase.rpc('add_coins', {
-      p_username: username,
-      p_amount: parseInt(amount),
-      p_type: 'deposit',
-      p_description: `Dépôt via ${method}`,
-    });
-    if (error) throw error;
-    res.json({ success: true, new_balance: data, transaction_id: `TX${Date.now()}` });
-  } catch (e) {
-    // Offline fallback
-    res.json({ success: true, new_balance: 999999, transaction_id: `TX${Date.now()}` });
-  }
-});
-
-// Wallet: withdraw
-app.post('/api/wallet/withdraw', async (req, res) => {
-  const { username, amount, method, phone } = req.body;
-  if (!username || !amount || amount < 500) {
-    return res.status(400).json({ success: false, message: 'Minimum 500 coins pour un retrait' });
-  }
-
-  try {
-    const { data, error } = await supabase.rpc('deduct_coins', {
-      p_username: username,
-      p_amount: parseInt(amount),
-      p_type: 'withdrawal',
-      p_description: `Retrait vers ${method}`,
-    });
-    if (error) throw error;
-    res.json({ success: true, new_balance: data, transaction_id: `TX${Date.now()}` });
-  } catch (e) {
-    res.json({ success: true, new_balance: 0, transaction_id: `TX${Date.now()}` });
-  }
-});
-
-
-// ===== AUTH ROUTES =====
-
-// Verify JWT token (called by client to validate session)
-app.post('/api/auth/verify', async (req, res) => {
-  const { token } = req.body;
-  if(!token) return res.status(401).json({ error: 'No token' });
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if(error || !user) return res.status(401).json({ error: 'Invalid token' });
-    res.json({ success: true, user: { id: user.id, email: user.email } });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Admin check
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@clashofcoins.ci').split(',');
-
-app.get('/api/admin/stats', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if(!token) return res.status(401).json({ error: 'Non autorisé' });
-  const { data: { user } } = await supabase.auth.getUser(token);
-  if(!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
-
-  try {
-    const [players, games, transactions] = await Promise.all([
-      supabase.from('players').select('id, coins, created_at', { count: 'exact' }),
-      supabase.from('games').select('id', { count: 'exact' }),
-      supabase.from('transactions').select('amount, type, created_at').limit(100),
-    ]);
-    res.json({
-      total_players: players.count || 0,
-      total_games: games.count || 0,
-      total_transactions: transactions.data?.length || 0,
-      total_coins: players.data?.reduce((s,p) => s + (p.coins||0), 0) || 0,
-    });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Serve auth page
-app.get('/auth', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'auth.html'));
-});
-
-// Serve admin page (protection handled client-side + server-side)  
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
+// ===== LUDO CONSTANTS =====
+const P52 = [
+  [1,6],[2,6],[3,6],[4,6],[5,6],
+  [6,5],[6,4],[6,3],[6,2],[6,1],[6,0],
+  [7,0],[8,0],
+  [8,1],[8,2],[8,3],[8,4],[8,5],
+  [9,6],[10,6],[11,6],[12,6],[13,6],
+  [14,6],[14,7],[14,8],
+  [13,8],[12,8],[11,8],[10,8],[9,8],
+  [8,9],[8,10],[8,11],[8,12],[8,13],
+  [8,14],[7,14],[6,14],
+  [6,13],[6,12],[6,11],[6,10],[6,9],
+  [5,8],[4,8],[3,8],[2,8],[1,8],
+  [0,8],[0,7],[0,6],
+];
+const EN = [0, 13, 26, 39];
+const SF = new Set(['2,8','6,2','12,6','8,12','1,6','8,1','13,8','6,13']);
 
 // ===== SOCKET.IO =====
-
 io.on('connection', (socket) => {
-  console.log(`[+] Socket connected: ${socket.id}`);
-
-  // Broadcast updated online count
-  broadcastOnlineCount();
+  console.log(`[+] Connected: ${socket.id}`);
 
   // ---- AUTH ----
-  socket.on('auth', ({ username, coins }) => {
+  socket.on('auth', ({ username, coins, userId }) => {
     connectedPlayers.set(socket.id, {
-      socketId: socket.id,
-      username: username || `Guest_${socket.id.slice(0,4)}`,
-      coins: coins || 0,
+      username: username || 'Joueur',
+      coins: coins || 1000,
+      userId: userId || null,
       inGame: false,
+      roomId: null,
     });
     socket.emit('auth_ok', { username, coins });
     broadcastOnlineCount();
+    console.log(`[AUTH] ${username} connected`);
   });
 
-  // ---- MATCHMAKING ----
-  socket.on('find_game', ({ mode, mise, players }) => {
-    const queueKey = `${mode}_${mise}_${players}`;
+  // ---- FIND GAME ----
+  socket.on('find_game', ({ mode, mise, numPlayers }) => {
     const player = connectedPlayers.get(socket.id);
     if (!player) return;
+    if (player.inGame) { socket.emit('error', { message: 'Déjà en partie' }); return; }
 
-    // Check coins
+    // Check balance for comp mode
     if (mode === 'comp' && player.coins < mise) {
       socket.emit('error', { message: 'Solde insuffisant' });
       return;
     }
 
-    // Join queue
-    if (!matchQueues.has(queueKey)) matchQueues.set(queueKey, []);
-    const queue = matchQueues.get(queueKey);
+    const qKey = `${mode}_${mise}_${numPlayers}`;
+    if (!matchQueues.has(qKey)) matchQueues.set(qKey, []);
+    const queue = matchQueues.get(qKey);
 
-    if (!queue.includes(socket.id)) {
-      queue.push(socket.id);
-      socket.join(`queue_${queueKey}`);
-    }
+    // Don't add twice
+    if (!queue.includes(socket.id)) queue.push(socket.id);
 
-    // Broadcast queue size
-    io.to(`queue_${queueKey}`).emit('queue_update', {
-      found: queue.length,
-      needed: players,
-    });
+    console.log(`[QUEUE] ${player.username} → ${qKey} (${queue.length}/${numPlayers})`);
 
-    // Check if we have enough players
-    if (queue.length >= players) {
-      const roomPlayers = queue.splice(0, players);
-      const roomId = `room_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
-
-      // Create room state
-      const roomState = {
-        id: roomId,
-        mode,
-        mise,
-        players: roomPlayers.map((sid, idx) => ({
-          socketId: sid,
-          username: connectedPlayers.get(sid)?.username || `Player${idx+1}`,
-          index: idx,
-        })),
-        pieces: Array.from({length: players}, () => Array(4).fill(-1)),
-        scores: Array(players).fill(0),
-        current: 0,
-        dice: null,
-        started: true,
-        createdAt: new Date(),
-      };
-
-      activeRooms.set(roomId, roomState);
-
-      // Put all players in the room
-      roomPlayers.forEach((sid, idx) => {
-        const s = io.sockets.sockets.get(sid);
-        if (s) {
-          s.join(roomId);
-          s.leave(`queue_${queueKey}`);
-          const p = connectedPlayers.get(sid);
-          if (p) p.inGame = true;
-
-          s.emit('match_found', {
-            roomId,
-            myIndex: idx,
-            players: roomState.players.map(p => ({ username: p.username })),
-            mise,
-            mode,
-          });
-        }
+    // Notify all in queue
+    queue.forEach(sid => {
+      io.to(sid).emit('queue_update', {
+        found: queue.length,
+        needed: numPlayers,
+        status: `${queue.length}/${numPlayers} joueurs trouvés...`,
       });
+    });
 
-      // Deduct mise from all players (comp mode)
-      if (mode === 'comp') {
-        roomPlayers.forEach(sid => {
-          const p = connectedPlayers.get(sid);
-          if (p) p.coins -= mise;
-        });
-      }
-
-      console.log(`[ROOM] Created ${roomId} with ${players} players`);
+    // Enough players → start match
+    if (queue.length >= numPlayers) {
+      const roomPlayers = queue.splice(0, numPlayers);
+      createRoom(roomPlayers, mode, mise, numPlayers, qKey);
     }
   });
 
-  // ---- CANCEL MATCHMAKING ----
+  // ---- CANCEL SEARCH ----
   socket.on('cancel_search', () => {
-    matchQueues.forEach((queue, key) => {
-      const idx = queue.indexOf(socket.id);
-      if (idx !== -1) {
-        queue.splice(idx, 1);
-        socket.leave(`queue_${key}`);
-      }
-    });
+    removeFromQueues(socket.id);
+    console.log(`[QUEUE] ${connectedPlayers.get(socket.id)?.username} cancelled`);
   });
 
-  // ---- GAME MOVE ----
-  socket.on('make_move', ({ roomId, player, piece, newPos }) => {
+  // ---- DICE ROLL (client rolls, tells server the result) ----
+  socket.on('dice_rolled', ({ roomId, result }) => {
     const room = activeRooms.get(roomId);
-    if (!room) return;
+    if (!room || room.over) return;
 
-    // Validate it's this player's turn
-    if (room.current !== player) return;
-    const playerInfo = room.players.find(p => p.socketId === socket.id);
-    if (!playerInfo || playerInfo.index !== player) return;
+    const playerIdx = room.players.findIndex(p => p.socketId === socket.id);
+    if (playerIdx === -1 || playerIdx !== room.current) return;
+    if (room.rolled) return; // Already rolled this turn
 
-    // Apply move server-side
-    room.pieces[player][piece] = newPos;
-    if (newPos === 6) room.scores[player] += 50;
+    room.dice   = result;
+    room.rolled = true;
 
-    // Broadcast move to all in room
-    socket.to(roomId).emit('player_moved', { player, piece, newPos });
+    // Broadcast to others
+    socket.to(roomId).emit('dice_result', {
+      player: playerIdx,
+      result,
+    });
 
-    // Check win
-    const finished = room.pieces[player].filter(p => p >= 58).length;
-    if (finished >= 4) {
-      endRoom(roomId, player);
+    console.log(`[GAME] ${room.players[playerIdx].username} rolled ${result} in ${roomId}`);
+  });
+
+  // ---- MAKE MOVE ----
+  socket.on('make_move', ({ roomId, piece, newPos }) => {
+    const room = activeRooms.get(roomId);
+    if (!room || room.over) return;
+
+    const playerIdx = room.players.findIndex(p => p.socketId === socket.id);
+    if (playerIdx === -1 || playerIdx !== room.current) return;
+
+    const oldPos = room.pieces[playerIdx][piece];
+
+    // Validate move
+    if (oldPos === -1 && room.dice !== 6) return;
+    if (oldPos !== -1 && oldPos + room.dice !== newPos && newPos !== 58) return;
+
+    // Apply move
+    room.pieces[playerIdx][piece] = newPos;
+
+    // Check capture
+    let captured = null;
+    if (newPos >= 0 && newPos < 52) {
+      const [mc, mr] = P52[(newPos + EN[playerIdx]) % 52];
+      if (!SF.has(`${mc},${mr}`)) {
+        for (let p2 = 0; p2 < room.players.length; p2++) {
+          if (p2 === playerIdx) continue;
+          for (let i2 = 0; i2 < 4; i2++) {
+            const op = room.pieces[p2][i2];
+            if (op >= 0 && op < 52) {
+              const [oc, or2] = P52[(op + EN[p2]) % 52];
+              if (oc === mc && or2 === mr) {
+                room.pieces[p2][i2] = -1;
+                room.scores[playerIdx] += 20;
+                captured = { player: p2, piece: i2 };
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Check piece finished
+    if (newPos >= 58) {
+      room.pieces[playerIdx][piece] = 58;
+      room.finished[playerIdx]++;
+      room.scores[playerIdx] += 50;
+    }
+
+    // Broadcast move to ALL in room
+    io.to(roomId).emit('player_moved', {
+      player: playerIdx,
+      piece,
+      newPos,
+      captured,
+      scores: room.scores,
+    });
+
+    // Check if player finished all 4 pieces
+    if (room.finished[playerIdx] >= 4) {
+      playerFinishedRoom(roomId, playerIdx);
       return;
     }
 
-    // Next turn (skip if rolled 6)
-    if (room.dice !== 6) {
-      room.current = (room.current + 1) % room.players.length;
+    // Next turn or replay (6 = replay)
+    if (room.dice === 6) {
+      room.rolled = false;
+      io.to(roomId).emit('turn_change', {
+        current: room.current,
+        replay: true,
+        message: `${room.players[playerIdx].username} rejoue (6)!`,
+      });
+    } else {
+      nextTurnRoom(roomId);
     }
-    io.to(roomId).emit('turn_change', { current: room.current });
-  });
-
-  // ---- DICE ROLL SYNC ----
-  socket.on('dice_rolled', ({ roomId, player, result }) => {
-    const room = activeRooms.get(roomId);
-    if (!room || room.current !== player) return;
-    room.dice = result;
-    socket.to(roomId).emit('dice_result', { player, result });
   });
 
   // ---- CHAT ----
-  socket.on('chat_message', ({ roomId, message }) => {
+  socket.on('chat', ({ roomId, message }) => {
     const player = connectedPlayers.get(socket.id);
-    if (!player) return;
-    // Sanitize
-    const safe = message.slice(0, 100).replace(/[<>]/g, '');
-    io.to(roomId).emit('chat_message', {
+    if (!player || !roomId) return;
+    const safe = String(message).slice(0, 80).replace(/[<>]/g, '');
+    io.to(roomId).emit('chat', {
       from: player.username,
-      message: safe,
-      timestamp: Date.now(),
+      msg: safe,
+      time: Date.now(),
     });
   });
 
   // ---- DISCONNECT ----
   socket.on('disconnect', () => {
-    console.log(`[-] Socket disconnected: ${socket.id}`);
+    const player = connectedPlayers.get(socket.id);
+    console.log(`[-] Disconnected: ${player?.username || socket.id}`);
 
-    // Remove from queues
-    matchQueues.forEach((queue, key) => {
-      const idx = queue.indexOf(socket.id);
-      if (idx !== -1) queue.splice(idx, 1);
-    });
+    removeFromQueues(socket.id);
 
     // Handle in-game disconnect
-    activeRooms.forEach((room, roomId) => {
-      const pIdx = room.players.findIndex(p => p.socketId === socket.id);
-      if (pIdx !== -1) {
-        io.to(roomId).emit('player_disconnected', {
-          player: pIdx,
-          username: room.players[pIdx].username,
-        });
-        // Auto-forfeit after 30s
-        setTimeout(() => {
-          if (activeRooms.has(roomId)) {
-            const remainingPlayers = room.players.filter(p => p.socketId !== socket.id);
-            if (remainingPlayers.length > 0) {
-              endRoom(roomId, remainingPlayers[0].index);
-            }
-          }
-        }, 30000);
+    if (player?.roomId) {
+      const room = activeRooms.get(player.roomId);
+      if (room) {
+        const pIdx = room.players.findIndex(p => p.socketId === socket.id);
+        if (pIdx !== -1) {
+          io.to(player.roomId).emit('player_disconnected', {
+            player: pIdx,
+            username: player.username,
+          });
+          // Give 30s to reconnect, then forfeit
+          room.players[pIdx].disconnected = true;
+          room.players[pIdx].disconnectTimer = setTimeout(() => {
+            forfeitRoom(player.roomId, pIdx);
+          }, 30000);
+        }
       }
-    });
+    }
 
     connectedPlayers.delete(socket.id);
     broadcastOnlineCount();
   });
 });
 
-// ===== ROOM HELPERS =====
-function endRoom(roomId, winnerIndex) {
-  const room = activeRooms.get(roomId);
-  if (!room) return;
+// ===== ROOM FUNCTIONS =====
+function createRoom(playerSockets, mode, mise, numPlayers, qKey) {
+  const roomId = `room_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
 
-  const prize = room.mode === 'comp'
-    ? Math.floor(room.mise * room.players.length * 0.95)
-    : 0;
+  const room = {
+    id: roomId,
+    mode,
+    mise,
+    numPlayers,
+    current: 0,
+    dice: 1,
+    rolled: false,
+    over: false,
+    pieces: Array.from({length: numPlayers}, () => Array(4).fill(-1)),
+    finished: Array(numPlayers).fill(0),
+    scores: Array(numPlayers).fill(0),
+    ranking: [],
+    eliminated: [],
+    players: playerSockets.map((sid, idx) => {
+      const p = connectedPlayers.get(sid);
+      return {
+        socketId: sid,
+        index: idx,
+        username: p?.username || `Joueur${idx+1}`,
+        userId: p?.userId || null,
+        coins: p?.coins || 1000,
+      };
+    }),
+    createdAt: Date.now(),
+  };
 
-  // Credit winner
-  if (room.mode === 'comp') {
-    const winnerSocket = room.players[winnerIndex]?.socketId;
-    if (winnerSocket) {
-      const p = connectedPlayers.get(winnerSocket);
-      if (p) p.coins += prize;
-      const ws = io.sockets.sockets.get(winnerSocket);
-      if (ws) ws.emit('game_won', { prize, newBalance: p?.coins });
-    }
+  activeRooms.set(roomId, room);
+
+  // Mark players as in-game
+  playerSockets.forEach((sid, idx) => {
+    const p = connectedPlayers.get(sid);
+    if (p) { p.inGame = true; p.roomId = roomId; }
+    const s = io.sockets.sockets.get(sid);
+    if (s) s.join(roomId);
+  });
+
+  // Deduct mise for comp mode
+  if (mode === 'comp') {
+    playerSockets.forEach(sid => {
+      const p = connectedPlayers.get(sid);
+      if (p) p.coins -= mise;
+    });
   }
 
-  // Notify all
-  io.to(roomId).emit('game_over', {
-    winner: winnerIndex,
-    winnerName: room.players[winnerIndex]?.username,
-    prize,
-    scores: room.scores,
+  // Notify all players - match found!
+  playerSockets.forEach((sid, idx) => {
+    io.to(sid).emit('match_found', {
+      roomId,
+      myIndex: idx,
+      players: room.players.map(p => ({ username: p.username })),
+      mode,
+      mise,
+    });
+  });
+
+  console.log(`[ROOM] Created ${roomId}: ${room.players.map(p=>p.username).join(' vs ')}`);
+
+  // Start first turn after 3s (let clients set up)
+  setTimeout(() => {
+    room.rolled = false;
+    io.to(roomId).emit('turn_change', {
+      current: 0,
+      replay: false,
+      message: `C'est le tour de ${room.players[0].username}`,
+    });
+  }, 3000);
+}
+
+function nextTurnRoom(roomId) {
+  const room = activeRooms.get(roomId);
+  if (!room || room.over) return;
+
+  let next = (room.current + 1) % room.numPlayers;
+  let safety = 0;
+  while (room.eliminated.includes(next) && safety < room.numPlayers) {
+    next = (next + 1) % room.numPlayers;
+    safety++;
+  }
+
+  room.current = next;
+  room.rolled = false;
+
+  io.to(roomId).emit('turn_change', {
+    current: next,
+    replay: false,
+    message: `Tour de ${room.players[next].username}`,
+  });
+}
+
+function playerFinishedRoom(roomId, playerIdx) {
+  const room = activeRooms.get(roomId);
+  if (!room || room.eliminated.includes(playerIdx)) return;
+
+  room.ranking.push(playerIdx);
+  room.eliminated.push(playerIdx);
+
+  const pos = room.ranking.length;
+  io.to(roomId).emit('player_ranked', {
+    player: playerIdx,
+    position: pos,
+    username: room.players[playerIdx].username,
+  });
+
+  // Check if only 1 remains
+  const remaining = [];
+  for (let i = 0; i < room.numPlayers; i++) {
+    if (!room.eliminated.includes(i)) remaining.push(i);
+  }
+
+  if (remaining.length <= 1) {
+    if (remaining.length === 1) room.ranking.push(remaining[0]);
+    endRoom(roomId);
+  } else {
+    nextTurnRoom(roomId);
+  }
+}
+
+function endRoom(roomId) {
+  const room = activeRooms.get(roomId);
+  if (!room || room.over) return;
+  room.over = true;
+
+  // Calculate prizes
+  const pool = room.mode === 'comp' ? room.mise * room.numPlayers : 0;
+  const prizes = room.ranking.map((playerIdx, pos) => {
+    if (room.mode !== 'comp') return 0;
+    if (pos === 0) return Math.floor(pool * 0.55);
+    if (pos === 1) return Math.floor(pool * 0.25);
+    return 0;
+  });
+
+  // Send result to each player
+  room.ranking.forEach((playerIdx, pos) => {
+    const sid = room.players[playerIdx].socketId;
+    const prize = prizes[pos] || 0;
+    io.to(sid).emit('game_over', {
+      myPosition: pos,
+      ranking: room.ranking,
+      players: room.players.map(p => ({ username: p.username })),
+      scores: room.scores,
+      prize,
+      mode: room.mode,
+    });
   });
 
   // Save to DB
-  saveGameResult(room, winnerIndex, prize);
+  saveRoomResult(room, prizes);
 
-  // Cleanup
+  // Cleanup players
   room.players.forEach(p => {
     const player = connectedPlayers.get(p.socketId);
-    if (player) { player.inGame = false; }
+    if (player) { player.inGame = false; player.roomId = null; }
   });
-  activeRooms.delete(roomId);
+
+  // Delete room after 30s
+  setTimeout(() => activeRooms.delete(roomId), 30000);
+  console.log(`[ROOM] Ended ${roomId} | Winner: ${room.players[room.ranking[0]]?.username}`);
 }
 
-async function saveGameResult(room, winnerIndex, prize) {
+function forfeitRoom(roomId, playerIdx) {
+  const room = activeRooms.get(roomId);
+  if (!room || room.over) return;
+  io.to(roomId).emit('player_forfeited', {
+    player: playerIdx,
+    username: room.players[playerIdx].username,
+  });
+  playerFinishedRoom(roomId, playerIdx);
+}
+
+function removeFromQueues(socketId) {
+  matchQueues.forEach((queue, key) => {
+    const idx = queue.indexOf(socketId);
+    if (idx !== -1) queue.splice(idx, 1);
+  });
+}
+
+async function saveRoomResult(room, prizes) {
   try {
-    await supabase.from('game_history').insert({
-      room_id: room.id,
-      mode: room.mode,
-      mise: room.mise,
-      winner: room.players[winnerIndex]?.username,
-      prize,
-      players: room.players.map(p => p.username),
-      scores: room.scores,
-      created_at: new Date().toISOString(),
-    });
-  } catch (e) {
-    console.error('[DB] Failed to save game:', e.message);
+    for (let i = 0; i < room.ranking.length; i++) {
+      const playerIdx = room.ranking[i];
+      const p = room.players[playerIdx];
+      if (!p.userId) continue;
+
+      // Update player stats
+      const { data: profile } = await supabase
+        .from('players')
+        .select('coins, wins, losses, games_played, xp, level')
+        .eq('id', p.userId)
+        .single();
+
+      if (!profile) continue;
+
+      const isWin = i === 0;
+      const coinsChange = prizes[i] || 0;
+      const xpGain = isWin ? 100 : i === 1 ? 60 : i === 2 ? 30 : 10;
+      const newXp = (profile.xp || 0) + xpGain;
+      const newLevel = Math.floor(newXp / 1000) + 1;
+
+      await supabase.from('players').update({
+        coins: Math.max(0, (profile.coins || 0) + coinsChange),
+        wins: (profile.wins || 0) + (isWin ? 1 : 0),
+        losses: (profile.losses || 0) + (!isWin ? 1 : 0),
+        games_played: (profile.games_played || 0) + 1,
+        xp: newXp,
+        level: newLevel,
+        updated_at: new Date().toISOString(),
+      }).eq('id', p.userId);
+
+      // Save game history
+      await supabase.from('game_history').insert({
+        username: p.username,
+        player_index: playerIdx,
+        score: room.scores[playerIdx] || 0,
+        pieces_done: room.finished[playerIdx] || 0,
+        captures: Math.floor((room.scores[playerIdx] || 0) / 20),
+        won: isWin,
+        coins_change: coinsChange,
+        mise: room.mise,
+        mode: room.mode,
+      }).catch(() => {});
+    }
+    console.log(`[DB] Saved results for ${room.id}`);
+  } catch(e) {
+    console.error('[DB] Save error:', e.message);
   }
 }
 
@@ -471,13 +504,14 @@ function broadcastOnlineCount() {
   io.emit('online_count', { count: connectedPlayers.size });
 }
 
-// ===== START SERVER =====
+// ===== START =====
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`
   ╔═══════════════════════════════════════╗
-  ║     CLASH OF COINS — Server v1.0      ║
-  ║  Running on http://localhost:${PORT}     ║
+  ║   CLASH OF COINS — Server v2.0 🎮    ║
+  ║   Multijoueur temps réel activé!      ║
+  ║   http://localhost:${PORT}               ║
   ╚═══════════════════════════════════════╝
   `);
 });

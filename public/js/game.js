@@ -11,6 +11,10 @@ const GAME={
   pieces:[],finished:[],scores:[0,0,0,0],
   movable:[],waitMove:false,
   ranking:[],eliminated:[],activePlayers:4,
+  // Multiplayer
+  isMultiplayer:false,
+  roomId:null,
+  myIndex:0,
 };
 
 // Colors: P0=Blue P1=Red P2=Green P3=Yellow
@@ -496,6 +500,11 @@ function applyMove(player,piece,newPos){
   if(typeof SFX!=='undefined') SFX.move();
   if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
 
+  // Send move to server (multiplayer)
+  if(GAME.isMultiplayer && STATE.socket && GAME.roomId && player===STATE.myColor){
+    STATE.socket.emit('make_move', {roomId:GAME.roomId, piece, newPos});
+  }
+
   // Capture check
   if(newPos>=0&&newPos<52){
     const[myC,myR]=P52[(newPos+EN[player])%52];
@@ -539,6 +548,8 @@ function applyMove(player,piece,newPos){
 
 function rollDice(){
   if(GAME.rolled||GAME.over||GAME.current!==STATE.myColor) return;
+  // In multiplayer, only roll on your turn
+  if(GAME.isMultiplayer && GAME.current !== GAME.myIndex) return;
   GAME.rolled=true;disableRoll();
 
   const diceEl=document.getElementById('dice-el');
@@ -560,6 +571,10 @@ function rollDice(){
         diceEl.style.transform='scale(1.4)';
         setTimeout(()=>diceEl.style.transform='scale(1)',300);
       }
+      // Send dice result to server (multiplayer)
+      if(GAME.isMultiplayer && STATE.socket && GAME.roomId){
+        STATE.socket.emit('dice_rolled', { roomId: GAME.roomId, result });
+      }
       const movable=getMovable(STATE.myColor,result);
       if(!movable.length){
         log(`Vous lancez ${result} — aucun mouvement 😕`,'rgba(255,255,255,.4)');
@@ -578,6 +593,9 @@ function rollDice(){
 
 function nextTurn(){
   if(GAME.over) return;
+  // In multiplayer, server controls turns via 'turn_change' event
+  if(GAME.isMultiplayer) return;
+
   let next=(GAME.current+1)%GAME.players;
   let safety=0;
   while(GAME.eliminated.includes(next)&&safety<GAME.players){
@@ -622,6 +640,8 @@ function aiTurn(player){
 // ===== RANKING SYSTEM =====
 function playerFinished(player){
   if(GAME.eliminated.includes(player)) return;
+  // In multiplayer, server handles ranking via player_ranked event
+  if(GAME.isMultiplayer) return;
   GAME.ranking.push(player);GAME.eliminated.push(player);GAME.activePlayers--;
   const pos=GAME.ranking.length;
   const posLabels=['🥇 1er','🥈 2e','🥉 3e','💀 Dernier'];
@@ -924,12 +944,40 @@ function confirmColor(){startGameWithColor();}
 // ===== GAME START =====
 function findGame(){
   if(STATE.currentMode==='comp'&&STATE.coins<STATE.currentMise){showToast('⚠️ Solde insuffisant!');return;}
-  openColorPicker();
+
+  // Check if socket available for real multiplayer
+  if(STATE.socket && STATE.socket.connected && STATE.numPlayers >= 2){
+    // Real multiplayer - go to matchmaking screen first
+    showScreen('matchmaking');
+    const mmMise = document.getElementById('mm-mise');
+    if(mmMise) mmMise.textContent = STATE.currentMode==='free' ? 'Gratuit' : STATE.currentMise.toLocaleString('fr-FR')+' 🪙';
+    const mmNeeded = document.getElementById('mm-needed');
+    if(mmNeeded) mmNeeded.textContent = STATE.numPlayers;
+
+    // Tell server to find a game
+    STATE.socket.emit('find_game', {
+      mode: STATE.currentMode,
+      mise: STATE.currentMise,
+      numPlayers: STATE.numPlayers,
+    });
+
+    // Timeout after 30s → play vs AI
+    STATE.mmTimeout = setTimeout(() => {
+      showToast('⏳ Pas de joueurs trouvés - partie contre l'IA');
+      if(STATE.socket) STATE.socket.emit('cancel_search');
+      openColorPicker();
+    }, 30000);
+  } else {
+    // No socket or solo - play vs AI
+    openColorPicker();
+  }
 }
 function startLocalGame(){startGameWithColor();}
 function cancelMatchmaking(){
   if(STATE.mmTimeout) clearTimeout(STATE.mmTimeout);
   if(STATE.socket) STATE.socket.emit('cancel_search');
+  GAME.isMultiplayer = false;
+  GAME.roomId = null;
   showScreen('mode');
 }
 
@@ -1024,27 +1072,218 @@ function showToast(msg){
   clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-// ===== SOCKET.IO =====
+// ===== SOCKET.IO MULTIPLAYER =====
 function initSocket(){
   try{
-    STATE.socket=io({transports:['websocket','polling'],timeout:5000});
-    STATE.socket.on('connect',()=>STATE.socket.emit('auth',{username:STATE.username,coins:STATE.coins}));
-    STATE.socket.on('online_count',({count})=>{
-      const el=document.getElementById('online-count');if(el)el.textContent=count.toLocaleString('fr-FR');
-    });
-    STATE.socket.on('match_found',({players,myIndex})=>{
-      clearTimeout(STATE.mmTimeout);
-      players.forEach((p,idx)=>{
-        const nm=document.getElementById(`pn-${idx}`);
-        if(nm) nm.textContent=idx===myIndex?'Vous':p.username;
+    STATE.socket = io({transports:['websocket','polling'], timeout:8000});
+
+    // Connected
+    STATE.socket.on('connect', () => {
+      console.log('🔌 Socket connected');
+      // Send auth with userId for DB sync
+      STATE.socket.emit('auth', {
+        username: STATE.username,
+        coins: STATE.coins,
+        userId: typeof CURRENT_USER !== 'undefined' ? CURRENT_USER?.id : null,
       });
-      showToast('🎮 Partie trouvée!');startLocalGame();
     });
-    STATE.socket.on('disconnect',()=>showToast('⚠️ Connexion perdue'));
-  }catch(e){STATE.socket=null;}
-  // Simulate online count
-  const el=document.getElementById('online-count');
-  if(el){let b=247;setInterval(()=>{b+=Math.floor(Math.random()*20-8);el.textContent=Math.max(50,b).toLocaleString('fr-FR');},6000);}
+
+    // Online count
+    STATE.socket.on('online_count', ({count}) => {
+      const el = document.getElementById('online-count');
+      if(el) el.textContent = count.toLocaleString('fr-FR');
+    });
+
+    // Queue update
+    STATE.socket.on('queue_update', ({found, needed, status}) => {
+      const mmFound = document.getElementById('mm-found');
+      const mmNeeded = document.getElementById('mm-needed');
+      const mmStatus = document.getElementById('mm-status');
+      if(mmFound) mmFound.textContent = found;
+      if(mmNeeded) mmNeeded.textContent = needed;
+      if(mmStatus) mmStatus.textContent = status || `Recherche de joueurs...`;
+    });
+
+    // Match found!
+    STATE.socket.on('match_found', ({roomId, myIndex, players, mode, mise}) => {
+      clearTimeout(STATE.mmTimeout);
+      console.log(`🎮 Match found! Room: ${roomId}, myIndex: ${myIndex}`);
+
+      GAME.isMultiplayer = true;
+      GAME.roomId = roomId;
+      GAME.myIndex = myIndex;
+      STATE.myColor = myIndex;
+
+      showToast('🎮 Partie trouvée! Démarrage...');
+
+      // Start game with real players
+      showScreen('game');
+      const gnp = document.getElementById('g-np');
+      if(gnp) gnp.textContent = players.length;
+      const gm = document.getElementById('g-mise');
+      if(gm) gm.textContent = mode === 'free' ? 'Gratuit' : (mise||0).toLocaleString('fr-FR') + ' 🪙';
+
+      initGame(players.length);
+      STATE.numPlayers = players.length;
+
+      // Set player names
+      players.forEach((p, idx) => {
+        const piEl = document.getElementById(`pi-${idx}`);
+        const paEl = document.getElementById(`pa-${idx}`);
+        const pnEl = document.getElementById(`pn-${idx}`);
+        const psEl = document.getElementById(`ps-${idx}`);
+        if(!piEl) return;
+        piEl.style.display = 'flex';
+        if(paEl){ paEl.style.background = PC[idx]; paEl.textContent = idx === myIndex ? 'MOI' : `P${idx+1}`; }
+        if(pnEl) pnEl.textContent = idx === myIndex ? 'Vous' : p.username;
+        if(psEl){ psEl.textContent = '0 pts'; psEl.style.color = PCL[idx]; }
+      });
+
+      setupCanvas();
+      GAME.current = -1; // Wait for server to say who goes first
+      disableRoll();
+      log('🎮 Partie multijoueur! En attente...', '#FFD700');
+    });
+
+    // Turn change (server authoritative)
+    STATE.socket.on('turn_change', ({current, replay, message}) => {
+      GAME.current = current;
+      GAME.rolled = false;
+      GAME.waitMove = false;
+      GAME.movable = [];
+      if(animFrame){ cancelAnimationFrame(animFrame); animFrame = null; }
+      updateAP();
+      drawBoard();
+
+      if(message) log(message, PC[current] || '#FFD700');
+
+      if(current === STATE.myColor){
+        // My turn!
+        log('🎲 Votre tour!', PC[STATE.myColor]);
+        enableRoll();
+        if(typeof SFX !== 'undefined') SFX.myTurn();
+      } else {
+        disableRoll();
+        log(`Tour de ${document.getElementById(`pn-${current}`)?.textContent || 'adversaire'}...`, PC[current]);
+      }
+    });
+
+    // Someone rolled dice
+    STATE.socket.on('dice_result', ({player, result}) => {
+      if(player === STATE.myColor) return; // Already handled locally
+      GAME.dice = result;
+      const diceEl = document.getElementById('dice-el');
+      if(diceEl) diceEl.textContent = DF[result-1];
+      if(typeof SFX !== 'undefined') SFX.diceResult(result);
+      log(`${document.getElementById(`pn-${player}`)?.textContent||'Adversaire'} lance ${result}`, PC[player]);
+    });
+
+    // Someone moved a pawn
+    STATE.socket.on('player_moved', ({player, piece, newPos, captured, scores}) => {
+      if(player === STATE.myColor) return; // Already applied locally
+
+      GAME.pieces[player][piece] = newPos;
+      if(scores) GAME.scores = scores;
+
+      if(typeof SFX !== 'undefined') SFX.move();
+
+      if(captured){
+        GAME.pieces[captured.player][captured.piece] = -1;
+        if(typeof SFX !== 'undefined') SFX.capture();
+        log(`💥 Capture par ${document.getElementById(`pn-${player}`)?.textContent||'adversaire'}!`, PC[player]);
+      }
+
+      updateSUI();
+      drawBoard();
+    });
+
+    // Player ranked
+    STATE.socket.on('player_ranked', ({player, position, username}) => {
+      const labels = ['🥇','🥈','🥉','💀'];
+      log(`${labels[position-1]||`${position}e`} — ${player === STATE.myColor ? 'Vous' : username}!`, PC[player]);
+      GAME.ranking.push(player);
+      GAME.eliminated.push(player);
+    });
+
+    // Game over
+    STATE.socket.on('game_over', ({myPosition, ranking, players, scores, prize, mode}) => {
+      GAME.ranking = ranking;
+      GAME.scores = scores;
+      GAME.over = true;
+      GAME.isMultiplayer = false;
+      GAME.roomId = null;
+
+      // Update coins if prize
+      if(prize > 0){
+        STATE.coins += prize;
+        updateCUI();
+        addTx('gain', `${myPosition===0?'1er':'2ème'} place (multi)`, prize);
+      }
+
+      // Show final ranking modal
+      setTimeout(() => showMultiplayerResult(myPosition, ranking, players, scores, prize, mode), 500);
+    });
+
+    // Player disconnected
+    STATE.socket.on('player_disconnected', ({player, username}) => {
+      showToast(`⚠️ ${username} s'est déconnecté(e)`);
+      log(`⚠️ ${username} déconnecté - 30s pour revenir`, '#ff8888');
+    });
+
+    // Player forfeited
+    STATE.socket.on('player_forfeited', ({player, username}) => {
+      showToast(`🏳️ ${username} a abandonné`);
+      GAME.eliminated.push(player);
+      GAME.ranking.push(player);
+    });
+
+    // Error
+    STATE.socket.on('error', ({message}) => {
+      showToast(`⚠️ ${message}`);
+      showScreen('home');
+    });
+
+    STATE.socket.on('disconnect', () => {
+      showToast('⚠️ Connexion perdue - reconnexion...');
+      GAME.isMultiplayer = false;
+    });
+
+  } catch(e) {
+    console.warn('Socket.io not available:', e);
+    STATE.socket = null;
+  }
+
+  // Simulate online count if no socket
+  if(!STATE.socket){
+    const el = document.getElementById('online-count');
+    if(el){ let b=247; setInterval(()=>{ b+=Math.floor(Math.random()*20-8); el.textContent=Math.max(50,b).toLocaleString('fr-FR'); }, 6000); }
+  }
+}
+
+// Show multiplayer end result
+function showMultiplayerResult(myPos, ranking, players, scores, prize, mode){
+  const posLabels = ['🥇','🥈','🥉','💀'];
+  const isFirst = myPos === 0;
+  const coinsStr = prize > 0 ? `+${prize.toLocaleString('fr-FR')} 🪙` : '';
+
+  document.getElementById('m-icon').textContent = isFirst ? '🏆' : myPos === players.length-1 ? '😤' : '🎯';
+  document.getElementById('m-title').textContent = isFirst ? 'VICTOIRE!' : myPos === players.length-1 ? 'DÉFAITE' : 'BIEN JOUÉ!';
+  document.getElementById('m-msg').innerHTML = ranking.map((p,i) => {
+    const name = p === STATE.myColor ? '<b style="color:#FFD700">Vous</b>' : (players[p]?.username || `Joueur${p+1}`);
+    return `${posLabels[i]} <span style="color:${PC[p]}">${name}</span> — ${scores[p]||0} pts`;
+  }).join('<br>');
+  const mc = document.getElementById('m-coins');
+  mc.textContent = coinsStr; mc.style.display = coinsStr ? 'block' : 'none';
+  document.getElementById('m-btn1').textContent = 'REJOUER';
+  document.getElementById('m-btn1').onclick = () => { closeModal(); findGame(); };
+  document.getElementById('m-btn2').textContent = 'ACCUEIL';
+  document.getElementById('m-btn2').onclick = () => { closeModal(); showScreen('home'); };
+
+  if(typeof SFX !== 'undefined'){
+    setTimeout(() => { if(isFirst) SFX.win(); else SFX.lose(); }, 300);
+  }
+  document.getElementById('modal').classList.add('open');
+  saveGameStats(myPos, prize);
 }
 
 // ===== PARTICLES =====
