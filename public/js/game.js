@@ -702,7 +702,7 @@ function showFinalRanking(){
   document.getElementById('m-btn2').onclick=()=>{closeModal();showScreen('home');};
   // Play win or lose sound
   if(typeof SFX!=='undefined'){
-    setTimeout(()=>{ if(isFirst) SFX.win(); else SFX.lose(); }, 300);
+    setTimeout(()=>{ if(isFirst) SFX.win(); else if(myPos===GAME.players-1) SFX.lose(); }, 400);
   }
   document.getElementById('modal').classList.add('open');
 }
@@ -849,6 +849,22 @@ function showScreen(name){
   const el=document.getElementById('scr-'+name);if(el)el.classList.add('active');
   if(name==='wallet') renderTx();
   if(name==='game') updateAP();
+
+  // Music management
+  if(typeof SFX !== 'undefined'){
+    if(name==='home'){
+      SFX.stopGameMusic();
+      setTimeout(()=>SFX.startHomeMusic(), 300);
+    } else if(name==='game'){
+      SFX.stopHomeMusic();
+      setTimeout(()=>SFX.startGameMusic(), 500);
+    } else {
+      // Other screens - keep home music if coming from home-like screens
+      if(name==='mode'||name==='color'||name==='tournaments'||name==='wallet'||name==='profile'){
+        // Keep home music playing
+      }
+    }
+  }
 }
 function navTo(name,btn){
   showScreen(name);
@@ -1147,8 +1163,25 @@ function toggleSound(){
 updateCUI();
 // Init background after DOM ready
 if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',()=>{initBackground();initParticles();});
+  document.addEventListener('DOMContentLoaded',()=>{
+    initBackground();
+    initParticles();
+  });
 } else {
   initBackground();
   initParticles();
 }
+
+// Start home music after first user interaction
+document.addEventListener('click', function startMusicOnce(){
+  if(typeof SFX !== 'undefined'){
+    // Small delay to let AudioContext unlock
+    setTimeout(()=>{
+      const currentScreen = document.querySelector('.screen.active');
+      if(currentScreen && currentScreen.id === 'scr-home'){
+        SFX.startHomeMusic();
+      }
+    }, 500);
+  }
+  document.removeEventListener('click', startMusicOnce);
+}, {once: true});
