@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Clash of Coins — Connexion</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Rajdhani:wght@500;600;700&family=Anton&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -67,6 +67,16 @@ html,body{width:100%;min-height:100%;background:var(--bg);color:#fff;font-family
 .strength{margin-top:6px;display:flex;gap:4px;align-items:center}
 .str-seg{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.1);transition:background .3s}
 .str-lbl{font-size:9px;color:rgba(255,255,255,.3);white-space:nowrap}
+
+@media (max-width:480px){
+  .logo-text{font-size:36px;}
+  .auth-card{padding:20px 16px;border-radius:16px;}
+  .btn-connect,.btn-register{font-size:16px;padding:14px;}
+  .form-input{font-size:16px;} /* Prevents zoom on iOS */
+  .tab{font-size:12px;padding:10px;}
+}
+/* Prevent iOS zoom on input focus */
+input,select,textarea{font-size:16px !important;}
 </style>
 </head>
 <body>

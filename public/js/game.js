@@ -76,20 +76,43 @@ let animFrame=null;
 // ===== CANVAS SETUP =====
 function setupCanvas(){
   canvas=document.getElementById('board-canvas');
-  const maxW=window.innerWidth-16;
-  const maxH=window.innerHeight-220;
-  const size=Math.min(maxW,maxH,460);
-  canvas.width=canvas.height=size;
-  C=size/15;
-  ctx=canvas.getContext('2d');
-  canvas.style.cursor='pointer';
-  canvas.addEventListener('click',onBoardClick);
-  canvas.addEventListener('touchend',e=>{
+  
+  // Mobile-aware sizing
+  const isMobile = window.innerWidth <= 480;
+  const headerH = isMobile ? 120 : 140;  // prow top
+  const footerH = isMobile ? 100 : 120;  // prow bottom + log
+  const padding = isMobile ? 8 : 16;
+  
+  const maxW = window.innerWidth - padding;
+  const maxH = window.innerHeight - headerH - footerH;
+  const size = Math.min(maxW, maxH, isMobile ? 380 : 460);
+  
+  canvas.width = canvas.height = size;
+  C = size / 15;
+  ctx = canvas.getContext('2d');
+  canvas.style.cursor = 'pointer';
+  canvas.style.maxWidth = '100%';
+  canvas.style.touchAction = 'none';
+  
+  // Remove old listeners first
+  canvas.removeEventListener('click', onBoardClick);
+  canvas.addEventListener('click', onBoardClick);
+  
+  canvas.addEventListener('touchend', e=>{
     e.preventDefault();
-    const t=e.changedTouches[0];
-    const rect=canvas.getBoundingClientRect();
-    onBoardClick({clientX:t.clientX,clientY:t.clientY,_rect:rect});
-  },{passive:false});
+    const t = e.changedTouches[0];
+    const rect = canvas.getBoundingClientRect();
+    onBoardClick({clientX:t.clientX, clientY:t.clientY, _rect:rect});
+  }, {passive:false});
+  
+  // Redraw on resize
+  if(!window._canvasResizeSet){
+    window._canvasResizeSet = true;
+    window.addEventListener('resize', ()=>{
+      if(ctx) setupCanvas();
+    });
+  }
+  
   drawBoard();
 }
 
@@ -470,11 +493,13 @@ function onBoardClick(e){
 function applyMove(player,piece,newPos){
   GAME.pieces[player][piece]=newPos;
   GAME.waitMove=false;GAME.movable=[];
+  if(typeof SFX!=='undefined') SFX.move();
   if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
 
   // Capture check
   if(newPos>=0&&newPos<52){
     const[myC,myR]=P52[(newPos+EN[player])%52];
+    if(SF.has(`${myC},${myR}`)) { if(typeof SFX!=='undefined') SFX.safe(); }
     if(!SF.has(`${myC},${myR}`)){
       for(let p2=0;p2<GAME.players;p2++){
         if(p2===player) continue;
@@ -485,6 +510,7 @@ function applyMove(player,piece,newPos){
             if(oc===myC&&or2===myR){
               GAME.pieces[p2][i2]=-1;GAME.scores[player]+=20;
               log(`💥 Capture! +20 pts`,PC[player]);
+              if(typeof SFX!=='undefined') SFX.capture();
             }
           }
         }
@@ -496,6 +522,7 @@ function applyMove(player,piece,newPos){
   if(newPos>=58){
     GAME.pieces[player][piece]=58;GAME.finished[player]++;GAME.scores[player]+=50;
     log(`⭐ Pièce ${piece+1} arrivée! +50 pts`,PC[player]);
+    if(typeof SFX!=='undefined') SFX.pieceDone();
     if(GAME.finished[player]>=4){playerFinished(player);return;}
   }
 
@@ -516,6 +543,7 @@ function rollDice(){
 
   const diceEl=document.getElementById('dice-el');
   if(diceEl) diceEl.classList.add('rolling');
+  if(typeof SFX!=='undefined') SFX.dice();
 
   let count=0;
   const iv=setInterval(()=>{
@@ -526,6 +554,7 @@ function rollDice(){
       if(diceEl){diceEl.classList.remove('rolling');diceEl.style.transform='scale(1)';}
       const result=Math.floor(Math.random()*6)+1;
       GAME.dice=result;
+      if(typeof SFX!=='undefined') SFX.diceResult(result);
       if(diceEl){
         diceEl.textContent=DF[result-1];
         diceEl.style.transform='scale(1.4)';
@@ -557,6 +586,7 @@ function nextTurn(){
   GAME.current=next;GAME.rolled=false;updateAP();
   if(GAME.current===STATE.myColor){
     log('🎲 Votre tour!',PC[STATE.myColor]);enableRoll();
+    if(typeof SFX!=='undefined') SFX.myTurn();
   } else {
     const aiIdx=GAME.current>STATE.myColor?GAME.current-1:GAME.current;
     log(`Tour de ${AI[aiIdx]||'IA'}...`,PC[GAME.current]);
@@ -670,6 +700,10 @@ function showFinalRanking(){
   document.getElementById('m-btn1').onclick=()=>{closeModal();findGame();};
   document.getElementById('m-btn2').textContent='ACCUEIL';
   document.getElementById('m-btn2').onclick=()=>{closeModal();showScreen('home');};
+  // Play win or lose sound
+  if(typeof SFX!=='undefined'){
+    setTimeout(()=>{ if(isFirst) SFX.win(); else SFX.lose(); }, 300);
+  }
   document.getElementById('modal').classList.add('open');
 }
 
@@ -1096,6 +1130,17 @@ function initBackground(){
     requestAnimationFrame(drawBg);
   }
   drawBg();
+}
+
+// ===== SOUND TOGGLE =====
+let soundEnabled = true;
+function toggleSound(){
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('sound-btn');
+  if(btn) btn.textContent = soundEnabled ? '🔊' : '🔇';
+  if(soundEnabled && typeof SFX !== 'undefined') SFX.click();
+  // Patch SFX to respect toggle
+  if(typeof SFX !== 'undefined') SFX.setVol(soundEnabled ? 0.5 : 0);
 }
 
 // ===== INIT =====
