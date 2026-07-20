@@ -497,6 +497,7 @@ function onBoardClick(e){
 function applyMove(player,piece,newPos){
   GAME.pieces[player][piece]=newPos;
   GAME.waitMove=false;GAME.movable=[];
+  hideDiceResult();
   if(typeof SFX!=='undefined') SFX.move();
   if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
 
@@ -549,6 +550,62 @@ function applyMove(player,piece,newPos){
   }
 }
 
+
+// ===== DICE RESULT PANEL =====
+let _drpTimeout = null;
+function showDiceResult(result, playerId){
+  const panel = document.getElementById('dice-result-panel');
+  const numEl = document.getElementById('drp-number');
+  const msgEl = document.getElementById('drp-msg');
+  const lblEl = document.getElementById('drp-label');
+  if(!panel || !numEl || !msgEl) return;
+
+  // Clear any existing timeout
+  if(_drpTimeout) clearTimeout(_drpTimeout);
+
+  // Set content
+  numEl.textContent = result;
+
+  const isMe = playerId === STATE.myColor;
+  const playerName = isMe ? 'Vous' : (document.getElementById(`pn-${playerId}`)?.textContent || 'Adversaire');
+
+  if(result === 6){
+    numEl.style.color = '#FFD700';
+    numEl.style.textShadow = '0 0 40px rgba(255,215,0,.9)';
+    msgEl.textContent = isMe ? 'Bravo ! Encore un tour 🎉' : `${playerName} rejoue !`;
+    lblEl.textContent = 'RÉSULTAT ⭐';
+    panel.querySelector('div').style.borderColor = 'rgba(255,215,0,.6)';
+  } else {
+    numEl.style.color = '#fff';
+    numEl.style.textShadow = '0 0 20px rgba(255,255,255,.4)';
+    msgEl.textContent = isMe ? 'Déplacez un pion ♟️' : `${playerName} joue...`;
+    lblEl.textContent = 'RÉSULTAT';
+    panel.querySelector('div').style.borderColor = 'rgba(255,255,255,.2)';
+  }
+
+  // Animate in
+  panel.style.display = 'block';
+  panel.style.opacity = '0';
+  panel.style.transform = 'translate(-50%,-50%) scale(0.7)';
+  panel.style.transition = 'all 0.25s cubic-bezier(.34,1.56,.64,1)';
+  requestAnimationFrame(() => {
+    panel.style.opacity = '1';
+    panel.style.transform = 'translate(-50%,-50%) scale(1)';
+  });
+
+  // Auto-hide after delay
+  const delay = result === 6 ? 1800 : 1200;
+  _drpTimeout = setTimeout(() => hideDiceResult(), delay);
+}
+
+function hideDiceResult(){
+  const panel = document.getElementById('dice-result-panel');
+  if(!panel) return;
+  panel.style.opacity = '0';
+  panel.style.transform = 'translate(-50%,-50%) scale(0.8)';
+  setTimeout(() => { panel.style.display = 'none'; }, 250);
+}
+
 function rollDice(){
   if(GAME.rolled||GAME.over||GAME.current!==STATE.myColor) return;
   // In multiplayer, only roll on your turn
@@ -574,6 +631,8 @@ function rollDice(){
         diceEl.style.transform='scale(1.4)';
         setTimeout(()=>diceEl.style.transform='scale(1)',300);
       }
+      // Show result panel
+      showDiceResult(result, STATE.myColor);
       // Send dice result to server (multiplayer)
       if(GAME.isMultiplayer && STATE.socket && GAME.roomId){
         STATE.socket.emit('dice_rolled', { roomId: GAME.roomId, result });
@@ -715,23 +774,69 @@ function showFinalRanking(){
 
   // Show modal
   const coinsStr=coinsChange>0?`+${coinsChange.toLocaleString('fr-FR')} 🪙`:coinsChange<0?`${coinsChange.toLocaleString('fr-FR')} 🪙`:'';
-  document.getElementById('m-icon').textContent=isFirst?'🏆':myPos===GAME.players-1?'😤':'🎯';
-  document.getElementById('m-title').textContent=isFirst?'VICTOIRE!':myPos===GAME.players-1?'DÉFAITE':'BIEN JOUÉ!';
-  document.getElementById('m-msg').innerHTML=GAME.ranking.map((p,i)=>{
-    const n=p===STATE.myColor?'<b style="color:#FFD700">Vous</b>':(AI[p>STATE.myColor?p-1:p]||'IA');
-    return `${posLabels[i]} <span style="color:${PC[p]}">${n}</span> — ${GAME.scores[p]} pts`;
-  }).join('<br>');
-  const mc=document.getElementById('m-coins');
-  mc.textContent=coinsStr;mc.style.display=coinsStr?'block':'none';
-  document.getElementById('m-btn1').textContent='REJOUER';
-  document.getElementById('m-btn1').onclick=()=>{closeModal();findGame();};
-  document.getElementById('m-btn2').textContent='ACCUEIL';
-  document.getElementById('m-btn2').onclick=()=>{closeModal();showScreen('home');};
-  // Play win or lose sound
-  if(typeof SFX!=='undefined'){
-    setTimeout(()=>{ if(isFirst) SFX.win(); else if(myPos===GAME.players-1) SFX.lose(); }, 400);
+  const modal = document.getElementById('modal');
+  const box = modal.querySelector('.modal-box');
+
+  if(isFirst){
+    // VICTORY
+    box.style.background = 'linear-gradient(145deg,#1a0a00,#2a1500,#1a0800)';
+    box.style.border = '2px solid rgba(255,215,0,.5)';
+    document.getElementById('m-icon').innerHTML = `
+      <div style="position:relative;display:inline-block">
+        <div style="font-size:70px;filter:drop-shadow(0 0 30px rgba(255,165,0,.8))">🏆</div>
+        <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-family:'Anton',sans-serif;font-size:11px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;padding:2px 10px;border-radius:10px;white-space:nowrap;letter-spacing:1px">VOUS AVEZ GAGNÉ!</div>
+      </div>`;
+    document.getElementById('m-title').innerHTML = `<span style="background:linear-gradient(135deg,#FFD700,#FF8C00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:32px">VICTOIRE !</span>`;
+  } else if(myPos===GAME.players-1){
+    // DEFEAT
+    box.style.background = 'linear-gradient(145deg,#0a0015,#150025,#0a001a)';
+    box.style.border = '2px solid rgba(180,100,255,.4)';
+    document.getElementById('m-icon').innerHTML = `<div style="font-size:70px">😔</div>`;
+    document.getElementById('m-title').innerHTML = `<span style="color:#bb77ff;font-size:28px">DÉFAITE !</span>`;
+  } else {
+    box.style.background = 'linear-gradient(145deg,#001a0a,#002a15,#001a0a)';
+    box.style.border = '2px solid rgba(0,204,68,.3)';
+    document.getElementById('m-icon').innerHTML = `<div style="font-size:70px">🎯</div>`;
+    document.getElementById('m-title').innerHTML = `<span style="color:#44ff88;font-size:28px">BIEN JOUÉ !</span>`;
   }
-  document.getElementById('modal').classList.add('open');
+
+  // Rankings
+  document.getElementById('m-msg').innerHTML = GAME.ranking.map((p,i)=>{
+    const n=p===STATE.myColor?`<b style="color:var(--gold)">Vous</b>`:(AI[p>STATE.myColor?p-1:p]||'IA');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+      <span style="font-size:18px">${posLabels[i]}</span>
+      <span style="color:${PC[p]};font-weight:700;flex:1">${n}</span>
+      <span style="color:rgba(255,255,255,.5);font-size:12px">${GAME.scores[p]} pts</span>
+    </div>`;
+  }).join('');
+
+  // Coins display - big and prominent
+  const mc = document.getElementById('m-coins');
+  if(coinsStr){
+    mc.style.display='block';
+    mc.innerHTML = `<div style="font-size:44px;font-weight:800;color:${coinsChange>0?'var(--gold)':'#ff6666'};text-shadow:0 0 30px ${coinsChange>0?'rgba(255,215,0,.6)':'rgba(255,0,0,.4)'}">
+      ${coinsStr}
+    </div>
+    <div style="display:flex;justify-content:center;gap:4px;margin-top:4px">
+      ${coinsChange>0?'🪙🪙🪙':'💸'}
+    </div>`;
+  } else {
+    mc.style.display='none';
+  }
+
+  // Buttons
+  const btn1 = document.getElementById('m-btn1');
+  const btn2 = document.getElementById('m-btn2');
+  btn1.textContent = isFirst ? '🔄 REJOUER' : '🔄 RÉESSAYER';
+  btn1.onclick = ()=>{ closeModal(); findGame(); };
+  btn2.textContent = '🏠 ACCUEIL';
+  btn2.onclick = ()=>{ closeModal(); showScreen('home'); };
+
+  if(typeof SFX!=='undefined'){
+    setTimeout(()=>{ if(isFirst) SFX.win(); else if(myPos===GAME.players-1) SFX.lose(); }, 300);
+    if(isFirst && coinsChange>0) setTimeout(()=>SFX.coinRain(),800);
+  }
+  modal.classList.add('open');
 }
 
 // Save game result to Supabase
@@ -825,19 +930,41 @@ function disableRoll(){
 }
 function updateAP(){
   for(let i=0;i<4;i++){
-    const av=document.getElementById(`pa-${i}`);if(!av)continue;
+    const card=document.getElementById(`pi-${i}`);
+    const av=document.getElementById(`pa-${i}`);
+    if(!av)continue;
     const isActive=i===GAME.current;
     const isElim=GAME.eliminated&&GAME.eliminated.includes(i);
-    av.style.boxShadow=isActive?`0 0 0 3px ${PCL[i]},0 0 20px ${PCG[i]}`:'none';
-    av.style.transform=isActive?'scale(1.25)':'scale(1)';
-    av.style.opacity=isElim?'0.35':'1';
-    av.classList.toggle('myturn',isActive);
+
+    // Avatar glow
+    av.style.boxShadow=isActive?`0 0 0 3px ${PCL[i]},0 0 16px ${PCG[i]}`:'none';
+    av.style.transform=isActive?'scale(1.15)':'scale(1)';
+    av.style.opacity=isElim?'0.3':'1';
+
+    // Card highlight
+    if(card){
+      card.style.borderColor=isActive?PCL[i]:'rgba(255,255,255,.1)';
+      card.style.boxShadow=isActive?`0 0 16px ${PCG[i]}`:'none';
+      card.style.opacity=isElim?'0.35':'1';
+    }
+
+    // My turn hint on dice
+    if(i===STATE.myColor){
+      const hint=document.getElementById('dice-hint');
+      if(hint) hint.textContent=isActive?'LANCER LE DÉ ⚡':'...';
+      const diceEl=document.getElementById('dice-el');
+      if(diceEl) diceEl.style.opacity=isActive?'1':'0.5';
+    }
   }
 }
 function updateSUI(){
   for(let i=0;i<4;i++){
     const el=document.getElementById(`ps-${i}`);
-    if(el) el.textContent=`${GAME.scores[i]} pts`;
+    if(el){
+      // Format: show score as coins
+      const score = GAME.scores[i] || 0;
+      el.textContent = score > 0 ? score.toLocaleString('fr-FR') : '0';
+    }
   }
 }
 function updateCUI(){
@@ -883,8 +1010,9 @@ function renderTx(){
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   const el=document.getElementById('scr-'+name);if(el)el.classList.add('active');
-  if(name==='wallet') renderTx();
+  if(name==='wallet'){ renderTx(); if(typeof renderRealTransactions==='function') renderRealTransactions(); }
   if(name==='game') updateAP();
+  if(name==='profile' && typeof updateProfileScreen==='function') updateProfileScreen();
 
   // Music management
   if(typeof SFX !== 'undefined'){
@@ -927,8 +1055,12 @@ function setPlayers(n){
 }
 function setMise(m){
   STATE.currentMise=m;
-  [100,500,1000,5000].forEach(x=>document.getElementById(`mb${x}`).classList.toggle('active',x===m));
+  [100,500,1000,5000].forEach(x=>{
+    const el=document.getElementById(`mb${x}`);
+    if(el) el.classList.toggle('active',x===m);
+  });
   updateGP();
+  if(typeof SFX!=='undefined') SFX.betPlaced();
 }
 function updateGP(){
   const el=document.getElementById('gp-val');
@@ -1012,12 +1144,14 @@ function startGameWithColor(){
     const psEl=document.getElementById(`ps-${i}`);
     if(!piEl) continue;
     piEl.style.display=i<STATE.numPlayers?'flex':'none';
+    if(i>=STATE.numPlayers) continue;
     if(paEl){
       paEl.style.background=PC[i];
-      paEl.textContent=i===STATE.myColor?'MOI':`P${i+1}`;
+      paEl.style.borderColor=PCL[i];
+      paEl.textContent=i===STATE.myColor?'👑':`P${i+1}`;
     }
     if(pnEl) pnEl.textContent=i===STATE.myColor?'Vous':(AI[i>STATE.myColor?i-1:i]||`IA ${i+1}`);
-    if(psEl){psEl.textContent='0 pts';psEl.style.color=PCL[i];}
+    if(psEl){ psEl.textContent='0'; psEl.style.color=PCL[i]; }
   }
 
   setupCanvas();
@@ -1197,6 +1331,7 @@ function initSocket(){
       if(diceEl) diceEl.textContent = DF[result-1];
       if(typeof SFX !== 'undefined') SFX.diceResult(result);
       log(`${document.getElementById(`pn-${player}`)?.textContent||'Adversaire'} lance ${result}`, PC[player]);
+      showDiceResult(result, player);
     });
 
     // Someone moved a pawn

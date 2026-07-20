@@ -269,7 +269,7 @@ html,body{width:100%;height:100%;overflow:hidden;
 .gh-title{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold);letter-spacing:1px}
 .gh-mise{font-size:11px;color:rgba(255,255,255,.4)}.gh-mise b{color:var(--gold);font-size:13px}
 
-.game-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 8px;gap:6px;overflow:hidden}
+.game-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 8px;gap:6px;overflow:hidden;position:relative}
 
 /* Player cards */
 .prow{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:480px;padding:0 2px}
@@ -540,7 +540,101 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 
 /* Smooth scrolling on mobile */
 .scroll{-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
+
+/* ===== HOME SCREEN REDESIGN ===== */
+.tb-coins{display:flex;align-items:center;gap:6px;background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.3);border-radius:20px;padding:5px 10px 5px 8px;cursor:pointer;transition:all .2s}
+.tb-coins:hover{background:rgba(255,215,0,.2)}
+.tb-coin-ic{font-size:16px}
+.tb-coin-val{font-size:14px;font-weight:800;color:var(--gold)}
+.tb-coin-add{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#00cc44,#008822);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0;margin-left:2px}
+
+.home-hero{display:flex;flex-direction:column;align-items:center;padding:20px 14px 8px;gap:12px}
+
+.btn-play-main{
+  width:100%;max-width:360px;padding:18px;
+  background:linear-gradient(135deg,#FFD700 0%,#FF8C00 100%);
+  color:#000;font-family:'Anton',sans-serif;font-size:24px;
+  border:none;border-radius:16px;cursor:pointer;
+  letter-spacing:3px;display:flex;align-items:center;justify-content:center;gap:10px;
+  box-shadow:0 8px 32px rgba(255,165,0,.5),0 4px 0 #8B4000,inset 0 1px 0 rgba(255,255,255,.3);
+  transition:all .15s;text-transform:uppercase;
+}
+.btn-play-main:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(255,165,0,.6),0 4px 0 #8B4000}
+.btn-play-main:active{transform:translateY(2px);box-shadow:0 2px 10px rgba(255,165,0,.3),0 1px 0 #8B4000}
+
+.btn-play-sec{
+  flex:1;padding:14px 8px;
+  border:none;border-radius:14px;cursor:pointer;
+  font-family:'Anton',sans-serif;font-size:14px;letter-spacing:1px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all .15s;text-transform:uppercase;color:#fff;
+}
+.btn-blue{background:linear-gradient(135deg,#1a5fff,#0033cc);box-shadow:0 6px 20px rgba(26,95,255,.4),0 3px 0 #001a88}
+.btn-blue:hover{transform:translateY(-2px)}
+.btn-purple{background:linear-gradient(135deg,#8833ff,#5500cc);box-shadow:0 6px 20px rgba(136,51,255,.4),0 3px 0 #330088}
+.btn-purple:hover{transform:translateY(-2px)}
+
+.home-qnav{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 14px}
+.hqn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:14px 6px 10px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.hqn:hover{border-color:rgba(255,215,0,.3);background:rgba(255,215,0,.08);transform:translateY(-3px)}
+.hqn:active{transform:scale(.95)}
+.hqn-ic{font-size:28px;margin-bottom:5px}
+.hqn-lb{font-size:9px;color:rgba(255,255,255,.5);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.hqn-badge{position:absolute;top:6px;right:6px;background:#ff4444;color:#fff;font-size:8px;font-weight:700;padding:2px 5px;border-radius:8px}
+
+/* ===== CASINO CHIPS ===== */
+.chips-grid{display:flex;justify-content:center;gap:16px;margin-bottom:22px;padding:8px}
+.chip{width:72px;height:72px;border-radius:50%;cursor:pointer;transition:all .2s;position:relative;display:flex;align-items:center;justify-content:center}
+.chip::before{content:'';position:absolute;inset:3px;border-radius:50%;border:3px dashed rgba(255,255,255,.3)}
+.chip-inner{font-family:'Anton',sans-serif;font-size:15px;letter-spacing:1px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);z-index:1}
+.chip-green{background:radial-gradient(circle at 35% 35%,#44dd66,#008822);box-shadow:0 6px 20px rgba(0,200,68,.4),0 3px 0 #005511,inset 0 1px 0 rgba(255,255,255,.2)}
+.chip-blue{background:radial-gradient(circle at 35% 35%,#4488ff,#0033cc);box-shadow:0 6px 20px rgba(26,95,255,.4),0 3px 0 #001188,inset 0 1px 0 rgba(255,255,255,.2)}
+.chip-purple{background:radial-gradient(circle at 35% 35%,#aa55ff,#6600cc);box-shadow:0 6px 20px rgba(136,51,255,.4),0 3px 0 #330066,inset 0 1px 0 rgba(255,255,255,.2)}
+.chip-gold{background:radial-gradient(circle at 35% 35%,#FFD700,#FF8C00);box-shadow:0 6px 20px rgba(255,165,0,.5),0 3px 0 #885500,inset 0 1px 0 rgba(255,255,255,.3)}
+.chip:hover{transform:translateY(-5px) scale(1.08)}
+.chip:active{transform:translateY(1px) scale(.96)}
+.chip.active{transform:scale(1.12);filter:brightness(1.2)}
+.chip.active::after{content:'✓';position:absolute;top:-6px;right:-2px;background:#FFD700;color:#000;font-size:11px;font-weight:900;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+
+/* ===== GAME SCREEN PREMIUM ===== */
+.pi-card{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:6px 8px;min-width:110px;backdrop-filter:blur(8px)}
+.pi-card-right{flex-direction:row-reverse}
+.pi-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;border:2.5px solid rgba(255,255,255,.3);flex-shrink:0;transition:all .3s}
+.pi-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pi-info-right{align-items:flex-end}
+.pi-name{font-size:10px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px}
+.pi-coins{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:800;color:var(--gold)}
+.pi-card.myturn{border-color:var(--gold);box-shadow:0 0 12px rgba(255,215,0,.4)}
+.pi-card.myturn .pi-av{box-shadow:0 0 0 3px var(--gold),0 0 16px rgba(255,215,0,.5);animation:player-pulse .8s ease-in-out infinite}
+
+.dice-center{display:flex;flex-direction:column;align-items:center;gap:4px}
+.dice-label{font-size:8px;color:rgba(255,215,0,.7);font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center}
+
+/* Game log pill */
+.game-log{font-size:11px;color:#fff;text-align:center;font-weight:700;transition:all .3s;padding:5px 10px;background:rgba(0,0,0,.6);border-radius:20px;border:1px solid rgba(255,255,255,.1);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(8px)}
+
+/* Install button */
+#install-btn{animation:pulse-green 2s ease-in-out infinite}
+@keyframes pulse-green{0%,100%{box-shadow:0 4px 16px rgba(0,200,68,.4)}50%{box-shadow:0 4px 24px rgba(0,200,68,.7)}}
 </style>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#FFD700">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Clash of Coins">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
+  <meta name="description" content="Le meilleur jeu de Ludo en ligne - Joue et gagne des coins!">
+  <meta name="keywords" content="ludo, jeu, coins, mobile, multijoueur">
+  <!-- OG Tags -->
+  <meta property="og:title" content="Clash of Coins">
+  <meta property="og:description" content="Joue au Ludo et gagne des coins!">
+  <meta property="og:image" content="/Bg.png">
+  <meta property="og:type" content="website">
 </head>
 <body>
 <canvas id="particles"></canvas>
@@ -572,94 +666,108 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 
 <!-- ===== HOME ===== -->
 <div class="screen" id="scr-home">
+
+  <!-- TOP BAR -->
   <div class="topbar">
-    <div class="tb-player">
+    <div class="tb-player" onclick="navTo('profile',null)" style="cursor:pointer">
       <div class="tb-av-wrap">
-        <div class="tb-av" id="tb-av">SK</div>
-        <div class="tb-lv">Niv.24</div>
+        <div class="tb-av" id="tb-av">👑</div>
+        <div class="tb-lv" id="tb-lv-badge">Niv.1</div>
       </div>
       <div>
-        <div class="tb-name"><span id="tb-name-txt">...</span></div>
-        <div class="xp-row"><div class="xp-bg"><div class="xp-fill"></div></div><span class="xp-txt">3200/5000</span></div>
+        <div class="tb-name" id="tb-name-txt">Chargement...</div>
+        <div class="xp-row">
+          <div class="xp-bg"><div class="xp-fill" id="xp-fill-bar"></div></div>
+          <span class="xp-txt" id="xp-txt-val">0/1000</span>
+        </div>
       </div>
     </div>
     <div class="tb-right">
+      <!-- Coins -->
+      <div class="tb-coins" onclick="navTo('wallet',null)">
+        <span class="tb-coin-ic">🪙</span>
+        <span class="tb-coin-val" id="bal-display-num">0</span>
+        <div class="tb-coin-add" onclick="event.stopPropagation();doDeposit()">+</div>
+      </div>
       <div class="tb-settings" onclick="showToast('Paramètres bientôt!')">⚙️</div>
-      <div class="notif-btn" onclick="showToast('Pas de nouvelles notifications')"><span>🔔</span><div class="notif-dot"></div></div>
     </div>
   </div>
 
   <div class="scroll" style="padding-bottom:80px">
-    <!-- Balance -->
-    <div class="bal-card">
-      <div class="bal-top"><div class="bal-lbl">Solde actuel</div><div class="online-b"><div class="od"></div><span id="online-count">247</span> en ligne</div></div>
-      <div class="bal-row">
-        <div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="bal-num" id="bal-display-num">15 350</span>
-            <span class="bal-coin-icon">🪙</span>
-            <button class="bal-add" onclick="doDeposit()">+</button>
-          </div>
-        </div>
-        <div class="bal-right">
-          <div class="wallet-icon">👜</div>
-        </div>
+
+    <!-- HERO LOGO + PLAY BUTTONS -->
+    <div class="home-hero">
+      <!-- Online badge -->
+      <div class="online-b" style="justify-content:center;margin-bottom:12px">
+        <div class="od"></div>
+        <span id="online-count">247</span> joueurs en ligne
+      </div>
+
+      <!-- Main play buttons -->
+      <button class="btn-play-main" onclick="startMode('free');if(typeof SFX!=='undefined')SFX.btnClick()">
+        <span style="font-size:22px">👑</span> JOUER
+      </button>
+
+      <div style="display:flex;gap:10px;width:100%;max-width:360px">
+        <button class="btn-play-sec btn-blue" onclick="startMode('comp');if(typeof SFX!=='undefined')SFX.btnClick()">
+          <span>👥</span> COMPÉTITION
+        </button>
+        <button class="btn-play-sec btn-purple" onclick="navTo('tournaments',null);if(typeof SFX!=='undefined')SFX.btnClick()">
+          <span>🏆</span> TOURNOIS
+        </button>
+      </div>
+
+      <!-- PWA Install Button -->
+      <button id="install-btn" onclick="installPWA()" style="display:none;align-items:center;gap:8px;padding:10px 20px;background:linear-gradient(135deg,#00cc44,#008822);color:#fff;border:none;border-radius:30px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,200,68,.4);letter-spacing:1px">
+        📲 INSTALLER L'APPLICATION
+      </button>
+    </div>
+
+    <!-- QUICK NAV — style icônes -->
+    <div class="home-qnav">
+      <div class="hqn" onclick="navTo('wallet',null);if(typeof SFX!=='undefined')SFX.btnClick()">
+        <div class="hqn-ic">🏆</div>
+        <div class="hqn-lb">Classement</div>
+      </div>
+      <div class="hqn" onclick="showToast('Boutique bientôt!')">
+        <div class="hqn-ic">🏪</div>
+        <div class="hqn-lb">Boutique</div>
+      </div>
+      <div class="hqn" onclick="showToast('Missions en cours!')">
+        <div class="hqn-ic">📋</div>
+        <div class="hqn-lb">Missions</div>
+        <div class="hqn-badge">3</div>
+      </div>
+      <div class="hqn" onclick="showToast('Coffre bientôt!')">
+        <div class="hqn-ic">📦</div>
+        <div class="hqn-lb">Coffre</div>
       </div>
     </div>
 
-    <!-- Quick nav -->
-    <div class="qnav">
-      <div class="qn" onclick="showScreen('wallet')"><div class="qn-ic">👛</div><div class="qn-lb">Wallet</div></div>
-      <div class="qn" onclick="showHistorique()"><div class="qn-ic">📋</div><div class="qn-lb">Historique</div></div>
-      <div class="qn" onclick="showToast('Amis bientôt!')"><div class="qn-ic">👥</div><div class="qn-lb">Amis</div><div class="qn-badge">2</div></div>
-      <div class="qn" onclick="showToast('Missions en cours!')"><div class="qn-ic">🎯</div><div class="qn-lb">Missions</div></div>
-    </div>
-
-    <!-- Play modes -->
-    <div class="play-section">
-      <div class="play-grid">
-        <div class="pc-free" onclick="startMode('free')">
-          <div class="pc-inner">
-            <div class="pc-title">JOUER<br>GRATUIT</div>
-            <div class="pc-sub">Gagne des coins</div>
-          </div>
-          <div class="pc-img">🎲</div>
-        </div>
-        <div class="pc-comp" onclick="startMode('comp')">
-          <div class="pc-inner">
-            <div class="pc-title">JOUER<br>COMPÉTITION</div>
-            <div class="pc-sub">Mise des coins</div>
-          </div>
-          <div class="pc-img">🏆</div>
-        </div>
+    <!-- LEADERBOARD -->
+    <div class="lb-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 4px">
+        <div class="sec-lbl" style="margin-bottom:0">🏆 Classement</div>
+        <span class="lb-more" onclick="renderRealLeaderboard()">↺ LIVE</span>
+      </div>
+      <div class="lb-card" id="lb-card-home">
+        <div style="text-align:center;padding:20px;color:rgba(255,255,255,.3)">Chargement...</div>
       </div>
     </div>
 
-    <!-- Tournament -->
+    <!-- TOURNAMENT BANNER -->
     <div class="tourn-banner" onclick="navTo('tournaments',null)">
       <div class="tb-left">
-        <div class="tb-badge">🏅 TOURNOIS</div>
+        <div class="tb-badge">🔥 GRAND TOURNOI</div>
         <div class="tb-title">Participe et gagne gros</div>
         <div class="tb-pool">500 000 🪙</div>
       </div>
       <div class="tb-trophy">🏆</div>
     </div>
 
-    <!-- Leaderboard -->
-    <div class="lb-section">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div class="sec-lbl" style="margin-bottom:0">Classement</div>
-        <span class="lb-more">VOIR PLUS ›</span>
-      </div>
-      <div class="lb-card">
-        <div class="lb-row"><div class="lb-rank">1</div><div class="lb-av" style="background:#2a1500;font-size:16px">🥇</div><div class="lb-info"><div class="lb-name">Champion_01</div><div class="lb-stats">450 parties · 69% victoires</div></div><div class="lb-coins-val">250 000 🪙</div></div>
-        <div class="lb-row"><div class="lb-rank">2</div><div class="lb-av" style="background:#1a1a1a;font-size:16px">🥈</div><div class="lb-info"><div class="lb-name">LudoMaster</div><div class="lb-stats">380 parties · 64% victoires</div></div><div class="lb-coins-val">180 500 🪙</div></div>
-        <div class="lb-row"><div class="lb-rank">3</div><div class="lb-av" style="background:#1a1000;font-size:16px">🥉</div><div class="lb-info"><div class="lb-name">ProGamer_CI</div><div class="lb-stats">290 parties · 62% victoires</div></div><div class="lb-coins-val">98 700 🪙</div></div>
-        <div class="lb-row" style="background:rgba(255,215,0,.04)"><div class="lb-rank" style="color:var(--gold)">4</div><div class="lb-av" style="background:#0d1640;color:#4d9fff;border-color:rgba(77,159,255,.3)">SK</div><div class="lb-info"><div class="lb-name">Vous</div><div class="lb-stats">147 parties · 61% victoires</div></div><div class="lb-coins-val" id="my-lb-coins">15 350 🪙</div></div>
-      </div>
-    </div>
   </div>
 
+  <!-- BOTTOM NAV -->
   <div class="bnav">
     <button class="ni active" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
     <button class="ni" onclick="startMode('free')"><div class="ni-ic">🎲</div><div class="ni-lb">Jouer</div></button>
@@ -679,11 +787,19 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
     <div id="mise-section">
       <div class="mode-sec">Mise en coins</div>
       <div class="mise-info">Plus la mise est élevée, plus les gains sont importants.<br>Commission de 5% prélevée sur les gains.</div>
-      <div class="mise-grid">
-        <div class="mb" id="mb100" onclick="setMise(100)">100</div>
-        <div class="mb active" id="mb500" onclick="setMise(500)">500</div>
-        <div class="mb" id="mb1000" onclick="setMise(1000)">1 000</div>
-        <div class="mb" id="mb5000" onclick="setMise(5000)">5 000</div>
+      <div class="chips-grid">
+        <div class="chip chip-green" id="mb100" onclick="setMise(100);if(typeof SFX!=='undefined')SFX.btnClick()">
+          <div class="chip-inner">100</div>
+        </div>
+        <div class="chip chip-blue active" id="mb500" onclick="setMise(500);if(typeof SFX!=='undefined')SFX.btnClick()">
+          <div class="chip-inner">500</div>
+        </div>
+        <div class="chip chip-purple" id="mb1000" onclick="setMise(1000);if(typeof SFX!=='undefined')SFX.btnClick()">
+          <div class="chip-inner">1K</div>
+        </div>
+        <div class="chip chip-gold" id="mb5000" onclick="setMise(5000);if(typeof SFX!=='undefined')SFX.btnClick()">
+          <div class="chip-inner">5K</div>
+        </div>
       </div>
     </div>
     <div class="gain-box" id="gain-preview">
@@ -720,41 +836,58 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
   <div class="game-body">
     <!-- Top players row -->
     <div class="prow">
-      <div class="pi" id="pi-0">
-        <div class="p-av" id="pa-0" style="background:#1a6fff">P1</div>
-        <div class="p-score-badge" id="ps-0" style="color:#88bbff">0 pts</div>
-        <div class="p-name" id="pn-0">Vous</div>
+      <div class="pi-card" id="pi-0">
+        <div class="pi-av" id="pa-0" style="background:#1a6fff">P1</div>
+        <div class="pi-info">
+          <div class="pi-name" id="pn-0">Vous</div>
+          <div class="pi-coins"><span>🪙</span><span id="ps-0">0</span></div>
+        </div>
       </div>
 
-      <!-- DICE 3D -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <!-- DICE CENTER -->
+      <div class="dice-center">
         <div class="dice-3d-wrap" onclick="rollDice()">
           <div class="dice-3d" id="dice-el">⚀</div>
         </div>
-        <div id="dice-hint" style="font-size:9px;color:rgba(255,215,0,.6);font-weight:700;text-transform:uppercase;letter-spacing:1px">LANCER</div>
+        <div class="dice-label" id="dice-hint">LANCER LE DÉ</div>
       </div>
 
-      <div class="pi" id="pi-1">
-        <div class="p-av" id="pa-1" style="background:#ee1111">P2</div>
-        <div class="p-score-badge" id="ps-1" style="color:#ff8888">0 pts</div>
-        <div class="p-name" id="pn-1">QueenLudo</div>
+      <div class="pi-card pi-card-right" id="pi-1">
+        <div class="pi-info pi-info-right">
+          <div class="pi-name" id="pn-1">QueenLudo</div>
+          <div class="pi-coins"><span id="ps-1">0</span><span>🪙</span></div>
+        </div>
+        <div class="pi-av" id="pa-1" style="background:#ee1111">P2</div>
       </div>
     </div>
 
     <canvas id="board-canvas"></canvas>
 
+    <!-- DICE RESULT PANEL -->
+    <div id="dice-result-panel" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100;text-align:center;pointer-events:none">
+      <div style="background:linear-gradient(145deg,rgba(10,10,30,.95),rgba(20,10,50,.95));border:2px solid rgba(255,215,0,.4);border-radius:24px;padding:20px 32px;backdrop-filter:blur(16px);box-shadow:0 20px 60px rgba(0,0,0,.8),0 0 40px rgba(255,215,0,.2);min-width:180px">
+        <div style="font-size:10px;color:rgba(255,255,255,.5);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px" id="drp-label">RÉSULTAT</div>
+        <div id="drp-number" style="font-family:'Anton',sans-serif;font-size:72px;line-height:1;color:#FFD700;text-shadow:0 0 40px rgba(255,215,0,.8)">6</div>
+        <div id="drp-msg" style="font-size:13px;font-weight:700;color:#fff;margin-top:6px">Bravo ! Encore un tour 🎉</div>
+      </div>
+    </div>
+
     <!-- Bottom players row -->
     <div class="prow">
-      <div class="pi" id="pi-2">
-        <div class="p-av" id="pa-2" style="background:#00cc44">P3</div>
-        <div class="p-score-badge" id="ps-2" style="color:#66ff88">0 pts</div>
-        <div class="p-name" id="pn-2">LuckyStar</div>
+      <div class="pi-card" id="pi-2">
+        <div class="pi-av" id="pa-2" style="background:#00cc44">P3</div>
+        <div class="pi-info">
+          <div class="pi-name" id="pn-2">LuckyStar</div>
+          <div class="pi-coins"><span>🪙</span><span id="ps-2">0</span></div>
+        </div>
       </div>
       <div id="game-log" class="game-log">🎲 Votre tour!</div>
-      <div class="pi" id="pi-3">
-        <div class="p-av" id="pa-3" style="background:#ddaa00">P4</div>
-        <div class="p-score-badge" id="ps-3" style="color:#ffdd66">0 pts</div>
-        <div class="p-name" id="pn-3">KingLudo</div>
+      <div class="pi-card pi-card-right" id="pi-3">
+        <div class="pi-info pi-info-right">
+          <div class="pi-name" id="pn-3">KingLudo</div>
+          <div class="pi-coins"><span id="ps-3">0</span><span>🪙</span></div>
+        </div>
+        <div class="pi-av" id="pa-3" style="background:#ddaa00">P4</div>
       </div>
     </div>
 
@@ -958,6 +1091,13 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 <script src="/js/sounds.js"></script>
 <script src="/js/game.js"></script>
 <script>
+// Global button hover/click sounds
+document.addEventListener('mouseover', e => {
+  if(e.target.matches('button,.qn,.pc-free,.pc-comp,.ti,.pb,.mb,.pm,.ni')){
+    if(typeof SFX !== 'undefined') SFX.btnHover();
+  }
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
   // If OAuth callback lands here, send to auth.html
   if(window.location.hash.includes('access_token') || window.location.search.includes('code=')){
@@ -1109,5 +1249,43 @@ document.getElementById('edit-profile-modal').addEventListener('click', function
 });
 </script>
 
+
+  <script>
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('✅ SW registered:', reg.scope))
+          .catch(err => console.warn('SW failed:', err));
+      });
+    }
+    
+    // PWA Install prompt
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // Show install button if exists
+      const btn = document.getElementById('install-btn');
+      if(btn) btn.style.display = 'flex';
+    });
+    
+    function installPWA(){
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(result => {
+        if(result.outcome === 'accepted') console.log('✅ PWA installed!');
+        deferredPrompt = null;
+        const btn = document.getElementById('install-btn');
+        if(btn) btn.style.display = 'none';
+      });
+    }
+    
+    // Detect if already installed
+    window.addEventListener('appinstalled', () => {
+      console.log('✅ App installed!');
+      const btn = document.getElementById('install-btn');
+      if(btn) btn.style.display = 'none';
+    });
+  </script>
 </body>
 </html>
