@@ -499,6 +499,7 @@ function applyMove(player,piece,newPos){
   GAME.waitMove=false;GAME.movable=[];
   hideDiceResult();
   if(typeof SFX!=='undefined') SFX.move();
+vibrate([30]);
   if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
 
   // Send move to server (multiplayer)
@@ -521,6 +522,7 @@ function applyMove(player,piece,newPos){
               GAME.pieces[p2][i2]=-1;GAME.scores[player]+=20;
               log(`💥 ${player===STATE.myColor?'Vous capturez':'Capture! '}+20 pts`,PC[player]);
               if(typeof SFX!=='undefined') SFX.capture();
+vibrate([100,50,100]);
             }
           }
         }
@@ -760,6 +762,8 @@ function showFinalRanking(){
   // Update local coins
   STATE.coins = Math.max(0, STATE.coins + coinsChange);
   updateCUI();
+loadSettings();
+updateBlockedCount();
 
   // Save transaction
   if(coinsChange !== 0){
@@ -1013,6 +1017,7 @@ function showScreen(name){
   if(name==='wallet'){ renderTx(); if(typeof renderRealTransactions==='function') renderRealTransactions(); }
   if(name==='game') updateAP();
   if(name==='profile' && typeof updateProfileScreen==='function') updateProfileScreen();
+  if(name==='settings') loadSettings();
 
   // Music management
   if(typeof SFX !== 'undefined'){
@@ -1112,7 +1117,7 @@ function findGame(){
 
     // Timeout after 30s → play vs AI
     STATE.mmTimeout = setTimeout(() => {
-      showToast("⏳ Pas de joueurs trouvés - partie contre l'IA");
+      showToast("Pas de joueurs trouves - partie contre l'IA");
       if(STATE.socket) STATE.socket.emit('cancel_search');
       openColorPicker();
     }, 30000);
@@ -1228,6 +1233,214 @@ function showToast(msg){
 }
 
 
+
+
+// ===== SETTINGS =====
+const SETTINGS_KEY = 'clash_settings';
+
+function loadSettings(){
+  try {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if(!saved) return;
+    const s = JSON.parse(saved);
+
+    // Apply volume
+    if(s.sfxVol !== undefined){
+      document.getElementById('sfx-volume') && (document.getElementById('sfx-volume').value = s.sfxVol*100);
+      if(typeof SFX !== 'undefined') SFX.setVol(s.sfxVol);
+    }
+    if(s.musicVol !== undefined){
+      document.getElementById('music-volume') && (document.getElementById('music-volume').value = s.musicVol*100);
+    }
+    if(s.muted){
+      const el = document.getElementById('toggle-mute');
+      if(el) el.checked = true;
+      if(typeof SFX !== 'undefined') SFX.setVol(0);
+    }
+    if(s.vibration !== undefined){
+      const el = document.getElementById('toggle-vibration');
+      if(el) el.checked = s.vibration;
+    }
+    if(s.notif !== undefined){
+      const el = document.getElementById('toggle-notif');
+      if(el) el.checked = s.notif;
+    }
+    if(s.publicProfile !== undefined){
+      const el = document.getElementById('toggle-public');
+      if(el) el.checked = s.publicProfile;
+    }
+    if(s.lang){
+      const el = document.getElementById('lang-select');
+      if(el) el.value = s.lang;
+    }
+    if(s.aiDiff){
+      const el = document.getElementById('ai-difficulty');
+      if(el) el.value = s.aiDiff;
+    }
+    if(s.theme) applyTheme(s.theme, true);
+
+  } catch(e){ console.warn('Settings load error:', e); }
+}
+
+function saveSettings(){
+  try {
+    const s = {
+      sfxVol: (document.getElementById('sfx-volume')?.value || 65) / 100,
+      musicVol: (document.getElementById('music-volume')?.value || 28) / 100,
+      muted: document.getElementById('toggle-mute')?.checked || false,
+      vibration: document.getElementById('toggle-vibration')?.checked ?? true,
+      notif: document.getElementById('toggle-notif')?.checked || false,
+      publicProfile: document.getElementById('toggle-public')?.checked ?? true,
+      lang: document.getElementById('lang-select')?.value || 'fr',
+      aiDiff: document.getElementById('ai-difficulty')?.value || 'medium',
+      theme: document.getElementById('theme-select')?.value || 'dark',
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  } catch(e){ console.warn('Settings save error:', e); }
+}
+
+function setSFXVolume(val){
+  const vol = val / 100;
+  if(typeof SFX !== 'undefined') SFX.setVol(vol);
+  saveSettings();
+}
+
+function setMusicVolume(val){
+  const vol = val / 100;
+  // Update music volume
+  saveSettings();
+}
+
+function toggleAllSound(muted){
+  if(typeof SFX !== 'undefined'){
+    if(muted) SFX.setVol(0);
+    else SFX.setVol((document.getElementById('sfx-volume')?.value || 65) / 100);
+  }
+  const btn = document.getElementById('sound-btn');
+  if(btn) btn.textContent = muted ? '🔇' : '🔊';
+  saveSettings();
+}
+
+function toggleNotifications(enabled){
+  if(enabled) requestNotifPermission();
+  saveSettings();
+}
+
+function applyTheme(theme, silent=false){
+  const root = document.documentElement;
+  if(theme === 'gold'){
+    root.style.setProperty('--bg', '#0d0800');
+    root.style.setProperty('--panel', '#1a1200');
+  } else if(theme === 'blue'){
+    root.style.setProperty('--bg', '#000d1a');
+    root.style.setProperty('--panel', '#001228');
+  } else {
+    root.style.setProperty('--bg', '#0a0a0f');
+    root.style.setProperty('--panel', '#111118');
+  }
+  const el = document.getElementById('theme-select');
+  if(el) el.value = theme;
+  if(!silent) saveSettings();
+}
+
+// Vibrate helper
+function vibrate(pattern=[50]){
+  const el = document.getElementById('toggle-vibration');
+  if(el?.checked && navigator.vibrate) navigator.vibrate(pattern);
+}
+
+async function changePassword(){
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+  const email = CURRENT_USER?.email;
+  if(!email){ showToast('⚠️ Aucun email associé'); return; }
+  try {
+    const sb = await getSupabase();
+    await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/auth.html'
+    });
+    showToast('✅ Email de réinitialisation envoyé à ' + email);
+  } catch(e){ showToast('⚠️ Erreur: ' + e.message); }
+}
+
+// Blocked players
+let _blockedPlayers = JSON.parse(localStorage.getItem('blocked_players') || '[]');
+
+function blockPlayer(username){
+  if(!_blockedPlayers.includes(username)){
+    _blockedPlayers.push(username);
+    localStorage.setItem('blocked_players', JSON.stringify(_blockedPlayers));
+    showToast('Joueur bloque: ' + username);
+    updateBlockedCount();
+  }
+}
+
+function unblockPlayer(username){
+  _blockedPlayers = _blockedPlayers.filter(u => u !== username);
+  localStorage.setItem('blocked_players', JSON.stringify(_blockedPlayers));
+  showToast('Joueur debloque: ' + username);
+  updateBlockedCount();
+}
+
+function updateBlockedCount(){
+  const el = document.getElementById('blocked-count-lbl');
+  if(el) el.textContent = _blockedPlayers.length > 0
+    ? `${_blockedPlayers.length} joueur(s) bloqué(s)`
+    : 'Gérer les blocages';
+}
+
+function showBlockedPlayers(){
+  if(!_blockedPlayers.length){
+    showToast('Aucun joueur bloqué');
+    return;
+  }
+  const list = _blockedPlayers.map(u =>
+    `• ${u} <button onclick="unblockPlayer('${u}')" style="color:#00cc44;background:none;border:none;cursor:pointer;font-size:12px">Débloquer</button>`
+  ).join('<br>');
+  showModal('🚫','JOUEURS BLOQUÉS', list, '',
+    'FERMER', closeModal, '', null);
+}
+
+function showHelp(){
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+  var rules = [
+    'Lance le de en cliquant dessus',
+    'Touche un pion pour le deplacer',
+    'Sors tes pions avec un 6',
+    'Les etoiles sont des zones safe',
+    'Capture les pions adverses',
+    'Le 1er a rentrer ses 4 pions gagne!'
+  ].join(' | ');
+  showModal('?','COMMENT JOUER', rules, '', 'COMPRIS!', closeModal, '', null);
+}
+
+function contactSupport(){
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+  const email = 'horizonmanagement24@gmail.com';
+  const subject = 'Support Clash of Coins';
+  const body = `Bonjour,\n\nJoueur: ${CURRENT_PROFILE?.username || 'Inconnu'}\nProblème: `;
+  window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+}
+
+async function deleteAccount(){
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+  showModal('🗑️','SUPPRIMER LE COMPTE',
+    'Action irreversible - donnees supprimees definitivement.',
+    '',
+    '❌ ANNULER', closeModal,
+    '🗑️ SUPPRIMER', async () => {
+      closeModal();
+      try {
+        const sb = await getSupabase();
+        // Delete from players table
+        await sb.from('players').delete().eq('id', CURRENT_USER.id);
+        // Sign out
+        await sb.auth.signOut();
+        showToast('Compte supprimé. Au revoir!');
+        setTimeout(() => window.location.href = '/auth.html', 2000);
+      } catch(e){ showToast('⚠️ Erreur: ' + e.message); }
+    }
+  );
+}
 
 // ===== PUSH NOTIFICATIONS =====
 async function requestNotifPermission(){
@@ -1470,7 +1683,7 @@ function initSocket(){
         log('🎲 Votre tour!', PC[STATE.myColor]);
         enableRoll();
         if(typeof SFX !== 'undefined') SFX.myTurn();
-        sendLocalNotif('🎲 Clash of Coins', "C'est ton tour! Lance le dé!");
+        sendLocalNotif("Clash of Coins", "C'est ton tour! Lance le de!");
       } else {
         disableRoll();
         log(`Tour de ${document.getElementById(`pn-${current}`)?.textContent || 'adversaire'}...`, PC[current]);
@@ -1536,7 +1749,7 @@ function initSocket(){
 
     // Player disconnected
     STATE.socket.on('player_disconnected', ({player, username}) => {
-      showToast(`⚠️ ${username} s'est déconnecté(e)`);
+      showToast(username + ' s est deconnecte(e)');
       if(typeof SFX!=='undefined') SFX.playerLeave();
       log(`⚠️ ${username} déconnecté - 30s pour revenir`, '#ff8888');
     });
