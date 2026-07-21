@@ -36,6 +36,47 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// ===== FRIEND ROOMS — Inviter par code =====
+const friendRooms = new Map(); // code -> { hostId, mode, mise, numPlayers, players:[] }
+
+function generateCode(){
+  return Math.random().toString(36).slice(2,8).toUpperCase();
+}
+
+app.post('/api/create-room', express.json(), (req, res) => {
+  const { mode, mise, numPlayers, username } = req.body;
+  let code;
+  do { code = generateCode(); } while(friendRooms.has(code));
+  
+  friendRooms.set(code, {
+    code,
+    mode: mode || 'free',
+    mise: mise || 0,
+    numPlayers: numPlayers || 4,
+    hostUsername: username || 'Hôte',
+    players: [],
+    createdAt: Date.now(),
+  });
+
+  // Auto-delete after 10 minutes
+  setTimeout(() => friendRooms.delete(code), 10 * 60 * 1000);
+
+  res.json({ success: true, code, link: `${req.headers.origin || 'https://clash-of-coins.onrender.com'}/?join=${code}` });
+});
+
+app.get('/api/room/:code', (req, res) => {
+  const room = friendRooms.get(req.params.code.toUpperCase());
+  if(!room) return res.json({ success: false, message: 'Code invalide ou expiré' });
+  res.json({ success: true, room: {
+    code: room.code,
+    mode: room.mode,
+    mise: room.mise,
+    numPlayers: room.numPlayers,
+    hostUsername: room.hostUsername,
+    players: room.players.length,
+  }});
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -85,6 +126,45 @@ io.on('connection', (socket) => {
     socket.emit('auth_ok', { username, coins });
     broadcastOnlineCount();
     console.log(`[AUTH] ${username} connected`);
+  });
+
+  // ---- JOIN FRIEND ROOM ----
+  socket.on('join_friend_room', ({ code }) => {
+    const player = connectedPlayers.get(socket.id);
+    if(!player) return;
+    
+    const room = friendRooms.get(code?.toUpperCase());
+    if(!room){ socket.emit('error', { message: 'Code invalide ou expiré' }); return; }
+    if(player.inGame){ socket.emit('error', { message: 'Déjà en partie' }); return; }
+
+    room.players.push(socket.id);
+    player.pendingRoom = code;
+
+    socket.emit('room_joined', {
+      code: room.code,
+      mode: room.mode,
+      mise: room.mise,
+      numPlayers: room.numPlayers,
+      currentPlayers: room.players.length,
+      hostUsername: room.hostUsername,
+    });
+
+    // Notify all in room
+    room.players.forEach(sid => {
+      io.to(sid).emit('room_update', {
+        currentPlayers: room.players.length,
+        needed: room.numPlayers,
+      });
+    });
+
+    console.log(`[FRIEND] ${player.username} joined room ${code} (${room.players.length}/${room.numPlayers})`);
+
+    // Start if full
+    if(room.players.length >= room.numPlayers){
+      const qKey = `friend_${code}`;
+      createRoom(room.players.slice(0, room.numPlayers), room.mode, room.mise, room.numPlayers, qKey);
+      friendRooms.delete(code);
+    }
   });
 
   // ---- FIND GAME ----

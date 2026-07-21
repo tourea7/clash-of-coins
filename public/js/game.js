@@ -1019,6 +1019,7 @@ function showScreen(name){
     if(name==='home'){
       SFX.stopGameMusic();
       setTimeout(()=>SFX.startHomeMusic(), 300);
+      showNotifBanner();
     } else if(name==='game'){
       SFX.stopHomeMusic();
       setTimeout(()=>SFX.startGameMusic(), 500);
@@ -1226,6 +1227,158 @@ function showToast(msg){
   clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
+
+
+// ===== PUSH NOTIFICATIONS =====
+async function requestNotifPermission(){
+  document.getElementById('notif-banner').style.display = 'none';
+  if(!('Notification' in window)){ showToast('⚠️ Notifications non supportées'); return; }
+  const perm = await Notification.requestPermission();
+  if(perm === 'granted'){
+    showToast('✅ Notifications activées!');
+    // Register push subscription if service worker available
+    if('serviceWorker' in navigator){
+      const reg = await navigator.serviceWorker.ready;
+      console.log('SW ready for push:', reg);
+    }
+  } else {
+    showToast('⚠️ Notifications refusées');
+  }
+}
+
+function sendLocalNotif(title, body){
+  if(Notification.permission !== 'granted') return;
+  if(document.visibilityState === 'visible') return; // App is focused
+  new Notification(title, {
+    body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'clash-coins-turn',
+    vibrate: [200,100,200],
+  });
+}
+
+// Show notification banner after login
+function showNotifBanner(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'default'){
+    setTimeout(()=>{
+      const banner = document.getElementById('notif-banner');
+      if(banner) banner.style.display = 'flex';
+    }, 5000);
+  }
+}
+
+
+// ===== FRIEND ROOM FUNCTIONS =====
+let _currentRoomCode = null;
+
+async function createFriendRoom(){
+  const btn = document.getElementById('btn-create-room');
+  if(btn){ btn.disabled=true; btn.textContent='Création...'; }
+
+  try {
+    const res = await fetch('/api/create-room', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        mode: STATE.currentMode,
+        mise: STATE.currentMise,
+        numPlayers: STATE.numPlayers,
+        username: STATE.username,
+      })
+    });
+    const data = await res.json();
+    if(!data.success) throw new Error(data.message);
+
+    _currentRoomCode = data.code;
+
+    // Show code display
+    const codeEl = document.getElementById('friend-code-val');
+    if(codeEl) codeEl.textContent = data.code;
+    const display = document.getElementById('friend-code-display');
+    if(display) display.style.display = 'block';
+    if(btn){ btn.style.display='none'; }
+
+    // Join the room ourselves via socket
+    if(STATE.socket){
+      STATE.socket.emit('join_friend_room', { code: data.code });
+
+      STATE.socket.on('room_update', ({currentPlayers, needed}) => {
+        const status = document.getElementById('friend-room-status');
+        if(status) status.textContent = `${currentPlayers}/${needed} joueurs connectés`;
+      });
+    }
+
+    showToast(`🎮 Code créé: ${data.code}`);
+    if(typeof SFX !== 'undefined') SFX.reward();
+
+  } catch(e) {
+    showToast('⚠️ Erreur: ' + e.message);
+    if(btn){ btn.disabled=false; btn.textContent='🎮 CRÉER LA PARTIE'; }
+  }
+}
+
+async function joinFriendRoom(){
+  const input = document.getElementById('join-code-input');
+  const status = document.getElementById('join-status');
+  const code = input?.value?.trim().toUpperCase();
+
+  if(!code || code.length < 4){
+    if(status) status.textContent = '⚠️ Entre un code valide';
+    return;
+  }
+
+  if(status) status.textContent = '⏳ Vérification...';
+
+  try {
+    // Check room exists
+    const res = await fetch(`/api/room/${code}`);
+    const data = await res.json();
+
+    if(!data.success){
+      if(status) status.textContent = '❌ ' + data.message;
+      return;
+    }
+
+    const room = data.room;
+    if(status) status.textContent = `✅ Partie de ${room.hostUsername} trouvée! Connexion...`;
+
+    // Update game state
+    STATE.currentMode = room.mode;
+    STATE.currentMise = room.mise;
+    STATE.numPlayers = room.numPlayers;
+
+    // Join via socket
+    if(STATE.socket){
+      STATE.socket.emit('join_friend_room', { code });
+      showToast(`🎮 Connexion à la partie de ${room.hostUsername}...`);
+      if(typeof SFX !== 'undefined') SFX.playerJoin();
+    } else {
+      if(status) status.textContent = '❌ Connexion socket requise';
+    }
+
+  } catch(e) {
+    if(status) status.textContent = '❌ Erreur de connexion';
+  }
+}
+
+function shareRoomCode(){
+  if(!_currentRoomCode) return;
+  const link = `https://clash-of-coins.onrender.com/?join=${_currentRoomCode}`;
+  const text = `🎮 Rejoins ma partie Clash of Coins!\nCode: ${_currentRoomCode}\nLien: ${link}`;
+  if(navigator.share){
+    navigator.share({ title: 'Clash of Coins', text, url: link });
+  } else {
+    navigator.clipboard?.writeText(text).then(() => showToast('✅ Lien copié!'));
+  }
+}
+
+function copyRoomCode(){
+  if(!_currentRoomCode) return;
+  navigator.clipboard?.writeText(_currentRoomCode).then(() => showToast(`✅ Code ${_currentRoomCode} copié!`));
+}
+
 // ===== SOCKET.IO MULTIPLAYER =====
 function initSocket(){
   try{
@@ -1317,6 +1470,7 @@ function initSocket(){
         log('🎲 Votre tour!', PC[STATE.myColor]);
         enableRoll();
         if(typeof SFX !== 'undefined') SFX.myTurn();
+        sendLocalNotif('🎲 Clash of Coins', "C'est ton tour! Lance le dé!");
       } else {
         disableRoll();
         log(`Tour de ${document.getElementById(`pn-${current}`)?.textContent || 'adversaire'}...`, PC[current]);
@@ -1560,6 +1714,20 @@ if(document.readyState==='loading'){
 } else {
   initBackground();
   initParticles();
+}
+
+// Check URL for friend room code (?join=CODE)
+const _urlParams = new URLSearchParams(window.location.search);
+const _joinCode = _urlParams.get('join');
+if(_joinCode){
+  // Wait for socket connection then join
+  setTimeout(()=>{
+    if(STATE.socket?.connected){
+      document.getElementById('join-code-input') && (document.getElementById('join-code-input').value = _joinCode);
+      showScreen('friends');
+      showToast(`🎮 Code détecté: ${_joinCode}`);
+    }
+  }, 2000);
 }
 
 // Start home music after first user interaction

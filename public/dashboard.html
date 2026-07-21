@@ -616,6 +616,40 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 /* Install button */
 #install-btn{animation:pulse-green 2s ease-in-out infinite}
 @keyframes pulse-green{0%,100%{box-shadow:0 4px 16px rgba(0,200,68,.4)}50%{box-shadow:0 4px 24px rgba(0,200,68,.7)}}
+
+/* ===== PROFILE REDESIGN ===== */
+.prof-av-wrap{position:relative;display:inline-block;margin-bottom:12px;cursor:pointer}
+.prof-av{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#FF8C00);display:flex;align-items:center;justify-content:center;font-size:40px;border:3px solid var(--gold);box-shadow:0 0 30px rgba(255,215,0,.4)}
+.prof-av-edit{position:absolute;bottom:2px;right:2px;width:26px;height:26px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid #000}
+.prof-xp-wrap{width:100%;max-width:280px;margin-top:10px}
+.prof-xp-bar{height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;margin-bottom:4px}
+.prof-xp-fill{height:8px;background:linear-gradient(90deg,#FFD700,#FF8C00);border-radius:4px;transition:width .5s ease}
+.prof-xp-txt{font-size:11px;color:rgba(255,255,255,.4);text-align:center}
+
+/* Game history */
+.gh-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.gh-row:last-child{border-bottom:none}
+.gh-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.gh-win{background:rgba(0,200,68,.15);border:1px solid rgba(0,200,68,.25)}
+.gh-lose{background:rgba(255,50,50,.12);border:1px solid rgba(255,50,50,.2)}
+.gh-info{flex:1}
+.gh-title{font-size:13px;font-weight:700;color:#fff}
+.gh-meta{font-size:10px;color:rgba(255,255,255,.35);margin-top:2px}
+.gh-coins{font-size:13px;font-weight:800;flex-shrink:0}
+.gh-pos{color:#00cc44}.gh-neg{color:#ff4444}
+
+/* ===== FRIEND MODE ===== */
+.friend-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:20px;margin-bottom:16px;text-align:center}
+.friend-card-ic{font-size:40px;margin-bottom:8px}
+.friend-card-title{font-family:'Anton',sans-serif;font-size:18px;letter-spacing:2px;color:#fff;margin-bottom:4px}
+.friend-card-sub{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:4px}
+
+/* Notification permission banner */
+#notif-banner{position:fixed;bottom:80px;left:14px;right:14px;background:linear-gradient(135deg,#1a5fff,#0033cc);border-radius:16px;padding:14px 16px;z-index:500;display:none;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(26,95,255,.4);animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+#notif-banner .nb-text{flex:1;font-size:13px;font-weight:600;color:#fff}
+#notif-banner .nb-btn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 14px;border-radius:20px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+#notif-banner .nb-close{font-size:18px;cursor:pointer;color:rgba(255,255,255,.6);padding:4px}
 </style>
 
   <!-- PWA -->
@@ -662,6 +696,15 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 </div>
 
 <canvas id="bg-canvas"></canvas>
+
+<!-- Notification permission banner -->
+<div id="notif-banner">
+  <span style="font-size:22px">🔔</span>
+  <div class="nb-text">Active les notifications pour savoir quand c'est ton tour!</div>
+  <button class="nb-btn" onclick="requestNotifPermission()">ACTIVER</button>
+  <span class="nb-close" onclick="document.getElementById('notif-banner').style.display='none'">✕</span>
+</div>
+
 <div id="app">
 
 <!-- ===== HOME ===== -->
@@ -781,7 +824,7 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 <div class="screen" id="scr-mode">
   <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><div class="shdr-title">JOUER</div></div>
   <div class="scroll" style="padding:16px 14px 80px">
-    <div class="mode-tabs"><div class="mt active" id="tab-rapide" onclick="setModeTab('rapide')">Partie Rapide</div><div class="mt" id="tab-amis" onclick="setModeTab('amis')">Avec Amis</div></div>
+    <div class="mode-tabs"><div class="mt active" id="tab-rapide" onclick="setModeTab('rapide')">Partie Rapide</div><div class="mt" id="tab-amis" onclick="setModeTab('amis');showScreen('friends')">Avec Amis</div></div>
     <div class="mode-sec">Choisir le mode</div>
     <div class="pbtns"><button class="pb" id="pb2" onclick="setPlayers(2)">2 Joueurs</button><button class="pb" id="pb3" onclick="setPlayers(3)">3 Joueurs</button><button class="pb active" id="pb4" onclick="setPlayers(4)">4 Joueurs</button></div>
     <div id="mise-section">
@@ -965,27 +1008,91 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 
 <!-- ===== PROFILE ===== -->
 <div class="screen" id="scr-profile">
-  <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><div class="shdr-title">PROFIL</div></div>
+  <div class="shdr">
+    <button class="bk" onclick="showScreen('home')">←</button>
+    <div class="shdr-title">MON PROFIL</div>
+    <button onclick="openEditProfile()" style="background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);color:var(--gold);border-radius:20px;padding:6px 14px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">✏️ MODIFIER</button>
+  </div>
+
   <div class="scroll" style="padding-bottom:80px">
+
+    <!-- HERO -->
     <div class="prof-hero">
-      <div class="prof-av-wrap">
+      <!-- Avatar grand -->
+      <div class="prof-av-wrap" onclick="openEditProfile()">
         <div class="prof-av" id="prof-av-display">👑</div>
+        <div class="prof-av-edit">✏️</div>
         <div class="prof-lv-badge" id="prof-lv-display">Niveau 1</div>
       </div>
       <div class="prof-name" id="prof-name-display">Chargement...</div>
       <div class="prof-since" id="prof-since-display">Membre depuis...</div>
+
+      <!-- XP Bar grande -->
+      <div class="prof-xp-wrap">
+        <div class="prof-xp-bar">
+          <div class="prof-xp-fill" id="prof-xp-fill"></div>
+        </div>
+        <div class="prof-xp-txt" id="prof-xp-txt">0 / 1000 XP</div>
+      </div>
     </div>
-    <div class="stat-grid">
-      <div class="sc-card"><div class="sc-val"><span id="stat-parties">0</span></div><div class="sc-lbl">Parties jouées</div></div>
-      <div class="sc-card"><div class="sc-val"><span id="stat-victoires">0</span></div><div class="sc-lbl">Victoires</div></div>
-      <div class="sc-card"><div class="sc-val"><span id="stat-taux">0%</span></div><div class="sc-lbl">Taux victoire</div></div>
-      <div class="sc-card"><div class="sc-val" id="profile-coins">15 350</div><div class="sc-lbl">Coins gagnés</div></div>
+
+    <!-- COINS CARD -->
+    <div style="margin:0 14px 14px;background:linear-gradient(135deg,#1a1300,#0d0900);border:1px solid rgba(255,215,0,.25);border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Solde total</div>
+        <div style="font-size:32px;font-weight:800;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.5)" id="profile-coins">0</div>
+      </div>
+      <div style="font-size:44px;filter:drop-shadow(0 4px 8px rgba(255,165,0,.4))">🪙</div>
     </div>
-    <div class="prof-btns" style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn-find" style="font-size:16px;padding:14px" onclick="showToast('Paramètres bientôt!')">⚙️ PARAMÈTRES</button>
-      <button style="padding:14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);border-radius:50px;cursor:pointer;font-family:'Anton',sans-serif;font-size:16px;letter-spacing:2px;transition:all .2s" onclick="logout()">🚪 SE DÉCONNECTER</button>
+
+    <!-- STATS GRID -->
+    <div style="padding:0 14px;margin-bottom:14px">
+      <div class="sec-lbl" style="margin-bottom:10px">📊 Statistiques</div>
+      <div class="stat-grid">
+        <div class="sc-card">
+          <div class="sc-val" id="stat-parties">0</div>
+          <div class="sc-lbl">Parties jouées</div>
+        </div>
+        <div class="sc-card">
+          <div class="sc-val" id="stat-victoires">0</div>
+          <div class="sc-lbl">Victoires</div>
+        </div>
+        <div class="sc-card">
+          <div class="sc-val" id="stat-taux">0%</div>
+          <div class="sc-lbl">Taux victoire</div>
+        </div>
+        <div class="sc-card">
+          <div class="sc-val" id="stat-serie">0</div>
+          <div class="sc-lbl">Meilleure série</div>
+        </div>
+      </div>
     </div>
+
+    <!-- HISTORIQUE PARTIES -->
+    <div style="padding:0 14px;margin-bottom:14px">
+      <div class="sec-lbl" style="margin-bottom:10px">🎮 Historique des parties</div>
+      <div id="game-history-list">
+        <div style="text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:13px">
+          Chargement...
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="prof-btns" style="display:flex;flex-direction:column;gap:10px;padding:0 14px">
+      <button class="btn-find" style="font-size:15px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="openEditProfile()">
+        ✏️ MODIFIER MON PROFIL
+      </button>
+      <button class="btn-find" style="font-size:15px;padding:14px;background:linear-gradient(135deg,#1a5fff,#0033cc);box-shadow:0 6px 20px rgba(26,95,255,.3);display:flex;align-items:center;justify-content:center;gap:8px" onclick="shareProfile()">
+        📤 PARTAGER MON PROFIL
+      </button>
+      <button onclick="logout()" style="padding:14px;background:rgba(255,50,50,.1);border:1.5px solid rgba(255,50,50,.3);color:#ff6666;border-radius:50px;cursor:pointer;font-family:'Anton',sans-serif;font-size:15px;letter-spacing:2px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
+        🚪 SE DÉCONNECTER
+      </button>
+    </div>
+
   </div>
+
   <div class="bnav">
     <button class="ni" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
     <button class="ni" onclick="startMode('free')"><div class="ni-ic">🎲</div><div class="ni-lb">Jouer</div></button>
@@ -995,6 +1102,58 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
   </div>
 </div>
 
+<!-- ===== FRIEND MODE ===== -->
+<div class="screen" id="scr-friends">
+  <div class="shdr">
+    <button class="bk" onclick="showScreen('mode')">←</button>
+    <div class="shdr-title">AVEC AMIS</div>
+  </div>
+  <div class="scroll" style="padding:20px 14px 80px">
+
+    <!-- CREATE ROOM -->
+    <div class="friend-card">
+      <div class="friend-card-ic">🏠</div>
+      <div class="friend-card-title">CRÉER UNE PARTIE</div>
+      <div class="friend-card-sub">Génère un code et invite tes amis</div>
+      <div id="friend-code-display" style="display:none">
+        <div style="font-family:'Anton',sans-serif;font-size:42px;letter-spacing:8px;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.5);margin:16px 0" id="friend-code-val">ABC123</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:12px">Partage ce code avec tes amis</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="shareRoomCode()" style="flex:1;padding:12px;background:linear-gradient(135deg,#1a5fff,#0033cc);color:#fff;border:none;border-radius:12px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;cursor:pointer">📤 PARTAGER</button>
+          <button onclick="copyRoomCode()" style="flex:1;padding:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:12px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;cursor:pointer">📋 COPIER</button>
+        </div>
+        <div id="friend-room-status" style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.5);text-align:center">En attente des joueurs...</div>
+        <div class="mm-dots" style="justify-content:center;margin-top:8px"><div class="md"></div><div class="md"></div><div class="md"></div></div>
+      </div>
+      <button id="btn-create-room" class="btn-find" style="font-size:16px;padding:14px;margin-top:8px" onclick="createFriendRoom()">
+        🎮 CRÉER LA PARTIE
+      </button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin:16px 0">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+      <div style="font-size:12px;color:rgba(255,255,255,.3)">OU</div>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+    </div>
+
+    <!-- JOIN ROOM -->
+    <div class="friend-card">
+      <div class="friend-card-ic">🔗</div>
+      <div class="friend-card-title">REJOINDRE</div>
+      <div class="friend-card-sub">Entre le code de ton ami</div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <input id="join-code-input" type="text" maxlength="6" placeholder="ABC123"
+          style="flex:1;padding:14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,215,0,.3);border-radius:12px;color:#fff;font-family:'Anton',sans-serif;font-size:22px;letter-spacing:6px;text-transform:uppercase;text-align:center;outline:none"
+          oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <button class="btn-find" style="font-size:16px;padding:14px;margin-top:10px;background:linear-gradient(135deg,#8833ff,#5500cc);box-shadow:0 6px 20px rgba(136,51,255,.4)" onclick="joinFriendRoom()">
+        🎯 REJOINDRE LA PARTIE
+      </button>
+      <div id="join-status" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);text-align:center"></div>
+    </div>
+
+  </div>
+</div>
 
 <!-- ===== COLOR PICKER ===== -->
 <div class="screen" id="scr-color">
