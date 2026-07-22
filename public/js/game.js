@@ -1196,30 +1196,113 @@ function confirmQuit(){
 }
 
 // ===== WALLET =====
-function doDeposit(){
-  STATE.coins+=5000;addTx('gain','Dépôt (Orange Money)',5000);updateCUI();renderTx();
-  showToast('✅ +5 000 coins déposés!');
+// ===== PAIEMENTS SIMULÉS (CinetPay sera intégré plus tard) =====
+const DEPOSIT_OPTIONS = [1000, 2000, 5000, 10000, 25000, 50000];
+const WITHDRAW_OPTIONS = [1000, 2000, 5000, 10000];
+
+function openDepositModal(){
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+
+  const btns = DEPOSIT_OPTIONS.map(a =>
+    `<button onclick="selectSimAmount('dep',${a},this)"
+      style="flex:1;min-width:80px;padding:10px;
+      background:${a===5000?'linear-gradient(135deg,#FFD700,#FF8C00)':'rgba(255,255,255,.08)'};
+      color:${a===5000?'#000':'#fff'};border:1px solid rgba(255,255,255,.15);
+      border-radius:12px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;cursor:pointer"
+      id="dep-btn-${a}">${a.toLocaleString('fr-FR')} 🪙</button>`
+  ).join('');
+
+  document.getElementById('m-icon').textContent = '💳';
+  document.getElementById('m-title').textContent = 'DÉPOSER DES COINS';
+  document.getElementById('m-msg').innerHTML = `
+    <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Choisir le montant</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">${btns}</div>
+    <div style="display:flex;gap:8px">
+      ${[{ic:'🟠',n:'Orange'},{ic:'🟡',n:'MTN'},{ic:'🔵',n:'Wave'},{ic:'🟢',n:'Moov'}].map(op=>
+        `<button style="flex:1;padding:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">${op.ic} ${op.n}</button>`
+      ).join('')}
+    </div>
+    <div style="margin-top:12px;font-size:10px;color:rgba(255,165,0,.7);text-align:center">
+      ⚠️ Mode démo — Intégration CinetPay bientôt disponible
+    </div>`;
+
+  document.getElementById('m-coins').style.display='none';
+  document.getElementById('m-btn1').textContent = '✅ CONFIRMER';
+  document.getElementById('m-btn1').onclick = () => confirmDeposit();
+  document.getElementById('m-btn2').textContent = '✕ ANNULER';
+  document.getElementById('m-btn2').onclick = closeModal;
+  document.getElementById('modal').classList.add('open');
+  window._simDepAmount = 5000;
 }
-function doWithdraw(){
-  if(STATE.coins<1000){showToast('⚠️ Solde insuffisant!');return;}
-  STATE.coins-=1000;addTx('loss','Retrait vers Wave',-1000);updateCUI();renderTx();
-  showToast('💸 1 000 coins retirés vers Wave');
+
+function selectSimAmount(type, amount, btn){
+  const prefix = type === 'dep' ? 'dep-btn-' : 'wd-btn-';
+  const options = type === 'dep' ? DEPOSIT_OPTIONS : WITHDRAW_OPTIONS;
+  options.forEach(a => {
+    const b = document.getElementById(prefix+a);
+    if(b){ b.style.background='rgba(255,255,255,.08)'; b.style.color='#fff'; }
+  });
+  btn.style.background = 'linear-gradient(135deg,#FFD700,#FF8C00)';
+  btn.style.color = '#000';
+  if(type==='dep') window._simDepAmount = amount;
+  else window._simWdAmount = amount;
 }
-function selectPM(pm){
-  const n={orange:'Orange Money',moov:'Moov Money',mtn:'MTN Money',wave:'Wave'};
-  showToast(`💳 ${n[pm]} sélectionné`);
+
+function confirmDeposit(){
+  const amount = window._simDepAmount || 5000;
+  STATE.coins += amount;
+  updateCUI();
+  addTx('gain', 'Dépôt (simulation)', amount);
+  if(typeof SFX !== 'undefined') SFX.coinRain();
+  closeModal();
+  showToast(`✅ +${amount.toLocaleString('fr-FR')} coins ajoutés!`);
 }
-function joinTournament(){
-  showModal('🏅','REJOINDRE','Confirmer votre inscription?','-1 000 🪙',
-    'CONFIRMER',()=>{STATE.coins-=1000;addTx('loss','Inscription tournoi',-1000);updateCUI();closeModal();showToast('🏅 Inscrit au tournoi!');},'ANNULER',closeModal
-  );
+
+function openWithdrawModal(){
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+  if(STATE.coins < 1000){ showToast('⚠️ Solde minimum: 1 000 coins'); return; }
+
+  const btns = WITHDRAW_OPTIONS.filter(a=>a<=STATE.coins).map(a =>
+    `<button onclick="selectSimAmount('wd',${a},this)"
+      style="flex:1;padding:10px;
+      background:${a===1000?'linear-gradient(135deg,#FFD700,#FF8C00)':'rgba(255,255,255,.08)'};
+      color:${a===1000?'#000':'#fff'};border:1px solid rgba(255,255,255,.15);
+      border-radius:12px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;cursor:pointer"
+      id="wd-btn-${a}">${a.toLocaleString('fr-FR')} 🪙</button>`
+  ).join('');
+
+  document.getElementById('m-icon').textContent = '💸';
+  document.getElementById('m-title').textContent = 'RETRAIT';
+  document.getElementById('m-msg').innerHTML = `
+    <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Montant à retirer</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">${btns}</div>
+    <div style="font-size:10px;color:rgba(255,165,0,.7);text-align:center">
+      ⚠️ Mode démo — Intégration CinetPay bientôt disponible
+    </div>`;
+
+  document.getElementById('m-coins').style.display='none';
+  document.getElementById('m-btn1').textContent = '💸 RETIRER';
+  document.getElementById('m-btn1').onclick = confirmWithdraw;
+  document.getElementById('m-btn2').textContent = '✕ ANNULER';
+  document.getElementById('m-btn2').onclick = closeModal;
+  document.getElementById('modal').classList.add('open');
+  window._simWdAmount = 1000;
 }
-function showHistorique(){showScreen('wallet');}
-function logout(){
-  showModal('🚪','DÉCONNEXION','Se déconnecter de Clash of Coins?','',
-    'DÉCONNECTER',()=>{closeModal();if(typeof doLogout==='function')doLogout();else window.location.href='/auth.html';},'ANNULER',closeModal
-  );
+
+function confirmWithdraw(){
+  const amount = window._simWdAmount || 1000;
+  if(STATE.coins < amount){ showToast('⚠️ Solde insuffisant'); return; }
+  STATE.coins -= amount;
+  updateCUI();
+  addTx('loss', 'Retrait (simulation)', -amount);
+  if(typeof SFX !== 'undefined') SFX.betDeducted();
+  closeModal();
+  showToast(`💸 ${amount.toLocaleString('fr-FR')} coins retirés (simulation)`);
 }
+
+// Legacy aliases
+function doDeposit(){ openDepositModal(); }
+function doWithdraw(){ openWithdrawModal(); }
 
 // ===== MODAL & TOAST =====
 function showModal(icon,title,msg,coins,b1t,b1f,b2t,b2f){
