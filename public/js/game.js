@@ -521,6 +521,7 @@ vibrate([30]);
             if(oc===myC&&or2===myR){
               GAME.pieces[p2][i2]=-1;GAME.scores[player]+=20;
               log(`💥 ${player===STATE.myColor?'Vous capturez':'Capture! '}+20 pts`,PC[player]);
+              if(GAME.isMultiplayer) addSystemChatMsg(`💥 ${player===STATE.myColor?'Vous avez':''+document.getElementById('pn-'+player)?.textContent+' a'} capturé un pion!`);
               if(typeof SFX!=='undefined') SFX.capture();
 vibrate([100,50,100]);
             }
@@ -1167,6 +1168,13 @@ function startGameWithColor(){
   updateAP();
   enableRoll();
   log('🎲 Votre tour — lancez le dé!',PC[STATE.myColor]);
+  // Reset chat
+  _chatOpen = false;
+  _unreadCount = 0;
+  const chatMsgs = document.getElementById('chat-messages');
+  if(chatMsgs) chatMsgs.innerHTML = '<div style="text-align:center;font-size:11px;color:rgba(255,255,255,.2)">Début du chat...</div>';
+  const chatPanel = document.getElementById('chat-panel');
+  if(chatPanel) chatPanel.classList.remove('open');
   if(typeof SFX!=='undefined') setTimeout(()=>SFX.gameStart(),500);
 }
 
@@ -1236,6 +1244,118 @@ function showToast(msg){
 
 
 
+
+
+// ===== CHAT EN PARTIE =====
+let _chatOpen = false;
+let _unreadCount = 0;
+
+// Filtre anti-insultes basique
+const BAD_WORDS = ['merde','putain','connard','idiot','nul','con','enfoiré','salope','bâtard'];
+function filterMsg(msg){
+  let filtered = msg;
+  BAD_WORDS.forEach(w => {
+    const re = new RegExp(w, 'gi');
+    filtered = filtered.replace(re, '***');
+  });
+  return filtered;
+}
+
+function toggleChat(){
+  _chatOpen = !_chatOpen;
+  const panel = document.getElementById('chat-panel');
+  const btn = document.getElementById('chat-toggle-btn');
+  const dot = document.getElementById('chat-notif-dot');
+
+  if(_chatOpen){
+    panel.classList.add('open');
+    btn.style.background = 'linear-gradient(135deg,#333,#111)';
+    _unreadCount = 0;
+    if(dot) dot.style.display = 'none';
+    // Scroll to bottom
+    setTimeout(() => {
+      const msgs = document.getElementById('chat-messages');
+      if(msgs) msgs.scrollTop = msgs.scrollHeight;
+    }, 100);
+    if(typeof SFX !== 'undefined') SFX.modalOpen();
+  } else {
+    panel.classList.remove('open');
+    btn.style.background = 'linear-gradient(135deg,#1a5fff,#0033cc)';
+    if(typeof SFX !== 'undefined') SFX.modalClose();
+  }
+}
+
+function sendChatMsg(){
+  const input = document.getElementById('chat-input');
+  const raw = input?.value?.trim();
+  if(!raw) return;
+
+  const filtered = filterMsg(raw);
+  input.value = '';
+
+  // Send via socket
+  if(STATE.socket && GAME.roomId){
+    STATE.socket.emit('chat', { roomId: GAME.roomId, message: filtered });
+  }
+
+  // Display immediately (mine)
+  addChatMsg(STATE.username, filtered, true);
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+}
+
+function sendQuickMsg(msg){
+  if(STATE.socket && GAME.roomId){
+    STATE.socket.emit('chat', { roomId: GAME.roomId, message: msg });
+  }
+  addChatMsg(STATE.username, msg, true);
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+}
+
+function addChatMsg(from, msg, isMe=false, isSystem=false){
+  const container = document.getElementById('chat-messages');
+  if(!container) return;
+
+  // Remove "début du chat" placeholder
+  const placeholder = container.querySelector('div[style*="text-align:center"]');
+  if(placeholder) placeholder.remove();
+
+  const div = document.createElement('div');
+  div.className = `chat-msg ${isSystem ? '' : isMe ? 'chat-msg-me' : 'chat-msg-other'}`;
+
+  if(isSystem){
+    div.innerHTML = `<div class="chat-bubble chat-bubble-system">${msg}</div>`;
+  } else {
+    const playerColor = (() => {
+      for(let i=0; i<4; i++){
+        const pn = document.getElementById(`pn-${i}`);
+        if(pn?.textContent === from || (isMe && i === STATE.myColor)) return PC[i];
+      }
+      return '#fff';
+    })();
+
+    div.innerHTML = `
+      ${!isMe ? `<div class="chat-name" style="color:${playerColor}">${from}</div>` : ''}
+      <div class="chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}">${msg}</div>
+    `;
+  }
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+
+  // Unread badge if chat closed
+  if(!_chatOpen && !isMe){
+    _unreadCount++;
+    const dot = document.getElementById('chat-notif-dot');
+    if(dot) dot.style.display = 'block';
+    const btn = document.getElementById('chat-toggle-btn');
+    if(btn) btn.textContent = `💬`;
+    if(typeof SFX !== 'undefined') SFX.chatMsg();
+  }
+}
+
+function addSystemChatMsg(msg){
+  addChatMsg('', msg, false, true);
+}
 
 // ===== TOURNAMENTS =====
 let _myTournaments = [];
@@ -1895,6 +2015,12 @@ function initSocket(){
       showToast(`🏳️ ${username} a abandonné`);
       GAME.eliminated.push(player);
       GAME.ranking.push(player);
+    });
+
+    // Chat received
+    STATE.socket.on('chat', ({from, msg}) => {
+      const isMe = from === STATE.username;
+      if(!isMe) addChatMsg(from, msg, false);
     });
 
     // Error
