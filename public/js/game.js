@@ -1018,6 +1018,7 @@ function showScreen(name){
   if(name==='game') updateAP();
   if(name==='profile' && typeof updateProfileScreen==='function') updateProfileScreen();
   if(name==='settings') loadSettings();
+  if(name==='tournaments') loadTournaments();
 
   // Music management
   if(typeof SFX !== 'undefined'){
@@ -1234,6 +1235,141 @@ function showToast(msg){
 
 
 
+
+
+// ===== TOURNAMENTS =====
+let _myTournaments = [];
+
+async function loadTournaments(){
+  const list = document.getElementById('tournaments-list');
+  if(!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,.3)">⏳ Chargement...</div>';
+
+  try {
+    const res = await fetch('/api/tournaments');
+    const data = await res.json();
+    const tourneys = data.tournaments || [];
+
+    if(!tourneys.length){
+      list.innerHTML = '<div style="text-align:center;padding:30px;color:rgba(255,255,255,.3)">Aucun tournoi disponible</div>';
+      return;
+    }
+
+    list.innerHTML = tourneys.map(t => {
+      const isFull = t.currentPlayers >= t.maxPlayers;
+      const pct = Math.round((t.currentPlayers / t.maxPlayers) * 100);
+      const statusLabel = t.status === 'open' ? 'OUVERT' : t.status === 'in_progress' ? 'EN COURS' : 'TERMINÉ';
+      const statusClass = t.status === 'open' ? 'tourn-open' : t.status === 'in_progress' ? 'tourn-progress' : 'tourn-finished';
+      const isJoined = _myTournaments.includes(t.id);
+
+      return `<div class="tourn-card" onclick="if(event.target.tagName!=='BUTTON'){}">
+        <div class="tourn-header">
+          <div class="tourn-name">${t.name}</div>
+          <div class="tourn-status ${statusClass}">${statusLabel}</div>
+        </div>
+        <div class="tourn-info">
+          <div class="tourn-info-item">
+            <div class="tourn-info-val">${t.mise > 0 ? t.mise.toLocaleString('fr-FR') : 'GRATUIT'}</div>
+            <div class="tourn-info-lbl">🪙 Mise</div>
+          </div>
+          <div class="tourn-info-item">
+            <div class="tourn-info-val" style="color:#00cc44">${t.prizePool.toLocaleString('fr-FR')}</div>
+            <div class="tourn-info-lbl">💰 Prize Pool</div>
+          </div>
+          <div class="tourn-info-item">
+            <div class="tourn-info-val">${t.currentPlayers}/${t.maxPlayers}</div>
+            <div class="tourn-info-lbl">👥 Joueurs</div>
+          </div>
+        </div>
+        <div class="tourn-progress-bar">
+          <div class="tourn-progress-fill" style="width:${pct}%"></div>
+        </div>
+        ${t.status === 'open' ? `
+          ${isJoined
+            ? '<button class="tourn-btn" style="background:rgba(0,200,68,.15);color:#00cc44;border:1px solid rgba(0,200,68,.3);cursor:default">✅ INSCRIT - En attente...</button>'
+            : isFull
+              ? '<button class="tourn-btn tourn-btn-full" disabled>COMPLET</button>'
+              : `<button class="tourn-btn tourn-btn-join" onclick="joinTournament('${t.id}','${t.name}',${t.mise})">🏆 S'INSCRIRE — ${t.mise > 0 ? t.mise.toLocaleString('fr-FR')+' 🪙' : 'GRATUIT'}</button>`
+          }
+        ` : `<button class="tourn-btn" style="background:rgba(255,255,255,.05);color:rgba(255,255,255,.3);cursor:default">${t.status === 'in_progress' ? '🎮 EN COURS...' : '🏁 TERMINÉ'}</button>`}
+      </div>`;
+    }).join('');
+
+  } catch(e) {
+    list.innerHTML = `<div style="text-align:center;padding:20px;color:#ff4444">❌ Erreur: ${e.message}</div>`;
+  }
+}
+
+async function joinTournament(tournId, name, mise){
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+
+  if(mise > 0 && STATE.coins < mise){
+    showToast('⚠️ Solde insuffisant!');
+    return;
+  }
+
+  const msg = mise > 0
+    ? `S'inscrire au ${name} pour ${mise.toLocaleString('fr-FR')} 🪙?`
+    : `S'inscrire au ${name} gratuitement?`;
+
+  showModal('🏆', 'INSCRIPTION TOURNOI', msg,
+    mise > 0 ? `-${mise.toLocaleString('fr-FR')} 🪙` : '',
+    '✅ CONFIRMER', async () => {
+      closeModal();
+      try {
+        const res = await fetch(`/api/tournaments/${tournId}/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: typeof CURRENT_USER !== 'undefined' ? CURRENT_USER?.id : null,
+            username: STATE.username,
+            socketId: STATE.socket?.id,
+          })
+        });
+        const data = await res.json();
+        if(data.success){
+          _myTournaments.push(tournId);
+          if(mise > 0){
+            STATE.coins -= mise;
+            updateCUI();
+            addTx('loss', `Inscription ${name}`, -mise);
+          }
+          if(typeof SFX !== 'undefined') SFX.reward();
+          showToast(`✅ Inscrit! Position ${data.position}/${data.maxPlayers}`);
+          loadTournaments();
+
+          // Listen for tournament events
+          if(STATE.socket){
+            STATE.socket.on('tournament_update', ({message}) => {
+              showToast(`🏆 ${message}`);
+            });
+            STATE.socket.on('tournament_started', ({opponent, message}) => {
+              showToast(`🎮 ${message}`);
+              if(typeof SFX !== 'undefined') SFX.gameStart();
+            });
+            STATE.socket.on('tournament_over', ({winner, isWinner, prize, message}) => {
+              showToast(`🏆 ${message}`);
+              if(isWinner && prize > 0){
+                STATE.coins += prize;
+                updateCUI();
+                addTx('gain', `Victoire tournoi ${name}`, prize);
+                if(typeof SFX !== 'undefined') SFX.bigWin();
+              } else {
+                if(typeof SFX !== 'undefined') SFX.lose();
+              }
+              _myTournaments = _myTournaments.filter(id => id !== tournId);
+            });
+          }
+        } else {
+          showToast('⚠️ ' + data.message);
+        }
+      } catch(e) {
+        showToast('❌ Erreur: ' + e.message);
+      }
+    },
+    '❌ ANNULER', closeModal
+  );
+}
 
 // ===== SETTINGS =====
 const SETTINGS_KEY = 'clash_settings';

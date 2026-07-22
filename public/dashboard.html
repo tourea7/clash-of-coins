@@ -650,6 +650,58 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 #notif-banner .nb-text{flex:1;font-size:13px;font-weight:600;color:#fff}
 #notif-banner .nb-btn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 14px;border-radius:20px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
 #notif-banner .nb-close{font-size:18px;cursor:pointer;color:rgba(255,255,255,.6);padding:4px}
+
+/* ===== SETTINGS SCREEN ===== */
+#scr-settings{background:rgba(0,0,0,.5)}
+.set-section-label{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;font-weight:700;margin:16px 0 8px;padding:0 4px}
+.set-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;overflow:hidden;margin-bottom:4px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;gap:12px}
+.set-row-btn{cursor:pointer;transition:background .15s}
+.set-row-btn:hover{background:rgba(255,255,255,.05)}
+.set-row-btn:active{background:rgba(255,255,255,.08)}
+.set-row-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+.set-row-ic{font-size:20px;flex-shrink:0;width:28px;text-align:center}
+.set-row-info{flex:1;min-width:0}
+.set-row-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:2px}
+.set-row-sub{font-size:11px;color:rgba(255,255,255,.4)}
+.set-divider{height:1px;background:rgba(255,255,255,.06);margin:0 16px}
+.set-arrow{font-size:20px;color:rgba(255,255,255,.3);flex-shrink:0}
+
+/* Toggle switch */
+.set-toggle{position:relative;width:48px;height:26px;flex-shrink:0}
+.set-toggle input{opacity:0;width:0;height:0}
+.set-toggle-slider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.2);border-radius:26px;transition:.3s}
+.set-toggle-slider::before{content:'';position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 2px 4px rgba(0,0,0,.3)}
+.set-toggle input:checked + .set-toggle-slider{background:linear-gradient(135deg,#00cc44,#008822)}
+.set-toggle input:checked + .set-toggle-slider::before{transform:translateX(22px)}
+
+/* Range slider */
+.set-slider{-webkit-appearance:none;width:100px;height:4px;border-radius:2px;background:rgba(255,255,255,.2);outline:none;cursor:pointer;flex-shrink:0}
+.set-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#FF8C00);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+
+/* Select */
+.set-select{-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;padding:6px 10px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;cursor:pointer;outline:none;flex-shrink:0}
+.set-select option{background:#111118;color:#fff}
+
+/* ===== TOURNAMENTS ===== */
+.tourn-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,215,0,.15);border-radius:18px;padding:16px;margin-bottom:12px;transition:all .2s;cursor:pointer}
+.tourn-card:hover{border-color:rgba(255,215,0,.4);background:rgba(255,215,0,.05)}
+.tourn-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.tourn-name{font-family:'Anton',sans-serif;font-size:16px;letter-spacing:1px;color:#fff}
+.tourn-status{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700}
+.tourn-open{background:rgba(0,200,68,.2);color:#00cc44;border:1px solid rgba(0,200,68,.3)}
+.tourn-progress{background:rgba(255,165,0,.2);color:#ffaa00;border:1px solid rgba(255,165,0,.3)}
+.tourn-finished{background:rgba(255,255,255,.1);color:rgba(255,255,255,.4)}
+.tourn-info{display:flex;gap:12px;margin-bottom:12px}
+.tourn-info-item{flex:1;text-align:center;background:rgba(0,0,0,.2);border-radius:10px;padding:8px}
+.tourn-info-val{font-size:16px;font-weight:800;color:var(--gold)}
+.tourn-info-lbl{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;margin-top:2px}
+.tourn-progress-bar{height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;margin-bottom:10px}
+.tourn-progress-fill{height:4px;background:linear-gradient(90deg,#FFD700,#FF8C00);border-radius:2px;transition:width .5s}
+.tourn-btn{width:100%;padding:12px;border:none;border-radius:12px;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .2s}
+.tourn-btn-join{background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;box-shadow:0 4px 16px rgba(255,165,0,.4)}
+.tourn-btn-join:hover{transform:translateY(-2px)}
+.tourn-btn-full{background:rgba(255,255,255,.08);color:rgba(255,255,255,.4);cursor:not-allowed}
 </style>
 
   <!-- PWA -->
@@ -732,7 +784,7 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
         <span class="tb-coin-val" id="bal-display-num">0</span>
         <div class="tb-coin-add" onclick="event.stopPropagation();doDeposit()">+</div>
       </div>
-      <div class="tb-settings" onclick="showToast('Paramètres bientôt!')">⚙️</div>
+      <div class="tb-settings" onclick="navTo('settings',null);if(typeof SFX!=='undefined')SFX.btnClick()">⚙️</div>
     </div>
   </div>
 
@@ -980,23 +1032,36 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 
 <!-- ===== TOURNAMENTS ===== -->
 <div class="screen" id="scr-tournaments">
-  <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><div class="shdr-title">TOURNOIS</div></div>
-  <div class="scroll" style="padding-bottom:80px">
-    <div class="tourn-hero">
-      <div class="th-trophy">🏆</div>
-      <div class="th-badge">🔥 GRAND TOURNOI</div>
-      <div class="th-title">CLASH OF COINS</div>
-      <div class="th-pool">500 000</div>
-      <div class="th-pool-lbl">🪙 Prize Pool</div>
-      <div class="th-timer">⏱️ Se termine dans: <b style="color:#fff">02j · 14h · 35min</b></div>
-    </div>
-    <div style="padding:12px 14px 8px"><div class="sec-lbl" style="margin-bottom:10px">Autres Tournois</div></div>
-    <div class="tourn-list">
-      <div class="ti" onclick="joinTournament()"><div class="ti-ic">🎯</div><div class="ti-info"><div class="ti-name">Tournoi du Soir</div><div class="ti-meta"><span>👥 120 joueurs</span><span>⏰ 1h:25min</span></div></div><div class="ti-right"><div class="ti-pool">50 000 🪙</div><div class="ti-entry">Entrée: 1 000 🪙</div><span class="badge bl">🔴 En cours</span></div></div>
-      <div class="ti" onclick="joinTournament()"><div class="ti-ic">⚡</div><div class="ti-info"><div class="ti-name">Clash Rapide</div><div class="ti-meta"><span>👥 80 joueurs</span><span>⏰ 45min</span></div></div><div class="ti-right"><div class="ti-pool">15 000 🪙</div><div class="ti-entry">Entrée: 500 🪙</div><span class="badge bs">🟣 Bientôt</span></div></div>
-      <div class="ti" onclick="joinTournament()"><div class="ti-ic">👑</div><div class="ti-info"><div class="ti-name">Challenge du Champion</div><div class="ti-meta"><span>👥 60 joueurs</span><span>⏰ 3h:10min</span></div></div><div class="ti-right"><div class="ti-pool">100 000 🪙</div><div class="ti-entry">Entrée: 2 000 🪙</div><span class="badge bl">🔴 En cours</span></div></div>
-    </div>
+  <div class="shdr">
+    <button class="bk" onclick="showScreen('home')">←</button>
+    <div class="shdr-title">TOURNOIS</div>
+    <button onclick="loadTournaments()" style="background:none;border:none;color:var(--gold);font-size:18px;cursor:pointer">↺</button>
   </div>
+
+  <div class="scroll" style="padding-bottom:80px">
+
+    <!-- HERO -->
+    <div style="background:linear-gradient(135deg,#1a0a00,#2a1500);border-bottom:1px solid rgba(255,215,0,.2);padding:20px 14px;text-align:center">
+      <div style="font-size:40px;margin-bottom:8px">🏆</div>
+      <div style="font-family:'Anton',sans-serif;font-size:22px;letter-spacing:3px;color:var(--gold)">TOURNOIS</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:4px">Affronte les meilleurs joueurs</div>
+    </div>
+
+    <!-- LISTE TOURNOIS -->
+    <div style="padding:14px" id="tournaments-list">
+      <div style="text-align:center;padding:30px;color:rgba(255,255,255,.3)">⏳ Chargement...</div>
+    </div>
+
+    <!-- MES TOURNOIS -->
+    <div style="padding:0 14px 14px">
+      <div class="sec-lbl" style="margin-bottom:10px">📋 Mes inscriptions</div>
+      <div id="my-tournaments">
+        <div style="text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:12px">Tu n'es inscrit à aucun tournoi</div>
+      </div>
+    </div>
+
+  </div>
+
   <div class="bnav">
     <button class="ni" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
     <button class="ni" onclick="startMode('free')"><div class="ni-ic">🎲</div><div class="ni-lb">Jouer</div></button>
@@ -1005,446 +1070,3 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
     <button class="ni" onclick="navTo('profile',this)"><div class="ni-ic">👤</div><div class="ni-lb">Profil</div></button>
   </div>
 </div>
-
-<!-- ===== PROFILE ===== -->
-<div class="screen" id="scr-profile">
-  <div class="shdr">
-    <button class="bk" onclick="showScreen('home')">←</button>
-    <div class="shdr-title">MON PROFIL</div>
-    <button onclick="openEditProfile()" style="background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);color:var(--gold);border-radius:20px;padding:6px 14px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">✏️ MODIFIER</button>
-  </div>
-
-  <div class="scroll" style="padding-bottom:80px">
-
-    <!-- HERO -->
-    <div class="prof-hero">
-      <!-- Avatar grand -->
-      <div class="prof-av-wrap" onclick="openEditProfile()">
-        <div class="prof-av" id="prof-av-display">👑</div>
-        <div class="prof-av-edit">✏️</div>
-        <div class="prof-lv-badge" id="prof-lv-display">Niveau 1</div>
-      </div>
-      <div class="prof-name" id="prof-name-display">Chargement...</div>
-      <div class="prof-since" id="prof-since-display">Membre depuis...</div>
-
-      <!-- XP Bar grande -->
-      <div class="prof-xp-wrap">
-        <div class="prof-xp-bar">
-          <div class="prof-xp-fill" id="prof-xp-fill"></div>
-        </div>
-        <div class="prof-xp-txt" id="prof-xp-txt">0 / 1000 XP</div>
-      </div>
-    </div>
-
-    <!-- COINS CARD -->
-    <div style="margin:0 14px 14px;background:linear-gradient(135deg,#1a1300,#0d0900);border:1px solid rgba(255,215,0,.25);border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Solde total</div>
-        <div style="font-size:32px;font-weight:800;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.5)" id="profile-coins">0</div>
-      </div>
-      <div style="font-size:44px;filter:drop-shadow(0 4px 8px rgba(255,165,0,.4))">🪙</div>
-    </div>
-
-    <!-- STATS GRID -->
-    <div style="padding:0 14px;margin-bottom:14px">
-      <div class="sec-lbl" style="margin-bottom:10px">📊 Statistiques</div>
-      <div class="stat-grid">
-        <div class="sc-card">
-          <div class="sc-val" id="stat-parties">0</div>
-          <div class="sc-lbl">Parties jouées</div>
-        </div>
-        <div class="sc-card">
-          <div class="sc-val" id="stat-victoires">0</div>
-          <div class="sc-lbl">Victoires</div>
-        </div>
-        <div class="sc-card">
-          <div class="sc-val" id="stat-taux">0%</div>
-          <div class="sc-lbl">Taux victoire</div>
-        </div>
-        <div class="sc-card">
-          <div class="sc-val" id="stat-serie">0</div>
-          <div class="sc-lbl">Meilleure série</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- HISTORIQUE PARTIES -->
-    <div style="padding:0 14px;margin-bottom:14px">
-      <div class="sec-lbl" style="margin-bottom:10px">🎮 Historique des parties</div>
-      <div id="game-history-list">
-        <div style="text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:13px">
-          Chargement...
-        </div>
-      </div>
-    </div>
-
-    <!-- ACTIONS -->
-    <div class="prof-btns" style="display:flex;flex-direction:column;gap:10px;padding:0 14px">
-      <button class="btn-find" style="font-size:15px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="openEditProfile()">
-        ✏️ MODIFIER MON PROFIL
-      </button>
-      <button class="btn-find" style="font-size:15px;padding:14px;background:linear-gradient(135deg,#1a5fff,#0033cc);box-shadow:0 6px 20px rgba(26,95,255,.3);display:flex;align-items:center;justify-content:center;gap:8px" onclick="shareProfile()">
-        📤 PARTAGER MON PROFIL
-      </button>
-      <button onclick="logout()" style="padding:14px;background:rgba(255,50,50,.1);border:1.5px solid rgba(255,50,50,.3);color:#ff6666;border-radius:50px;cursor:pointer;font-family:'Anton',sans-serif;font-size:15px;letter-spacing:2px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px">
-        🚪 SE DÉCONNECTER
-      </button>
-    </div>
-
-  </div>
-
-  <div class="bnav">
-    <button class="ni" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
-    <button class="ni" onclick="startMode('free')"><div class="ni-ic">🎲</div><div class="ni-lb">Jouer</div></button>
-    <button class="ni" onclick="navTo('tournaments',this)"><div class="ni-ic">🏆</div><div class="ni-lb">Tournois</div></button>
-    <button class="ni" onclick="navTo('wallet',this)"><div class="ni-ic">👛</div><div class="ni-lb">Wallet</div></button>
-    <button class="ni active"><div class="ni-ic">👤</div><div class="ni-lb">Profil</div></button>
-  </div>
-</div>
-
-<!-- ===== FRIEND MODE ===== -->
-<div class="screen" id="scr-friends">
-  <div class="shdr">
-    <button class="bk" onclick="showScreen('mode')">←</button>
-    <div class="shdr-title">AVEC AMIS</div>
-  </div>
-  <div class="scroll" style="padding:20px 14px 80px">
-
-    <!-- CREATE ROOM -->
-    <div class="friend-card">
-      <div class="friend-card-ic">🏠</div>
-      <div class="friend-card-title">CRÉER UNE PARTIE</div>
-      <div class="friend-card-sub">Génère un code et invite tes amis</div>
-      <div id="friend-code-display" style="display:none">
-        <div style="font-family:'Anton',sans-serif;font-size:42px;letter-spacing:8px;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.5);margin:16px 0" id="friend-code-val">ABC123</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:12px">Partage ce code avec tes amis</div>
-        <div style="display:flex;gap:8px">
-          <button onclick="shareRoomCode()" style="flex:1;padding:12px;background:linear-gradient(135deg,#1a5fff,#0033cc);color:#fff;border:none;border-radius:12px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;cursor:pointer">📤 PARTAGER</button>
-          <button onclick="copyRoomCode()" style="flex:1;padding:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:12px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;cursor:pointer">📋 COPIER</button>
-        </div>
-        <div id="friend-room-status" style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.5);text-align:center">En attente des joueurs...</div>
-        <div class="mm-dots" style="justify-content:center;margin-top:8px"><div class="md"></div><div class="md"></div><div class="md"></div></div>
-      </div>
-      <button id="btn-create-room" class="btn-find" style="font-size:16px;padding:14px;margin-top:8px" onclick="createFriendRoom()">
-        🎮 CRÉER LA PARTIE
-      </button>
-    </div>
-
-    <div style="display:flex;align-items:center;gap:12px;margin:16px 0">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
-      <div style="font-size:12px;color:rgba(255,255,255,.3)">OU</div>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
-    </div>
-
-    <!-- JOIN ROOM -->
-    <div class="friend-card">
-      <div class="friend-card-ic">🔗</div>
-      <div class="friend-card-title">REJOINDRE</div>
-      <div class="friend-card-sub">Entre le code de ton ami</div>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <input id="join-code-input" type="text" maxlength="6" placeholder="ABC123"
-          style="flex:1;padding:14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,215,0,.3);border-radius:12px;color:#fff;font-family:'Anton',sans-serif;font-size:22px;letter-spacing:6px;text-transform:uppercase;text-align:center;outline:none"
-          oninput="this.value=this.value.toUpperCase()">
-      </div>
-      <button class="btn-find" style="font-size:16px;padding:14px;margin-top:10px;background:linear-gradient(135deg,#8833ff,#5500cc);box-shadow:0 6px 20px rgba(136,51,255,.4)" onclick="joinFriendRoom()">
-        🎯 REJOINDRE LA PARTIE
-      </button>
-      <div id="join-status" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);text-align:center"></div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ===== COLOR PICKER ===== -->
-<div class="screen" id="scr-color">
-  <div class="shdr"><button class="bk" onclick="showScreen('mode')">←</button><div class="shdr-title">CHOISIR SA COULEUR</div></div>
-  <div class="color-pick-wrap">
-    <div class="color-pick-title">Quelle couleur voulez-vous jouer?</div>
-    <div class="color-grid">
-      <div class="color-card" id="cc-0"
-           style="background:linear-gradient(145deg,#0033aa,#1155ee);border-color:rgba(26,111,255,.5)"
-           onclick="selectColor(0)">
-        <div class="cc-check">✓</div>
-        <div class="cc-icon">🔵</div>
-        <div class="cc-name" style="color:#77aaff">BLEU</div>
-        <div class="cc-status" id="cc-status-0">Disponible</div>
-      </div>
-      <div class="color-card" id="cc-1"
-           style="background:linear-gradient(145deg,#aa0000,#dd2222);border-color:rgba(238,17,17,.5)"
-           onclick="selectColor(1)">
-        <div class="cc-check">✓</div>
-        <div class="cc-icon">🔴</div>
-        <div class="cc-name" style="color:#ff7777">ROUGE</div>
-        <div class="cc-status" id="cc-status-1">Disponible</div>
-      </div>
-      <div class="color-card" id="cc-2"
-           style="background:linear-gradient(145deg,#007722,#00aa33);border-color:rgba(0,187,51,.5)"
-           onclick="selectColor(2)">
-        <div class="cc-check">✓</div>
-        <div class="cc-icon">🟢</div>
-        <div class="cc-name" style="color:#66ff88">VERT</div>
-        <div class="cc-status" id="cc-status-2">Disponible</div>
-      </div>
-      <div class="color-card" id="cc-3"
-           style="background:linear-gradient(145deg,#aa7700,#ddaa00);border-color:rgba(221,170,0,.5)"
-           onclick="selectColor(3)">
-        <div class="cc-check">✓</div>
-        <div class="cc-icon">🟡</div>
-        <div class="cc-name" style="color:#ffdd55">JAUNE</div>
-        <div class="cc-status" id="cc-status-3">Disponible</div>
-      </div>
-    </div>
-
-    <div class="color-preview">
-      <div class="cp-pawn" id="cp-pawn">🔵</div>
-      <div class="cp-text">Vous jouez avec la couleur <b id="cp-name">Bleu</b></div>
-    </div>
-
-    <div class="color-confirm-wrap">
-      <button class="btn-find" id="color-confirm-btn" onclick="confirmColor()">
-        CONFIRMER ⚡
-      </button>
-      <div class="mfooter" style="margin-top:12px">Les autres couleurs seront jouées par l'IA</div>
-    </div>
-  </div>
-</div>
-
-
-<!-- EDIT PROFILE MODAL -->
-<div id="edit-profile-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9998;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif">
-  <div style="background:#111118;border:1px solid rgba(255,215,0,.2);border-radius:20px;padding:28px 24px;width:360px;max-width:92vw">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div style="font-family:'Anton',sans-serif;font-size:18px;color:#FFD700;letter-spacing:2px">MON PROFIL</div>
-      <button onclick="closeEditProfile()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:22px;cursor:pointer">✕</button>
-    </div>
-
-    <!-- Avatar picker -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:8px">Avatar</div>
-      <div id="edit-avatars" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-    </div>
-
-    <!-- Username -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:6px">Pseudo</div>
-      <input id="edit-username" type="text" maxlength="20"
-        style="width:100%;padding:12px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,215,0,.3);border-radius:12px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;outline:none"
-        oninput="validateEditUsername(this.value)">
-      <div id="edit-username-hint" style="font-size:10px;margin-top:4px;color:rgba(255,255,255,.3)">3-20 caractères</div>
-    </div>
-
-    <!-- Message -->
-    <div id="edit-msg" style="font-size:12px;margin-bottom:12px;display:none;padding:8px 12px;border-radius:8px"></div>
-
-    <button id="edit-save-btn" onclick="saveEditProfile()"
-      style="width:100%;padding:14px;background:linear-gradient(135deg,#FFD700,#FF8C00);color:#000;font-family:'Anton',sans-serif;font-size:16px;letter-spacing:2px;border:none;border-radius:40px;cursor:pointer">
-      SAUVEGARDER ✓
-    </button>
-  </div>
-</div>
-
-</div><!-- #app -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="/socket.io/socket.io.js"></script>
-<script src="/js/auth.js"></script>
-<script src="/js/sounds.js"></script>
-<script src="/js/game.js"></script>
-<script>
-// Global button hover/click sounds
-document.addEventListener('mouseover', e => {
-  if(e.target.matches('button,.qn,.pc-free,.pc-comp,.ti,.pb,.mb,.pm,.ni')){
-    if(typeof SFX !== 'undefined') SFX.btnHover();
-  }
-});
-
-document.addEventListener('DOMContentLoaded', async () => {
-  // If OAuth callback lands here, send to auth.html
-  if(window.location.hash.includes('access_token') || window.location.search.includes('code=')){
-    window.location.href = '/auth.html' + window.location.hash + window.location.search;
-    return;
-  }
-
-  // Safety timeout - if loading takes more than 8 seconds, redirect to auth
-  const loadingTimeout = setTimeout(() => {
-    window.location.href = '/auth.html';
-  }, 8000);
-  
-  // Animate loading bar
-  let prog = 0;
-  const bar = document.getElementById('ld-bar');
-  const txt = document.getElementById('ld-text');
-  const barIv = setInterval(() => {
-    prog = Math.min(prog + Math.random()*15, 90);
-    if(bar) bar.style.width = prog + '%';
-    if(txt) {
-      if(prog > 30) txt.textContent = 'Vérification de la session...';
-      if(prog > 60) txt.textContent = 'Chargement du profil...';
-      if(prog > 80) txt.textContent = 'Presque prêt...';
-    }
-  }, 200);
-
-  // initAuth() redirects to /auth.html if not logged in
-  const ok = await initAuth();
-  if(!ok) return;
-
-  clearTimeout(loadingTimeout);
-  clearInterval(barIv);
-  if(bar) bar.style.width = '100%';
-  if(txt) txt.textContent = 'Prêt! 🎉';
-
-  // ✅ Logged in - hide loading, show dashboard
-  const loadEl = document.getElementById('loading');
-  setTimeout(() => {
-    if(loadEl){ loadEl.style.opacity='0'; setTimeout(()=>{loadEl.style.display='none';},400); }
-    document.getElementById('scr-home').classList.add('active');
-    updateCoinsUI();
-
-    // Update profile displays after short delay
-    setTimeout(() => {
-      if(typeof updateAllProfileDisplays === 'function') updateAllProfileDisplays();
-      if(typeof updateProfileUI === 'function') updateProfileUI();
-      if(typeof updateCoinsUI === 'function') updateCoinsUI();
-      if(typeof renderRealLeaderboard === 'function') renderRealLeaderboard();
-      if(typeof renderRealTransactions === 'function') renderRealTransactions();
-    }, 400);
-  }, 200);
-});
-</script>
-
-<script>
-const EDIT_AVATARS = ['👑','🦁','🐯','🦊','🐺','🦅','🐲','💎','⚡','🔥','🌙','⭐'];
-let editSelectedAvatar = '👑';
-
-function openEditProfile(){
-  const modal = document.getElementById('edit-profile-modal');
-  modal.style.display = 'flex';
-
-  // Pre-fill with current values
-  const usernameInput = document.getElementById('edit-username');
-  if(usernameInput && typeof CURRENT_PROFILE !== 'undefined' && CURRENT_PROFILE){
-    usernameInput.value = CURRENT_PROFILE.username || '';
-    editSelectedAvatar = CURRENT_PROFILE.avatar_url || '👑';
-  }
-
-  // Build avatar grid
-  const grid = document.getElementById('edit-avatars');
-  grid.innerHTML = '';
-  EDIT_AVATARS.forEach(av => {
-    const el = document.createElement('div');
-    el.textContent = av;
-    const isSelected = av === editSelectedAvatar;
-    el.style.cssText = `width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2.5px solid ${isSelected?'#FFD700':'transparent'};background:${isSelected?'rgba(255,215,0,.15)':'rgba(255,255,255,.06)'};transition:all .2s`;
-    el.onclick = () => {
-      document.querySelectorAll('#edit-avatars div').forEach(a => {
-        a.style.borderColor='transparent';a.style.background='rgba(255,255,255,.06)';
-      });
-      el.style.borderColor='#FFD700';el.style.background='rgba(255,215,0,.15)';
-      editSelectedAvatar = av;
-    };
-    grid.appendChild(el);
-  });
-}
-
-function closeEditProfile(){
-  document.getElementById('edit-profile-modal').style.display = 'none';
-}
-
-function validateEditUsername(val){
-  const hint = document.getElementById('edit-username-hint');
-  const ok = /^[a-zA-Z0-9_]{3,20}$/.test(val);
-  hint.style.color = val.length===0?'rgba(255,255,255,.3)':ok?'#44ff88':'#ff6666';
-  hint.textContent = val.length===0?'3-20 caractères':ok?'✓ Pseudo valide':'✗ Lettres, chiffres et _ uniquement';
-  return ok;
-}
-
-async function saveEditProfile(){
-  const username = document.getElementById('edit-username').value.trim();
-  const msg = document.getElementById('edit-msg');
-  if(!validateEditUsername(username)) return;
-
-  const btn = document.getElementById('edit-save-btn');
-  btn.textContent = 'Sauvegarde...';
-  btn.disabled = true;
-
-  try {
-    const sb = await getSupabase();
-    const { error } = await sb.from('players')
-      .update({ username, avatar_url: editSelectedAvatar })
-      .eq('id', CURRENT_USER.id);
-
-    if(error) throw error;
-
-    // Update local state
-    if(CURRENT_PROFILE){ CURRENT_PROFILE.username=username; CURRENT_PROFILE.avatar_url=editSelectedAvatar; }
-    if(typeof STATE!=='undefined'){ STATE.username=username; STATE.initials=username.slice(0,2).toUpperCase(); }
-
-    // Update UI
-    if(typeof updateProfileUI==='function') updateProfileUI();
-
-    // Show success
-    msg.style.display='block';
-    msg.style.background='rgba(0,200,68,.1)';
-    msg.style.border='1px solid rgba(0,200,68,.2)';
-    msg.style.color='#44ff88';
-    msg.textContent='✅ Profil mis à jour!';
-
-    setTimeout(closeEditProfile, 1200);
-
-  } catch(e) {
-    msg.style.display='block';
-    msg.style.background='rgba(255,60,60,.1)';
-    msg.style.border='1px solid rgba(255,60,60,.2)';
-    msg.style.color='#ff8888';
-    msg.textContent='Erreur: '+e.message;
-  }
-
-  btn.textContent='SAUVEGARDER ✓';
-  btn.disabled=false;
-}
-
-// Close on background click
-document.getElementById('edit-profile-modal').addEventListener('click', function(e){
-  if(e.target === this) closeEditProfile();
-});
-</script>
-
-
-  <script>
-    if('serviceWorker' in navigator){
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('✅ SW registered:', reg.scope))
-          .catch(err => console.warn('SW failed:', err));
-      });
-    }
-    
-    // PWA Install prompt
-    let deferredPrompt = null;
-    window.addEventListener('beforeinstallprompt', e => {
-      e.preventDefault();
-      deferredPrompt = e;
-      // Show install button if exists
-      const btn = document.getElementById('install-btn');
-      if(btn) btn.style.display = 'flex';
-    });
-    
-    function installPWA(){
-      if(!deferredPrompt) return;
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(result => {
-        if(result.outcome === 'accepted') console.log('✅ PWA installed!');
-        deferredPrompt = null;
-        const btn = document.getElementById('install-btn');
-        if(btn) btn.style.display = 'none';
-      });
-    }
-    
-    // Detect if already installed
-    window.addEventListener('appinstalled', () => {
-      console.log('✅ App installed!');
-      const btn = document.getElementById('install-btn');
-      if(btn) btn.style.display = 'none';
-    });
-  </script>
-</body>
-</html>

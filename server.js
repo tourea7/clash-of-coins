@@ -747,3 +747,316 @@ httpServer.listen(PORT, () => {
 });
 
 module.exports = { app, io };
+
+// ============================================================
+// TOURNOIS AUTOMATIQUES
+// ============================================================
+
+const tournaments = new Map(); // tournamentId -> tournamentState
+
+function createTournament({ name, mise, maxPlayers, prizePool }){
+  const id = 'tourn_' + Date.now();
+  const tournament = {
+    id,
+    name,
+    mise,
+    maxPlayers,  // 4 ou 8
+    prizePool,
+    players: [],  // { userId, username, socketId }
+    bracket: [],  // matches
+    currentRound: 0,
+    status: 'open',  // open | in_progress | finished
+    winner: null,
+    createdAt: Date.now(),
+    startAt: null,
+  };
+  tournaments.set(id, tournament);
+  console.log(`[TOURN] Created: ${name} (${maxPlayers} players, ${mise} coins)`);
+  return tournament;
+}
+
+// API: liste des tournois
+app.get('/api/tournaments', async (req, res) => {
+  const list = [];
+  tournaments.forEach(t => {
+    list.push({
+      id: t.id,
+      name: t.name,
+      mise: t.mise,
+      maxPlayers: t.maxPlayers,
+      currentPlayers: t.players.length,
+      prizePool: t.prizePool,
+      status: t.status,
+      createdAt: t.createdAt,
+    });
+  });
+  // Also load from Supabase
+  try {
+    const { data } = await supabase
+      .from('tournaments')
+      .select('*')
+      .eq('status', 'open')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if(data) data.forEach(t => {
+      if(!list.find(l => l.id === t.id)){
+        list.push({
+          id: t.id,
+          name: t.name,
+          mise: t.mise,
+          maxPlayers: t.max_players,
+          currentPlayers: t.current_players || 0,
+          prizePool: t.prize_pool,
+          status: t.status,
+          createdAt: new Date(t.created_at).getTime(),
+        });
+      }
+    });
+  } catch(e) {}
+  res.json({ tournaments: list });
+});
+
+// API: rejoindre un tournoi
+app.post('/api/tournaments/:id/join', express.json(), async (req, res) => {
+  const { userId, username, socketId } = req.body;
+  const tourn = tournaments.get(req.params.id);
+
+  if(!tourn) return res.json({ success: false, message: 'Tournoi introuvable' });
+  if(tourn.status !== 'open') return res.json({ success: false, message: 'Tournoi fermé' });
+  if(tourn.players.find(p => p.userId === userId))
+    return res.json({ success: false, message: 'Déjà inscrit' });
+  if(tourn.players.length >= tourn.maxPlayers)
+    return res.json({ success: false, message: 'Tournoi complet' });
+
+  // Deduct mise from DB
+  try {
+    const { data: profile } = await supabase
+      .from('players').select('coins').eq('id', userId).single();
+    if(!profile || profile.coins < tourn.mise)
+      return res.json({ success: false, message: 'Solde insuffisant' });
+
+    await supabase.from('players')
+      .update({ coins: profile.coins - tourn.mise })
+      .eq('id', userId);
+  } catch(e) {
+    return res.json({ success: false, message: 'Erreur DB: ' + e.message });
+  }
+
+  tourn.players.push({ userId, username, socketId });
+  console.log(`[TOURN] ${username} joined ${tourn.name} (${tourn.players.length}/${tourn.maxPlayers})`);
+
+  // Notify all tournament players
+  tourn.players.forEach(p => {
+    io.to(p.socketId).emit('tournament_update', {
+      tournamentId: tourn.id,
+      currentPlayers: tourn.players.length,
+      maxPlayers: tourn.maxPlayers,
+      message: `${username} a rejoint! (${tourn.players.length}/${tourn.maxPlayers})`,
+    });
+  });
+
+  // Start if full
+  if(tourn.players.length >= tourn.maxPlayers){
+    setTimeout(() => startTournament(tourn.id), 3000);
+  }
+
+  res.json({ success: true, position: tourn.players.length });
+});
+
+// Démarrer le tournoi
+function startTournament(tournId){
+  const tourn = tournaments.get(tournId);
+  if(!tourn || tourn.status !== 'open') return;
+
+  tourn.status = 'in_progress';
+  tourn.startAt = Date.now();
+
+  // Shuffle players
+  const players = [...tourn.players].sort(() => Math.random() - 0.5);
+
+  // Create bracket (pairs for round 1)
+  const matches = [];
+  for(let i = 0; i < players.length; i += 2){
+    if(players[i+1]){
+      matches.push({
+        id: `match_${tournId}_${i/2}`,
+        player1: players[i],
+        player2: players[i+1],
+        winner: null,
+        roomId: null,
+      });
+    }
+  }
+  tourn.bracket = [matches]; // Round 1
+  tourn.currentRound = 0;
+
+  console.log(`[TOURN] Started: ${tourn.name} — ${matches.length} matches`);
+
+  // Notify all players
+  tourn.players.forEach(p => {
+    const match = matches.find(m => m.player1.userId === p.userId || m.player2.userId === p.userId);
+    const opponent = match?.player1.userId === p.userId ? match?.player2 : match?.player1;
+    io.to(p.socketId).emit('tournament_started', {
+      tournamentId: tournId,
+      name: tourn.name,
+      opponent: opponent?.username,
+      matchId: match?.id,
+      message: `Le tournoi commence! Tu affrontes ${opponent?.username}!`,
+    });
+  });
+
+  // Start all matches
+  matches.forEach(match => startTournamentMatch(tournId, match));
+}
+
+function startTournamentMatch(tournId, match){
+  const tourn = tournaments.get(tournId);
+  if(!tourn) return;
+
+  // Create a game room for this match
+  const players = [match.player1.socketId, match.player2.socketId];
+  match.roomId = `tourn_${tournId}_${match.id}`;
+
+  createRoom(players, 'comp', tourn.mise, 2, match.id);
+
+  // Listen for game_over to advance bracket
+  const checkResult = setInterval(() => {
+    const room = activeRooms.get(match.roomId);
+    if(!room) { clearInterval(checkResult); return; }
+
+    if(room.over && room.ranking.length > 0){
+      clearInterval(checkResult);
+      const winnerIdx = room.ranking[0];
+      const winnerSocket = room.players[winnerIdx]?.socketId;
+      const winner = tourn.players.find(p => p.socketId === winnerSocket);
+
+      if(winner){
+        match.winner = winner;
+        advanceTournament(tournId);
+      }
+    }
+  }, 2000);
+}
+
+function advanceTournament(tournId){
+  const tourn = tournaments.get(tournId);
+  if(!tourn) return;
+
+  const currentMatches = tourn.bracket[tourn.currentRound];
+  const allDone = currentMatches.every(m => m.winner !== null);
+  if(!allDone) return;
+
+  const winners = currentMatches.map(m => m.winner);
+
+  if(winners.length === 1){
+    // Tournament finished!
+    tourn.status = 'finished';
+    tourn.winner = winners[0];
+
+    // Distribute prizes
+    distributeTournamentPrizes(tournId);
+    return;
+  }
+
+  // Next round
+  tourn.currentRound++;
+  const nextMatches = [];
+  for(let i = 0; i < winners.length; i += 2){
+    if(winners[i+1]){
+      nextMatches.push({
+        id: `match_${tournId}_r${tourn.currentRound}_${i/2}`,
+        player1: winners[i],
+        player2: winners[i+1],
+        winner: null,
+        roomId: null,
+      });
+    }
+  }
+  tourn.bracket.push(nextMatches);
+
+  // Notify and start next round
+  tourn.players.forEach(p => {
+    io.to(p.socketId).emit('tournament_round', {
+      round: tourn.currentRound + 1,
+      message: `Tour ${tourn.currentRound + 1} commence!`,
+    });
+  });
+
+  nextMatches.forEach(match => startTournamentMatch(tournId, match));
+}
+
+async function distributeTournamentPrizes(tournId){
+  const tourn = tournaments.get(tournId);
+  if(!tourn || !tourn.winner) return;
+
+  // Prize distribution: 60% winner, 25% finalist, 15% semi-finalists
+  const prizes = {
+    1: Math.floor(tourn.prizePool * 0.60),
+    2: Math.floor(tourn.prizePool * 0.25),
+    3: Math.floor(tourn.prizePool * 0.10),
+  };
+
+  console.log(`[TOURN] ${tourn.name} finished! Winner: ${tourn.winner.username}`);
+
+  // Pay winner
+  try {
+    const { data: profile } = await supabase
+      .from('players').select('coins').eq('id', tourn.winner.userId).single();
+    if(profile){
+      await supabase.from('players')
+        .update({ coins: profile.coins + prizes[1], wins: supabase.raw('wins + 1') })
+        .eq('id', tourn.winner.userId);
+    }
+  } catch(e){ console.error('[TOURN] Prize error:', e.message); }
+
+  // Notify all
+  tourn.players.forEach(p => {
+    const isWinner = p.userId === tourn.winner.userId;
+    io.to(p.socketId).emit('tournament_over', {
+      winner: tourn.winner.username,
+      isWinner,
+      prize: isWinner ? prizes[1] : 0,
+      message: isWinner
+        ? `🏆 VICTOIRE! Tu remportes ${prizes[1].toLocaleString()} coins!`
+        : `${tourn.winner.username} remporte le tournoi!`,
+    });
+  });
+
+  // Save to DB
+  await supabase.from('tournaments').update({
+    status: 'finished',
+    winner_username: tourn.winner.username,
+    winner_id: tourn.winner.userId,
+    finished_at: new Date().toISOString(),
+  }).eq('id', tournId).catch(() => {});
+
+  // Cleanup after 5 min
+  setTimeout(() => tournaments.delete(tournId), 5 * 60 * 1000);
+}
+
+// Auto-create daily tournaments
+function scheduleDefaultTournaments(){
+  const defaults = [
+    { name: '🎯 Tournoi Gratuit', mise: 0, maxPlayers: 4, prizePool: 1000 },
+    { name: '💰 Tournoi 500', mise: 500, maxPlayers: 4, prizePool: 2000 },
+    { name: '👑 Tournoi Premium', mise: 1000, maxPlayers: 8, prizePool: 8000 },
+  ];
+
+  defaults.forEach(t => createTournament(t));
+  console.log('[TOURN] Default tournaments created');
+
+  // Recreate every 6 hours
+  setInterval(() => {
+    // Remove finished tournaments and recreate
+    tournaments.forEach((t, id) => {
+      if(t.status === 'finished') tournaments.delete(id);
+    });
+    defaults.forEach(t => {
+      const exists = [...tournaments.values()].find(existing => existing.name === t.name && existing.status === 'open');
+      if(!exists) createTournament(t);
+    });
+  }, 6 * 60 * 60 * 1000);
+}
+
+// Start tournaments on server boot
+scheduleDefaultTournaments();
