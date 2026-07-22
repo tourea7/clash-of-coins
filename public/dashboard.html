@@ -1137,6 +1137,58 @@ document.addEventListener('mouseover', e => {
     if(typeof SFX !== 'undefined') SFX.btnHover();
   }
 });
+
+// ===== INIT DASHBOARD =====
+document.addEventListener('DOMContentLoaded', async () => {
+  // Redirect OAuth callbacks
+  if(window.location.hash.includes('access_token') || window.location.search.includes('code=')){
+    window.location.href = '/auth.html' + window.location.hash + window.location.search;
+    return;
+  }
+
+  // Safety timeout - 8 seconds max
+  const loadingTimeout = setTimeout(() => {
+    window.location.href = '/auth.html';
+  }, 8000);
+
+  // Animate loading bar
+  let prog = 0;
+  const bar = document.getElementById('ld-bar');
+  const txt = document.getElementById('ld-text');
+  const barIv = setInterval(() => {
+    prog = Math.min(prog + Math.random()*15, 90);
+    if(bar) bar.style.width = prog + '%';
+    if(txt){
+      if(prog > 30) txt.textContent = 'Vérification...';
+      if(prog > 60) txt.textContent = 'Chargement du profil...';
+      if(prog > 80) txt.textContent = 'Presque prêt...';
+    }
+  }, 200);
+
+  // Check auth
+  const ok = await initAuth();
+  if(!ok) return;
+
+  // Success - hide loading
+  clearTimeout(loadingTimeout);
+  clearInterval(barIv);
+  if(bar) bar.style.width = '100%';
+  if(txt) txt.textContent = 'Prêt! 🎉';
+
+  setTimeout(() => {
+    const loadEl = document.getElementById('loading');
+    if(loadEl){ 
+      loadEl.style.opacity = '0'; 
+      loadEl.style.transition = 'opacity 0.4s';
+      setTimeout(() => { loadEl.style.display = 'none'; }, 400); 
+    }
+    showScreen('home');
+    updateCoinsUI();
+    if(typeof renderRealLeaderboard === 'function') renderRealLeaderboard();
+    if(typeof initSocket === 'function') initSocket();
+    if(typeof showNotifBanner === 'function') setTimeout(showNotifBanner, 5000);
+  }, 300);
+});
 </script>
 
 <!-- Scripts -->
