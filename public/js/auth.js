@@ -309,10 +309,11 @@ async function saveGameResult(data){
 
 async function loadLeaderboard(){
   const sb = await getSupabase();
+  // Order by coins (richest players first)
   const { data } = await sb.from('players')
-    .select('username, coins, wins, games_played, level, avatar_url')
+    .select('username, coins, wins, losses, games_played, level, avatar_url, xp')
     .order('coins', { ascending: false })
-    .limit(10);
+    .limit(50);  // Load 50 to find user position
   return data || [];
 }
 
@@ -366,26 +367,217 @@ function updateProfileUI(){
 }
 
 async function renderRealLeaderboard(){
+  const lbCard = document.getElementById('lb-card-home') || document.querySelector('.lb-card');
+  if(!lbCard) return;
+
+  // Show loading state
+  lbCard.innerHTML = `
+    <div class="lb-hdr">
+      <div class="lb-hdr-txt">🏆 CLASSEMENT MONDIAL</div>
+      <span class="lb-more" onclick="renderRealLeaderboard()">↺ ACTUALISER</span>
+    </div>
+    <div style="text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:13px">
+      <div style="font-size:24px;margin-bottom:8px">⏳</div>Chargement...
+    </div>`;
+
   const lb = await loadLeaderboard();
-  const lbCard = document.querySelector('.lb-card');
-  if(!lbCard || !lb.length) return;
-  const medals = ['🥇','🥈','🥉'];
-  const rows = lb.slice(0,4).map((p,i) => {
-    const isMe = p.username === CURRENT_PROFILE?.username;
-    return `<div class="lb-row" ${isMe?'style="background:rgba(255,215,0,.04)"':''}>
-      <div class="lb-rank">${i+1}</div>
-      <div class="lb-av" style="background:rgba(255,255,255,.06);font-size:${medals[i]?'16':'12'}px">${medals[i]||p.avatar_url||'👤'}</div>
-      <div class="lb-info">
-        <div class="lb-name">${isMe?'<b style="color:var(--gold)">Vous</b>':p.username}</div>
-        <div class="lb-stats">${p.games_played||0} parties · ${p.wins||0} victoires</div>
+  if(!lb || !lb.length){
+    lbCard.innerHTML = `
+      <div class="lb-hdr">
+        <div class="lb-hdr-txt">🏆 CLASSEMENT MONDIAL</div>
+        <span class="lb-more" onclick="renderRealLeaderboard()">↺</span>
       </div>
-      <div class="lb-coins-val">${(p.coins||0).toLocaleString('fr-FR')} 🪙</div>
+      <div style="text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:13px">Aucun joueur pour l'instant</div>`;
+    return;
+  }
+
+  const medals = ['🥇','🥈','🥉'];
+  const myUsername = CURRENT_PROFILE?.username;
+
+  // Find my position in full leaderboard
+  const myRank = lb.findIndex(p => p.username === myUsername) + 1;
+
+  // Build rows for top 10
+  const rows = lb.slice(0, 10).map((p, i) => {
+    const isMe = p.username === myUsername;
+    const rank = i + 1;
+    const winRate = p.games_played > 0
+      ? Math.round((p.wins / p.games_played) * 100)
+      : 0;
+    const avatar = p.avatar_url || '👤';
+    const rankDisplay = medals[i] || `<span style="font-size:12px;color:${isMe?'var(--gold)':'rgba(255,255,255,.5)'}">${rank}</span>`;
+
+    return `<div class="lb-row" style="${isMe?'background:linear-gradient(90deg,rgba(255,215,0,.08),rgba(255,215,0,.03));border-left:3px solid var(--gold);':''}">
+      <div class="lb-rank" style="font-size:${rank<=3?'18':'13'}px">${rankDisplay}</div>
+      <div class="lb-av" style="background:${isMe?'rgba(255,215,0,.15)':'rgba(255,255,255,.06)'};border-color:${isMe?'var(--gold)':'rgba(255,255,255,.1)'};font-size:16px">${avatar}</div>
+      <div class="lb-info">
+        <div class="lb-name" style="${isMe?'color:var(--gold);font-weight:800':''}">${isMe?'👑 Vous':p.username}</div>
+        <div class="lb-stats">${p.games_played||0} parties · ${winRate}% victoires · Niv.${p.level||1}</div>
+      </div>
+      <div class="lb-coins-val" style="flex-direction:column;align-items:flex-end;gap:1px">
+        <span style="color:var(--gold);font-weight:700;font-size:12px">${(p.coins||0).toLocaleString('fr-FR')} 🪙</span>
+        <span style="color:rgba(255,255,255,.3);font-size:9px">${p.wins||0} 🏆</span>
+      </div>
     </div>`;
   }).join('');
-  const hdr = lbCard.querySelector('.lb-hdr');
-  lbCard.innerHTML = '';
-  if(hdr) lbCard.appendChild(hdr);
-  lbCard.insertAdjacentHTML('beforeend', rows);
+
+  // If I'm not in top 10, show my position at the bottom
+  let myRow = '';
+  if(myRank > 10 && myUsername){
+    const me = lb.find(p => p.username === myUsername);
+    if(me){
+      const winRate = me.games_played > 0 ? Math.round((me.wins/me.games_played)*100) : 0;
+      myRow = `
+        <div style="border-top:2px dashed rgba(255,215,0,.2);margin:4px 0"></div>
+        <div class="lb-row" style="background:linear-gradient(90deg,rgba(255,215,0,.08),rgba(255,215,0,.03));border-left:3px solid var(--gold);">
+          <div class="lb-rank"><span style="font-size:11px;color:var(--gold)">${myRank}</span></div>
+          <div class="lb-av" style="background:rgba(255,215,0,.15);border-color:var(--gold);font-size:16px">${me.avatar_url||'👤'}</div>
+          <div class="lb-info">
+            <div class="lb-name" style="color:var(--gold);font-weight:800">👑 Vous</div>
+            <div class="lb-stats">${me.games_played||0} parties · ${winRate}% victoires · Niv.${me.level||1}</div>
+          </div>
+          <div class="lb-coins-val">
+            <span style="color:var(--gold);font-size:12px">${(me.coins||0).toLocaleString('fr-FR')} 🪙</span>
+          </div>
+        </div>`;
+    }
+  }
+
+  lbCard.innerHTML = `
+    <div class="lb-hdr">
+      <div class="lb-hdr-txt">🏆 CLASSEMENT MONDIAL</div>
+      <span class="lb-more" onclick="renderRealLeaderboard()" title="Actualiser">↺ LIVE</span>
+    </div>
+    ${rows}
+    ${myRow}`;
+
+  // Update my leaderboard coins display
+  if(CURRENT_PROFILE){
+    const myLbCoins = document.getElementById('my-lb-coins');
+    if(myLbCoins) myLbCoins.textContent = (CURRENT_PROFILE.coins||0).toLocaleString('fr-FR') + ' 🪙';
+  }
+}
+
+// Auto-refresh leaderboard every 60 seconds when on home screen
+setInterval(async () => {
+  const homeScreen = document.getElementById('scr-home');
+  if(homeScreen && homeScreen.classList.contains('active')){
+    await renderRealLeaderboard();
+  }
+}, 60000);
+
+
+// ===== GAME HISTORY =====
+async function renderGameHistory(){
+  const list = document.getElementById('game-history-list');
+  if(!list) return;
+  if(!CURRENT_USER){
+    list.innerHTML = `<div style="text-align:center;padding:20px;color:rgba(255,255,255,.3)">Connectez-vous pour voir l'historique</div>`;
+    return;
+  }
+
+  list.innerHTML = '<div style="text-align:center;padding:16px;color:rgba(255,255,255,.3)">⏳ Chargement...</div>';
+
+  try {
+    const sb = await getSupabase();
+    const { data } = await sb.from('game_history')
+      .select('*')
+      .eq('username', CURRENT_PROFILE?.username)
+      .order('created_at', { ascending: false })
+      .limit(15);
+
+    if(!data || !data.length){
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:13px">🎮 Aucune partie jouée encore</div>';
+      return;
+    }
+
+    const months = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    list.innerHTML = data.map(g => {
+      const isWin = g.won;
+      const date = new Date(g.created_at);
+      const dateStr = `${date.getDate()} ${months[date.getMonth()]} · ${date.getHours()}:${String(date.getMinutes()).padStart(2,'0')}`;
+      const coins = g.coins_change || 0;
+      const modeLabel = g.mode === 'comp' ? '🏆 Compétition' : '🎮 Gratuit';
+      const posLabel = ['🥇 1er','🥈 2ème','🥉 3ème','💀 Dernier'][Math.min((g.position||1)-1, 3)];
+
+      return `<div class="gh-row">
+        <div class="gh-icon ${isWin?'gh-win':'gh-lose'}">${isWin?'🏆':'🎯'}</div>
+        <div class="gh-info">
+          <div class="gh-title">${posLabel} — ${modeLabel}</div>
+          <div class="gh-meta">${dateStr} · ${g.score||0} pts · ${g.pieces_done||0}/4 pions</div>
+        </div>
+        <div class="gh-coins ${coins>=0?'gh-pos':'gh-neg'}">${coins>=0?'+':''}${coins.toLocaleString('fr-FR')} 🪙</div>
+      </div>`;
+    }).join('');
+
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;color:rgba(255,100,100,.5);font-size:12px">Erreur de chargement</div>';
+  }
+}
+
+// Update profile screen with all data
+async function updateProfileScreen(){
+  if(!CURRENT_PROFILE){
+    // Try to reload profile
+    try {
+      await loadProfile(CURRENT_USER);
+    } catch(e) {
+      console.warn('Profile not loaded:', e);
+      return;
+    }
+    if(!CURRENT_PROFILE) return;
+  }
+  const p = CURRENT_PROFILE;
+
+  // Avatar & name
+  const avEl = document.getElementById('prof-av-display');
+  if(avEl) avEl.textContent = p.avatar_url || '👑';
+  const lvEl = document.getElementById('prof-lv-display');
+  if(lvEl) lvEl.textContent = 'Niveau ' + (p.level || 1);
+  const nmEl = document.getElementById('prof-name-display');
+  if(nmEl) nmEl.textContent = p.username || '...';
+  const snEl = document.getElementById('prof-since-display');
+  if(snEl){
+    const d = new Date(CURRENT_USER?.created_at || Date.now());
+    snEl.textContent = 'Membre depuis ' + d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  }
+
+  // XP bar
+  const xpFill = document.getElementById('prof-xp-fill');
+  const xpTxt = document.getElementById('prof-xp-txt');
+  const xp = p.xp || 0;
+  const xpInLevel = xp % 1000;
+  if(xpFill) xpFill.style.width = (xpInLevel / 10) + '%';
+  if(xpTxt) xpTxt.textContent = `${xpInLevel} / 1000 XP — Niveau ${p.level||1}`;
+
+  // Stats
+  const sp = document.getElementById('stat-parties');
+  if(sp) sp.textContent = (p.games_played || 0).toLocaleString('fr-FR');
+  const sv = document.getElementById('stat-victoires');
+  if(sv) sv.textContent = (p.wins || 0).toLocaleString('fr-FR');
+  const st = document.getElementById('stat-taux');
+  if(st) st.textContent = p.games_played > 0 ? Math.round((p.wins/p.games_played)*100)+'%' : '0%';
+  const ss = document.getElementById('stat-serie');
+  if(ss) ss.textContent = p.wins || 0; // Best streak (using wins as proxy)
+
+  // Coins
+  const pc = document.getElementById('profile-coins');
+  if(pc) pc.textContent = (p.coins || 0).toLocaleString('fr-FR') + ' 🪙';
+
+  // Load game history
+  await renderGameHistory();
+}
+
+// Share profile
+function shareProfile(){
+  const text = `🎮 Clash of Coins\n👑 ${CURRENT_PROFILE?.username}\n🏆 ${CURRENT_PROFILE?.wins||0} victoires\n🪙 ${(CURRENT_PROFILE?.coins||0).toLocaleString('fr-FR')} coins\n\nJoue avec moi! clash-of-coins.onrender.com`;
+  if(navigator.share){
+    navigator.share({ title: 'Clash of Coins', text, url: 'https://clash-of-coins.onrender.com' });
+  } else {
+    navigator.clipboard?.writeText(text).then(()=> {
+      if(typeof showToast === 'function') showToast('✅ Profil copié!');
+    });
+  }
 }
 
 async function renderRealTransactions(){
