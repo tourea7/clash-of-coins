@@ -1,0 +1,28 @@
+{
+  "name": "Clash of Coins",
+  "short_name": "Clash of Coins",
+  "description": "Le meilleur jeu de Ludo en ligne — Joue et gagne des coins!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#FFD700",
+  "orientation": "portrait",
+  "lang": "fr",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "/Bg.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Jouer maintenant",
+      "short_name": "Jouer",
+      "description": "Lancer une partie directement",
+      "url": "/dashboard.html",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
