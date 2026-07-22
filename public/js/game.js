@@ -681,57 +681,65 @@ function rollDice(){
 
 function nextTurn(){
   if(GAME.over) return;
-  // In multiplayer, server controls turns via 'turn_change' event
   if(GAME.isMultiplayer) return;
 
   let next=(GAME.current+1)%GAME.players;
   let safety=0;
   while(GAME.eliminated.includes(next)&&safety<GAME.players){
-    next=(next+1)%GAME.players;safety++;
+    next=(next+1)%GAME.players; safety++;
   }
-  GAME.current=next;GAME.rolled=false;updateAP();
+
+  // All eliminated? End game
+  if(safety>=GAME.players){ GAME.over=true; showFinalRanking(); return; }
+
+  GAME.current=next;
+  GAME.rolled=false;
+  GAME.waitMove=false;
+  GAME.movable=[];
+  updateAP();
+  drawBoard();
+
   if(GAME.current===STATE.myColor){
-    log('🎲 Votre tour!',PC[STATE.myColor]);enableRoll();
-    if(typeof SFX!=='undefined'){ SFX.myTurn(); }
+    log('🎲 Votre tour!',PC[STATE.myColor]);
+    enableRoll();
+    if(typeof SFX!=='undefined') SFX.myTurn();
   } else {
-    const aiIdx=GAME.current>STATE.myColor?GAME.current-1:GAME.current;
-    log(`Tour de ${AI[aiIdx]||'IA'}...`,PC[GAME.current]);
+    const aiName=document.getElementById('pn-'+GAME.current)?.textContent||AI[GAME.current]||'IA';
+    log('Tour de '+aiName+'...',PC[GAME.current]);
     if(typeof SFX!=='undefined') SFX.turnChange();
-    disableRoll();setTimeout(()=>aiTurn(GAME.current),1000);
+    disableRoll();
+    setTimeout(()=>aiTurn(GAME.current),1000);
   }
 }
-
 function aiTurn(player){
-  if(GAME.over||GAME.current!==player||GAME.eliminated.includes(player)) return;
-  if(player===STATE.myColor) return; // Never run AI for human player
-  const result=Math.floor(Math.random()*6)+1;
-  GAME.dice=result;
-  const diceEl=document.getElementById('dice-el');
-  if(diceEl) diceEl.textContent=DF[result-1];
-  const aiIdx=player>STATE.myColor?player-1:player;
-  log(`${AI[aiIdx]||'IA'} lance ${result}`,PC[player]);
+  if(GAME.over) return;
+  if(GAME.current !== player) return;
+  if(GAME.eliminated.includes(player)){ nextTurn(); return; }
+  if(player === STATE.myColor) return;
+
+  const result = Math.floor(Math.random()*6)+1;
+  GAME.dice = result;
+  GAME.rolled = true;
+  const diceEl = document.getElementById('dice-el');
+  if(diceEl) diceEl.textContent = DF[result-1];
+  if(typeof SFX !== 'undefined') SFX.diceResult(result);
+  const aiName = document.getElementById('pn-'+player)?.textContent || AI[player] || 'IA';
+  log(aiName+' lance '+result, PC[player]);
+  showDiceResult(result, player);
   setTimeout(()=>{
-    const movable=getMovable(player,result);
+    const movable = getMovable(player, result);
     if(movable.length){
       let best = movable[0];
-      // AI strategy: prefer captures, then most advanced piece
-      for(const m of movable){
-        if(m.newPos > best.newPos) best = m;
-      }
+      for(const m of movable){ if(m.newPos > best.newPos) best = m; }
       applyMove(best.player, best.piece, best.newPos);
     } else {
-      // No valid moves
-      if(result === 6){
-        // Rolled 6 but no move (all pieces finished?) - skip
-        setTimeout(() => nextTurn(), 800);
-      } else {
-        setTimeout(() => nextTurn(), 600);
-      }
+      if(result === 6) setTimeout(()=>aiTurn(player), 800);
+      else setTimeout(()=>nextTurn(), 600);
     }
-  },700);
+  }, 700);
 }
 
-// ===== RANKING SYSTEM =====
+
 function playerFinished(player){
   if(GAME.eliminated.includes(player)) return;
   // In multiplayer, server handles ranking via player_ranked event
