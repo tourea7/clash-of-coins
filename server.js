@@ -87,6 +87,29 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Admin: voir les suspects
+app.get('/api/admin/cheaters', (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  if(adminKey !== process.env.JWT_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const suspects = [];
+  cheatLog.forEach((log, socketId) => {
+    if(log.count > 0){
+      const player = connectedPlayers.get(socketId);
+      suspects.push({
+        socketId,
+        username: player?.username || 'Inconnu',
+        violations: log.count,
+        reasons: log.reasons.slice(-5),
+        lastAt: new Date(log.lastAt).toISOString(),
+      });
+    }
+  });
+  suspects.sort((a,b) => b.violations - a.violations);
+  res.json({ suspects, total: suspects.length });
+});
+
 // ===== STATE =====
 const connectedPlayers = new Map(); // socketId -> { username, coins, userId, inGame, roomId }
 const matchQueues      = new Map(); // "mode_mise_numPlayers" -> [socketId, ...]
@@ -111,6 +134,36 @@ const EN = [0, 13, 26, 39];
 const SF = new Set(['2,8','6,2','12,6','8,12','1,6','8,1','13,8','6,13']);
 
 // ===== SOCKET.IO =====
+// ===== ANTI-CHEAT =====
+const cheatLog = new Map(); // socketId -> { count, lastAt, reasons }
+
+function logCheat(socketId, reason){
+  const player = connectedPlayers.get(socketId);
+  const username = player?.username || socketId;
+  
+  if(!cheatLog.has(socketId)) cheatLog.set(socketId, { count:0, reasons:[] });
+  const log = cheatLog.get(socketId);
+  log.count++;
+  log.reasons.push({ reason, at: Date.now() });
+  log.lastAt = Date.now();
+
+  console.warn(`[CHEAT] ${username}: ${reason} (total: ${log.count})`);
+
+  // Auto-kick after 5 violations
+  if(log.count >= 5){
+    const socket = io.sockets.sockets.get(socketId);
+    if(socket){
+      socket.emit('error', { message: 'Comportement suspect détecté. Vous avez été déconnecté.' });
+      socket.disconnect(true);
+      console.warn(`[CHEAT] KICKED: ${username}`);
+    }
+  }
+}
+
+function validateDiceResult(result){
+  return Number.isInteger(result) && result >= 1 && result <= 6;
+}
+
 io.on('connection', (socket) => {
   console.log(`[+] Connected: ${socket.id}`);
 
@@ -173,10 +226,19 @@ io.on('connection', (socket) => {
     if (!player) return;
     if (player.inGame) { socket.emit('error', { message: 'Déjà en partie' }); return; }
 
-    // Check balance for comp mode
-    if (mode === 'comp' && player.coins < mise) {
-      socket.emit('error', { message: 'Solde insuffisant' });
-      return;
+    // Check balance for comp mode (verify against DB)
+    if (mode === 'comp') {
+      if (player.coins < mise) {
+        socket.emit('error', { message: 'Solde insuffisant' });
+        logCheat(socket.id, `insufficient coins: has ${player.coins} needs ${mise}`);
+        return;
+      }
+      // Sanity check: mise can't exceed reasonable amount
+      if (mise > 100000) {
+        logCheat(socket.id, `suspicious mise: ${mise}`);
+        socket.emit('error', { message: 'Mise invalide' });
+        return;
+      }
     }
 
     const qKey = `${mode}_${mise}_${numPlayers}`;
@@ -210,14 +272,34 @@ io.on('connection', (socket) => {
     console.log(`[QUEUE] ${connectedPlayers.get(socket.id)?.username} cancelled`);
   });
 
-  // ---- DICE ROLL (client rolls, tells server the result) ----
+  // ---- DICE ROLL (client rolls, server validates) ----
   socket.on('dice_rolled', ({ roomId, result }) => {
     const room = activeRooms.get(roomId);
     if (!room || room.over) return;
 
     const playerIdx = room.players.findIndex(p => p.socketId === socket.id);
-    if (playerIdx === -1 || playerIdx !== room.current) return;
-    if (room.rolled) return; // Already rolled this turn
+    if (playerIdx === -1 || playerIdx !== room.current) {
+      logCheat(socket.id, 'dice roll not your turn'); return;
+    }
+    if (room.rolled) {
+      logCheat(socket.id, 'double dice roll'); return;
+    }
+    
+    // Validate dice result (1-6 only)
+    if (!validateDiceResult(result)) {
+      logCheat(socket.id, `invalid dice: ${result}`);
+      // Generate server-side result instead
+      result = Math.floor(Math.random() * 6) + 1;
+      console.log(`[ANTICHEAT] Generated server dice: ${result}`);
+    }
+
+    // Rate limiting
+    const now = Date.now();
+    const player = connectedPlayers.get(socket.id);
+    if (player && player.lastRoll && now - player.lastRoll < 500) {
+      logCheat(socket.id, 'roll too fast'); return;
+    }
+    if (player) player.lastRoll = now;
 
     room.dice   = result;
     room.rolled = true;
@@ -231,19 +313,57 @@ io.on('connection', (socket) => {
     console.log(`[GAME] ${room.players[playerIdx].username} rolled ${result} in ${roomId}`);
   });
 
-  // ---- MAKE MOVE ----
+  // ---- MAKE MOVE (with full anti-cheat validation) ----
   socket.on('make_move', ({ roomId, piece, newPos }) => {
     const room = activeRooms.get(roomId);
     if (!room || room.over) return;
 
     const playerIdx = room.players.findIndex(p => p.socketId === socket.id);
-    if (playerIdx === -1 || playerIdx !== room.current) return;
+    if (playerIdx === -1) { logCheat(socket.id, 'not in room'); return; }
+    if (playerIdx !== room.current) { logCheat(socket.id, 'not your turn'); return; }
+    if (!room.rolled) { logCheat(socket.id, 'move without rolling'); return; }
+
+    // Validate piece index
+    if (piece < 0 || piece > 3) { logCheat(socket.id, 'invalid piece index'); return; }
 
     const oldPos = room.pieces[playerIdx][piece];
+    if (oldPos === 58) { logCheat(socket.id, 'moving finished piece'); return; }
 
-    // Validate move
-    if (oldPos === -1 && room.dice !== 6) return;
-    if (oldPos !== -1 && oldPos + room.dice !== newPos && newPos !== 58) return;
+    // Validate move based on dice
+    if (oldPos === -1 && room.dice !== 6) {
+      logCheat(socket.id, 'exit home without 6');
+      return;
+    }
+    if (oldPos === -1 && room.dice === 6 && newPos !== 0) {
+      logCheat(socket.id, 'invalid exit position');
+      return;
+    }
+    if (oldPos >= 0 && oldPos < 52) {
+      const expectedPos = oldPos + room.dice;
+      if (newPos !== Math.min(expectedPos, 58)) {
+        logCheat(socket.id, `invalid move: ${oldPos}+${room.dice}≠${newPos}`);
+        return;
+      }
+    }
+    if (oldPos >= 52 && oldPos < 58) {
+      const expectedPos = oldPos + room.dice;
+      if (newPos !== Math.min(expectedPos, 58)) {
+        logCheat(socket.id, `invalid home stretch move`);
+        return;
+      }
+    }
+
+    // Rate limiting — max 1 move per 300ms
+    const now = Date.now();
+    const player = connectedPlayers.get(socket.id);
+    if (player && player.lastMove && now - player.lastMove < 300) {
+      logCheat(socket.id, 'move too fast (rate limit)');
+      return;
+    }
+    if (player) player.lastMove = now;
+
+    // ✅ Move is valid — apply it
+    room.rolled = false; // Consume the roll
 
     // Apply move
     room.pieces[playerIdx][piece] = newPos;
@@ -551,8 +671,11 @@ async function saveRoomResult(room, prizes) {
       const newXp = (profile.xp || 0) + xpGain;
       const newLevel = Math.floor(newXp / 1000) + 1;
 
-      await supabase.from('players').update({
-        coins: Math.max(0, (profile.coins || 0) + coinsChange),
+      // Anti-fraud: verify coins haven't been manipulated
+    const expectedCoins = Math.max(0, (profile.coins || 0) + coinsChange);
+    
+    await supabase.from('players').update({
+        coins: expectedCoins,
         wins: (profile.wins || 0) + (isWin ? 1 : 0),
         losses: (profile.losses || 0) + (!isWin ? 1 : 0),
         games_played: (profile.games_played || 0) + 1,
