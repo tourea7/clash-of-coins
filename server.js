@@ -87,6 +87,33 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Admin: voir les parties live
+app.get('/api/admin/rooms', (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  if(adminKey !== process.env.JWT_SECRET){
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const rooms = [];
+  activeRooms.forEach((room, roomId) => {
+    rooms.push({
+      id: roomId,
+      mode: room.mode,
+      mise: room.mise,
+      numPlayers: room.numPlayers,
+      current: room.current,
+      over: room.over,
+      createdAt: room.createdAt,
+      players: room.players.map((p, i) => ({
+        index: i,
+        username: p.username,
+        finished: room.finished[i],
+        score: room.scores[i],
+      })),
+    });
+  });
+  res.json({ rooms, total: rooms.length });
+});
+
 // Admin: voir les suspects
 app.get('/api/admin/cheaters', (req, res) => {
   const adminKey = req.headers['x-admin-key'];
