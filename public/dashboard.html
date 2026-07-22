@@ -1127,3 +1127,57 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
     <button class="ni" onclick="navTo('profile',this)"><div class="ni-ic">👤</div><div class="ni-lb">Profil</div></button>
   </div>
 </div>
+
+
+
+<script>
+// ===== GLOBAL BUTTON HOVER SOUNDS =====
+document.addEventListener('mouseover', e => {
+  if(e.target.matches('button,.qn,.hqn,.pc-free,.pc-comp,.ti,.pb,.mb,.pm,.ni,.chip,.tourn-btn')){
+    if(typeof SFX !== 'undefined') SFX.btnHover();
+  }
+});
+</script>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="/js/sounds.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/game.js"></script>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('✅ SW registered'))
+      .catch(err => console.warn('SW failed:', err));
+  });
+}
+
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('install-btn');
+  if(btn) btn.style.display = 'flex';
+});
+
+function installPWA(){
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(result => {
+    deferredPrompt = null;
+    const btn = document.getElementById('install-btn');
+    if(btn) btn.style.display = 'none';
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  const btn = document.getElementById('install-btn');
+  if(btn) btn.style.display = 'none';
+});
+</script>
+
+</body>
+</html>
