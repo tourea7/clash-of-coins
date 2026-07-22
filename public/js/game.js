@@ -470,9 +470,15 @@ function getMovable(player,dice){
   const m=[];
   for(let i=0;i<4;i++){
     const pos=GAME.pieces[player][i];
-    if(pos===58) continue;
-    if(pos===-1){if(dice===6) m.push({player,piece:i,newPos:0});}
-    else{const np=pos+dice;if(np<=58) m.push({player,piece:i,newPos:np});}
+    if(pos===58) continue; // Already finished
+    if(pos===-1){
+      // In home base - need a 6 to exit
+      if(dice===6) m.push({player,piece:i,newPos:0});
+    } else {
+      // On board - check won't overshoot finish
+      const np=pos+dice;
+      if(np<=58) m.push({player,piece:i,newPos:np});
+    }
   }
   return m;
 }
@@ -642,14 +648,29 @@ function rollDice(){
       }
       const movable=getMovable(STATE.myColor,result);
       if(!movable.length){
+        // No valid moves
         log(`Vous lancez ${result} — aucun mouvement 😕`,'rgba(255,255,255,.4)');
         if(typeof SFX!=='undefined') SFX.invalid();
-        setTimeout(nextTurn,1300);
-      } else if(movable.length===1){
+        // In multiplayer tell server, in solo go next turn
+        if(GAME.isMultiplayer && STATE.socket && GAME.roomId){
+          STATE.socket.emit('no_moves', {roomId: GAME.roomId});
+        } else {
+          setTimeout(nextTurn,1300);
+        }
+      } else if(movable.length===1 && result!==6){
+        // Only one possible move and not a 6 - auto move
         log(`Vous lancez ${result} 🎯`,PC[STATE.myColor]);
         if(typeof SFX!=='undefined') SFX.valid();
         setTimeout(()=>applyMove(movable[0].player,movable[0].piece,movable[0].newPos),500);
+      } else if(movable.length===1 && result===6){
+        // Only one possible move with a 6
+        log(`Vous lancez 6! 🎉`,PC[STATE.myColor]);
+        if(typeof SFX!=='undefined') SFX.valid();
+        GAME.movable=movable;GAME.waitMove=true;
+        log(`Touchez votre pion pour le sortir! ✨`,'#FFD700');
+        drawBoard();
       } else {
+        // Multiple choices - let player choose
         GAME.movable=movable;GAME.waitMove=true;
         log(`Vous lancez ${result} — touchez un pion ✨`,'#FFD700');
         drawBoard();
@@ -692,15 +713,20 @@ function aiTurn(player){
   setTimeout(()=>{
     const movable=getMovable(player,result);
     if(movable.length){
-      let best=movable[0];
-      // Prefer captures > furthest advancement
+      let best = movable[0];
+      // AI strategy: prefer captures, then most advanced piece
       for(const m of movable){
-        if(m.newPos>best.newPos) best=m;
+        if(m.newPos > best.newPos) best = m;
       }
-      applyMove(best.player,best.piece,best.newPos);
+      applyMove(best.player, best.piece, best.newPos);
     } else {
-      if(result===6) setTimeout(()=>aiTurn(player),800);
-      else setTimeout(nextTurn,600);
+      // No valid moves
+      if(result === 6){
+        // Rolled 6 but no move (all pieces finished?) - skip
+        setTimeout(() => nextTurn(), 800);
+      } else {
+        setTimeout(() => nextTurn(), 600);
+      }
     }
   },700);
 }
@@ -1015,11 +1041,11 @@ function renderTx(){
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   const el=document.getElementById('scr-'+name);if(el)el.classList.add('active');
-  if(name==='wallet'){ renderTx(); if(typeof renderRealTransactions==='function') renderRealTransactions(); }
+  if(name==='wallet'){ try{ renderTx(); if(typeof renderRealTransactions==='function') renderRealTransactions(); }catch(e){console.warn('wallet err:',e);} }
   if(name==='game') updateAP();
-  if(name==='profile' && typeof updateProfileScreen==='function') updateProfileScreen();
-  if(name==='settings') loadSettings();
-  if(name==='tournaments') loadTournaments();
+  if(name==='profile'){ try{ if(typeof updateProfileScreen==='function') updateProfileScreen(); }catch(e){console.warn('profile err:',e);} }
+  if(name==='settings'){ try{ loadSettings(); }catch(e){console.warn('settings err:',e);} }
+  if(name==='tournaments'){ try{ loadTournaments(); }catch(e){console.warn('tourn err:',e);} }
 
   // Music management
   if(typeof SFX !== 'undefined'){
@@ -1077,12 +1103,16 @@ function updateGP(){
 
 // ===== COLOR PICKER =====
 function openColorPicker(){
+  // Reset color cards
   for(let i=0;i<4;i++){
     const card=document.getElementById(`cc-${i}`);
     if(card) card.classList.remove('selected','taken');
   }
   selectColor(STATE.myColor);
   showScreen('color');
+  // Make sure confirm button works
+  const confirmBtn = document.getElementById('btn-confirm-color');
+  if(confirmBtn) confirmBtn.onclick = confirmColor;
 }
 function selectColor(idx){
   for(let i=0;i<4;i++){
@@ -1095,7 +1125,10 @@ function selectColor(idx){
   const pawn=document.getElementById('cp-pawn');if(pawn) pawn.textContent=COLOR_PAWNS[idx];
   const name=document.getElementById('cp-name');if(name){name.textContent=COLOR_NAMES[idx];name.style.color=PC[idx];}
 }
-function confirmColor(){startGameWithColor();}
+function confirmColor(){
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+  startGameWithColor();
+}
 
 // ===== GAME START =====
 function findGame(){
@@ -1105,6 +1138,7 @@ function findGame(){
   if(STATE.socket && STATE.socket.connected && STATE.numPlayers >= 2){
     // Real multiplayer - go to matchmaking screen first
     showScreen('matchmaking');
+    GAME.isMultiplayer = false; // Will be set true when match found
     const mmMise = document.getElementById('mm-mise');
     if(mmMise) mmMise.textContent = STATE.currentMode==='free' ? 'Gratuit' : STATE.currentMise.toLocaleString('fr-FR')+' 🪙';
     const mmNeeded = document.getElementById('mm-needed');
@@ -1130,14 +1164,28 @@ function findGame(){
 }
 function startLocalGame(){startGameWithColor();}
 function cancelMatchmaking(){
-  if(STATE.mmTimeout) clearTimeout(STATE.mmTimeout);
+  if(STATE.mmTimeout){ clearTimeout(STATE.mmTimeout); STATE.mmTimeout = null; }
   if(STATE.socket) STATE.socket.emit('cancel_search');
   GAME.isMultiplayer = false;
   GAME.roomId = null;
+  GAME.rolled = false;
+  GAME.waitMove = false;
   showScreen('mode');
+  showToast('Recherche annulée');
 }
 
 function startGameWithColor(){
+  // Reset multiplayer state if coming from failed matchmaking
+  if(!GAME.isMultiplayer){
+    GAME.roomId = null;
+  }
+  // Reset game state
+  GAME.rolled = false;
+  GAME.waitMove = false;
+  GAME.movable = [];
+  GAME.over = false;
+  if(animFrame){ cancelAnimationFrame(animFrame); animFrame = null; }
+  
   showScreen('game');
   const gnp=document.getElementById('g-np');if(gnp) gnp.textContent=STATE.numPlayers;
   const gm=document.getElementById('g-mise');
