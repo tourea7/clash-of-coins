@@ -551,11 +551,24 @@ vibrate([100,50,100]);
   updateSUI();drawBoard();
 
   if(GAME.dice===6){
-    log(`🎲 ${player===STATE.myColor?'Vous rejouez':AI[player>STATE.myColor?player-1:player]+' rejoue'} (6)!`,'#FFD700');
-    if(player!==STATE.myColor) setTimeout(()=>aiTurn(player),900);
-    else{GAME.rolled=false;enableRoll();}
+    // Replay on 6
+    const pName = player===STATE.myColor ? 'Vous rejouez' : (document.getElementById('pn-'+player)?.textContent||'IA')+' rejoue';
+    log('🎲 '+pName+' (6)!','#FFD700');
+    if(GAME.isMultiplayer){
+      // In multiplayer server will send turn_change
+      if(player===STATE.myColor){ GAME.rolled=false; enableRoll(); }
+      // else wait for server turn_change
+    } else {
+      if(player!==STATE.myColor) setTimeout(()=>aiTurn(player),900);
+      else{ GAME.rolled=false; enableRoll(); }
+    }
   } else {
-    setTimeout(nextTurn,700);
+    if(GAME.isMultiplayer){
+      // In multiplayer: server sends turn_change - just wait
+      // But if it was MY move, server handles next turn
+    } else {
+      setTimeout(()=>nextTurn(),700);
+    }
   }
 }
 
@@ -2100,19 +2113,28 @@ function initSocket(){
     STATE.socket.on('player_moved', ({player, piece, newPos, captured, scores}) => {
       if(player === STATE.myColor) return; // Already applied locally
 
+      // Apply opponent move
       GAME.pieces[player][piece] = newPos;
-      if(scores) GAME.scores = scores;
+      if(scores) GAME.scores = [...scores];
 
       if(typeof SFX !== 'undefined') SFX.move();
+      hideDiceResult();
 
       if(captured){
         GAME.pieces[captured.player][captured.piece] = -1;
         if(typeof SFX !== 'undefined') SFX.capture();
-        log(`💥 Capture par ${document.getElementById(`pn-${player}`)?.textContent||'adversaire'}!`, PC[player]);
+        log('💥 Capture!', PC[player]);
+      }
+
+      // Check if piece finished
+      if(newPos >= 58){
+        GAME.finished[player] = (GAME.finished[player]||0) + 1;
+        if(typeof SFX !== 'undefined') SFX.pieceDone();
       }
 
       updateSUI();
       drawBoard();
+      // Server will send turn_change next
     });
 
     // Player ranked
