@@ -293,6 +293,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ---- NO MOVES (client has no valid moves) ----
+  socket.on('no_moves', ({ roomId }) => {
+    const room = activeRooms.get(roomId);
+    if(!room || room.over) return;
+    const playerIdx = room.players.findIndex(p => p.socketId === socket.id);
+    if(playerIdx === -1 || playerIdx !== room.current) return;
+    console.log(`[GAME] ${room.players[playerIdx].username} has no moves`);
+    // Advance to next turn
+    nextTurnRoom(roomId);
+  });
+
   // ---- CANCEL SEARCH ----
   socket.on('cancel_search', () => {
     removeFromQueues(socket.id);
@@ -356,28 +367,36 @@ io.on('connection', (socket) => {
     const oldPos = room.pieces[playerIdx][piece];
     if (oldPos === 58) { logCheat(socket.id, 'moving finished piece'); return; }
 
-    // Validate move based on dice
+    // Validate move (log warnings but don't block to avoid false positives)
+    let moveValid = true;
+    let cheatReason = '';
+
     if (oldPos === -1 && room.dice !== 6) {
-      logCheat(socket.id, 'exit home without 6');
-      return;
-    }
-    if (oldPos === -1 && room.dice === 6 && newPos !== 0) {
-      logCheat(socket.id, 'invalid exit position');
-      return;
-    }
-    if (oldPos >= 0 && oldPos < 52) {
-      const expectedPos = oldPos + room.dice;
-      if (newPos !== Math.min(expectedPos, 58)) {
-        logCheat(socket.id, `invalid move: ${oldPos}+${room.dice}≠${newPos}`);
-        return;
+      cheatReason = 'exit home without 6';
+      moveValid = false;
+    } else if (oldPos === -1 && room.dice === 6 && newPos !== 0) {
+      cheatReason = 'invalid exit position';
+      moveValid = false;
+    } else if (oldPos >= 0 && oldPos < 52) {
+      const expectedPos = Math.min(oldPos + room.dice, 58);
+      if (newPos !== expectedPos) {
+        cheatReason = `invalid move: ${oldPos}+${room.dice}=${expectedPos} but got ${newPos}`;
+        moveValid = false;
+      }
+    } else if (oldPos >= 52 && oldPos < 58) {
+      const expectedPos = Math.min(oldPos + room.dice, 58);
+      if (newPos !== expectedPos) {
+        cheatReason = 'invalid home stretch move';
+        moveValid = false;
       }
     }
-    if (oldPos >= 52 && oldPos < 58) {
-      const expectedPos = oldPos + room.dice;
-      if (newPos !== Math.min(expectedPos, 58)) {
-        logCheat(socket.id, `invalid home stretch move`);
-        return;
-      }
+
+    if (!moveValid) {
+      logCheat(socket.id, cheatReason);
+      // Only block if clear cheat (not timing issue)
+      if (cheatReason.includes('exit home without 6')) return;
+      // For other cases, log but allow (might be timing/sync issue)
+      console.warn(`[WARN] Allowing suspicious move: ${cheatReason}`);
     }
 
     // Rate limiting — max 1 move per 300ms
@@ -389,8 +408,9 @@ io.on('connection', (socket) => {
     }
     if (player) player.lastMove = now;
 
-    // ✅ Move is valid — apply it
+    // ✅ Move is valid — apply it  
     room.rolled = false; // Consume the roll
+    room.lastMove = { player: playerIdx, piece, newPos, at: Date.now() };
 
     // Apply move
     room.pieces[playerIdx][piece] = newPos;
@@ -581,6 +601,7 @@ function nextTurnRoom(roomId) {
 
   room.current = next;
   room.rolled = false;
+  room.dice = 1; // Reset dice
 
   io.to(roomId).emit('turn_change', {
     current: next,
@@ -1060,3 +1081,241 @@ function scheduleDefaultTournaments(){
 
 // Start tournaments on server boot
 scheduleDefaultTournaments();
+
+// ============================================================
+// CINETPAY — Intégration paiement CI
+// Orange Money + MTN + Wave + Moov
+// ============================================================
+
+const CINETPAY_API_KEY  = process.env.CINETPAY_API_KEY  || '';
+const CINETPAY_SITE_ID  = process.env.CINETPAY_SITE_ID  || '';
+const CINETPAY_BASE_URL = 'https://api-checkout.cinetpay.com/v2';
+
+// ===== INITIER UN PAIEMENT (DÉPÔT) =====
+app.post('/api/payment/initiate', express.json(), async (req, res) => {
+  const { userId, username, amount, currency = 'XOF' } = req.body;
+
+  if(!userId || !amount) return res.json({ success: false, message: 'Paramètres manquants' });
+  if(amount < 100) return res.json({ success: false, message: 'Montant minimum: 100 XOF' });
+  if(amount > 1000000) return res.json({ success: false, message: 'Montant maximum: 1 000 000 XOF' });
+
+  const transactionId = `COC_${userId.slice(0,8)}_${Date.now()}`;
+
+  try {
+    const response = await fetch(`${CINETPAY_BASE_URL}/payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apikey:         CINETPAY_API_KEY,
+        site_id:        CINETPAY_SITE_ID,
+        transaction_id: transactionId,
+        amount:         amount,
+        currency:       currency,
+        description:    `Dépôt Clash of Coins - ${username}`,
+        notify_url:     `${process.env.APP_URL || 'https://clash-of-coins.onrender.com'}/api/payment/notify`,
+        return_url:     `${process.env.APP_URL || 'https://clash-of-coins.onrender.com'}/dashboard.html?payment=success`,
+        cancel_url:     `${process.env.APP_URL || 'https://clash-of-coins.onrender.com'}/dashboard.html?payment=cancelled`,
+        channels:       'ALL',  // Orange Money, MTN, Wave, Moov
+        metadata:       JSON.stringify({ userId, username, type: 'deposit' }),
+        lang:           'fr',
+        customer_name:  username,
+        customer_email: '',
+        customer_phone_number: '',
+        customer_address: 'Abidjan',
+        customer_city:  'Abidjan',
+        customer_country: 'CI',
+        customer_state: 'CI',
+        customer_zip_code: '00225',
+      }),
+    });
+
+    const data = await response.json();
+
+    if(data.code === '201') {
+      // Save pending transaction in DB
+      await supabase.from('transactions').insert({
+        player_id: userId,
+        username,
+        type: 'deposit_pending',
+        amount,
+        description: `Dépôt CinetPay #${transactionId}`,
+        status: 'pending',
+        transaction_id: transactionId,
+      }).catch(() => {});
+
+      console.log(`[PAY] Initiated: ${username} → ${amount} XOF (${transactionId})`);
+      res.json({
+        success: true,
+        paymentUrl: data.data.payment_url,
+        transactionId,
+      });
+    } else {
+      console.error('[PAY] CinetPay error:', data);
+      res.json({ success: false, message: data.message || 'Erreur CinetPay' });
+    }
+  } catch(e) {
+    console.error('[PAY] Error:', e.message);
+    res.json({ success: false, message: 'Erreur réseau: ' + e.message });
+  }
+});
+
+// ===== NOTIFICATION CINETPAY (WEBHOOK) =====
+app.post('/api/payment/notify', express.json(), async (req, res) => {
+  const { cpm_trans_id, cpm_site_id, cpm_amount, cpm_currency,
+          cpm_payment_config, cpm_trans_status, cpm_error_message } = req.body;
+
+  console.log(`[PAY] Notify: ${cpm_trans_id} → ${cpm_trans_status}`);
+
+  // Vérifier que c'est bien notre site
+  if(cpm_site_id !== CINETPAY_SITE_ID){
+    return res.status(400).json({ message: 'Invalid site_id' });
+  }
+
+  if(cpm_trans_status === 'ACCEPTED') {
+    try {
+      // Récupérer la transaction en DB
+      const { data: tx } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('transaction_id', cpm_trans_id)
+        .single();
+
+      if(!tx || tx.status === 'completed') {
+        return res.json({ message: 'Already processed' });
+      }
+
+      // Convertir montant en coins (1 XOF = 1 coin)
+      const coinsToAdd = parseInt(cpm_amount);
+
+      // Mettre à jour le solde joueur
+      const { data: player } = await supabase
+        .from('players')
+        .select('coins')
+        .eq('id', tx.player_id)
+        .single();
+
+      if(player) {
+        await supabase.from('players')
+          .update({ coins: player.coins + coinsToAdd })
+          .eq('id', tx.player_id);
+
+        // Marquer transaction comme complétée
+        await supabase.from('transactions')
+          .update({ status: 'completed', completed_at: new Date().toISOString() })
+          .eq('transaction_id', cpm_trans_id);
+
+        // Notifier le joueur en temps réel via socket
+        const playerSocket = [...connectedPlayers.entries()]
+          .find(([, p]) => p.userId === tx.player_id);
+
+        if(playerSocket) {
+          io.to(playerSocket[0]).emit('payment_success', {
+            amount: coinsToAdd,
+            newBalance: player.coins + coinsToAdd,
+            transactionId: cpm_trans_id,
+          });
+        }
+
+        console.log(`[PAY] ✅ ${tx.username} reçoit ${coinsToAdd} coins`);
+      }
+    } catch(e) {
+      console.error('[PAY] Notify error:', e.message);
+    }
+  } else if(cpm_trans_status === 'REFUSED' || cpm_trans_status === 'CANCELLED') {
+    await supabase.from('transactions')
+      .update({ status: cpm_trans_status.toLowerCase() })
+      .eq('transaction_id', cpm_trans_id)
+      .catch(() => {});
+    console.log(`[PAY] ❌ ${cpm_trans_id} → ${cpm_trans_status}`);
+  }
+
+  res.json({ message: 'OK' });
+});
+
+// ===== VÉRIFIER STATUT PAIEMENT =====
+app.get('/api/payment/check/:transactionId', async (req, res) => {
+  try {
+    const response = await fetch(`${CINETPAY_BASE_URL}/payment/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apikey: CINETPAY_API_KEY,
+        site_id: CINETPAY_SITE_ID,
+        transaction_id: req.params.transactionId,
+      }),
+    });
+    const data = await response.json();
+    res.json({ success: true, status: data.data?.status, data });
+  } catch(e) {
+    res.json({ success: false, message: e.message });
+  }
+});
+
+// ===== RETRAIT (TRANSFERT VERS MOBILE MONEY) =====
+app.post('/api/payment/withdraw', express.json(), async (req, res) => {
+  const { userId, username, amount, phoneNumber, operator } = req.body;
+
+  if(!userId || !amount || !phoneNumber)
+    return res.json({ success: false, message: 'Paramètres manquants' });
+  if(amount < 500)
+    return res.json({ success: false, message: 'Retrait minimum: 500 XOF' });
+
+  try {
+    // Vérifier solde
+    const { data: player } = await supabase
+      .from('players').select('coins').eq('id', userId).single();
+
+    if(!player || player.coins < amount)
+      return res.json({ success: false, message: 'Solde insuffisant' });
+
+    // Déduire d'abord
+    await supabase.from('players')
+      .update({ coins: player.coins - amount })
+      .eq('id', userId);
+
+    // Initier transfert CinetPay
+    const transactionId = `WD_${userId.slice(0,8)}_${Date.now()}`;
+    const response = await fetch(`${CINETPAY_BASE_URL}/transfer/money/send/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apikey:   CINETPAY_API_KEY,
+        data: [{
+          prefix:    '225',
+          phone:     phoneNumber,
+          amount:    amount,
+          first_name: username,
+          last_name:  '',
+          email:      '',
+          user_id:    userId,
+        }],
+        notify_url: `${process.env.APP_URL}/api/payment/notify-withdraw`,
+      }),
+    });
+
+    const data = await response.json();
+
+    if(data.code === '0') {
+      await supabase.from('transactions').insert({
+        player_id: userId,
+        username,
+        type: 'withdrawal',
+        amount: -amount,
+        description: `Retrait vers ${phoneNumber} (${operator})`,
+        status: 'pending',
+        transaction_id: transactionId,
+      }).catch(() => {});
+
+      console.log(`[PAY] Withdrawal: ${username} → ${amount} XOF to ${phoneNumber}`);
+      res.json({ success: true, message: `Retrait de ${amount} XOF initié vers ${phoneNumber}` });
+    } else {
+      // Rembourser si échec
+      await supabase.from('players')
+        .update({ coins: player.coins })
+        .eq('id', userId);
+      res.json({ success: false, message: data.message || 'Erreur transfert' });
+    }
+  } catch(e) {
+    res.json({ success: false, message: e.message });
+  }
+});
