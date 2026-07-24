@@ -1179,7 +1179,9 @@ function findGame(){
       openColorPicker();
     }, 30000);
   } else {
-    // No socket or solo - play vs AI
+    // No socket or solo - go directly to color picker
+    GAME.isMultiplayer = false;
+    GAME.roomId = null;
     openColorPicker();
   }
 }
@@ -1196,18 +1198,49 @@ function cancelMatchmaking(){
 }
 
 function startGameWithColor(){
-  // Reset multiplayer state if coming from failed matchmaking
-  if(!GAME.isMultiplayer){
-    GAME.roomId = null;
-  }
-  // Reset game state
+  // Full reset
+  GAME.isMultiplayer = false;
+  GAME.roomId = null;
   GAME.rolled = false;
   GAME.waitMove = false;
   GAME.movable = [];
   GAME.over = false;
+  GAME.ranking = [];
+  GAME.eliminated = [];
+  GAME.activePlayers = STATE.numPlayers;
   if(animFrame){ cancelAnimationFrame(animFrame); animFrame = null; }
   
-  showScreen('game');
+  // Remove old socket listeners to avoid duplicates
+  if(STATE.socket){
+    STATE.socket.off('match_found');
+    STATE.socket.off('turn_change');
+    STATE.socket.off('dice_result');
+    STATE.socket.off('player_moved');
+    STATE.socket.off('player_ranked');
+    STATE.socket.off('game_over');
+    STATE.socket.off('player_disconnected');
+    STATE.socket.off('player_forfeited');
+    STATE.socket.off('room_joined');
+    STATE.socket.off('room_update');
+    STATE.socket.off('tournament_update');
+    STATE.socket.off('tournament_started');
+    STATE.socket.off('tournament_over');
+    STATE.socket.off('chat');
+    STATE.socket.off('payment_success');
+    // Re-register persistent listeners
+    STATE.socket.on('online_count', ({count}) => {
+      const el = document.getElementById('online-count');
+      if(el) el.textContent = count.toLocaleString('fr-FR');
+    });
+  }
+  
+  // Force show game screen
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const gameScreen = document.getElementById('scr-game');
+  if(gameScreen){
+    gameScreen.classList.add('active');
+    gameScreen.style.display = 'flex';
+  }
   const gnp=document.getElementById('g-np');if(gnp) gnp.textContent=STATE.numPlayers;
   const gm=document.getElementById('g-mise');
   if(gm) gm.textContent=STATE.currentMode==='free'?'Gratuit':STATE.currentMise.toLocaleString('fr-FR')+' 🪙';
@@ -2076,22 +2109,29 @@ function initSocket(){
 
     // Turn change (server authoritative)
     STATE.socket.on('turn_change', ({current, replay, message}) => {
+      // Full reset for new turn
       GAME.current = current;
       GAME.rolled = false;
       GAME.waitMove = false;
       GAME.movable = [];
+      GAME.dice = 1;
       if(animFrame){ cancelAnimationFrame(animFrame); animFrame = null; }
+      
+      // Reset dice visual
+      const dEl = document.getElementById('dice-el');
+      if(dEl){ dEl.textContent='⚀'; dEl.style.opacity='1'; dEl.style.transform=''; }
+      
       updateAP();
       drawBoard();
 
       if(message) log(message, PC[current] || '#FFD700');
 
       if(current === STATE.myColor){
-        // My turn!
+        // MY TURN
         log('🎲 Votre tour!', PC[STATE.myColor]);
         enableRoll();
         if(typeof SFX !== 'undefined') SFX.myTurn();
-        sendLocalNotif("Clash of Coins", "C'est ton tour! Lance le de!");
+        sendLocalNotif('Clash of Coins', "C'est ton tour! Lance le dé!");
       } else {
         disableRoll();
         log(`Tour de ${document.getElementById(`pn-${current}`)?.textContent || 'adversaire'}...`, PC[current]);
