@@ -1186,14 +1186,27 @@ function updateGP(){
 function openColorPicker(){
   // Reset color cards
   for(let i=0;i<4;i++){
-    const card=document.getElementById(`cc-${i}`);
+    const card=document.getElementById('cc-'+i);
     if(card) card.classList.remove('selected','taken');
   }
   selectColor(STATE.myColor);
   showScreen('color');
+  
   // Make sure confirm button works
   const confirmBtn = document.getElementById('btn-confirm-color');
-  if(confirmBtn) confirmBtn.onclick = confirmColor;
+  if(confirmBtn){
+    confirmBtn.onclick = null;
+    confirmBtn.onclick = function(){ confirmColor(); };
+  }
+  
+  // Also bind card clicks
+  for(let i=0;i<4;i++){
+    const card = document.getElementById('cc-'+i);
+    if(card){
+      const idx = i;
+      card.onclick = function(){ selectColor(idx); };
+    }
+  }
 }
 function selectColor(idx){
   for(let i=0;i<4;i++){
@@ -1213,49 +1226,59 @@ function confirmColor(){
 
 // ===== GAME START =====
 function findGame(){
-  if(STATE.currentMode==='comp'&&STATE.coins<STATE.currentMise){showToast('⚠️ Solde insuffisant!');return;}
+  if(STATE.currentMode==='comp' && STATE.coins < STATE.currentMise){
+    showToast('⚠️ Solde insuffisant!'); return;
+  }
 
-  // Check if socket available for real multiplayer
-  if(STATE.socket && STATE.socket.connected && STATE.numPlayers >= 2){
-    // Real multiplayer - go to matchmaking screen first
-    showScreen('matchmaking');
-    GAME.isMultiplayer = false; // Will be set true when match found
-    const mmMise = document.getElementById('mm-mise');
-    if(mmMise) mmMise.textContent = STATE.currentMode==='free' ? 'Gratuit' : STATE.currentMise.toLocaleString('fr-FR')+' 🪙';
-    const mmNeeded = document.getElementById('mm-needed');
-    if(mmNeeded) mmNeeded.textContent = STATE.numPlayers;
+  const isOnline = STATE.socket && STATE.socket.connected && STATE.numPlayers >= 2;
 
-    // Tell server to find a game
-    STATE.socket.emit('find_game', {
-      mode: STATE.currentMode,
-      mise: STATE.currentMise,
-      numPlayers: STATE.numPlayers,
-    });
+  // Always show color picker first
+  openColorPicker();
 
-    // Timeout after 30s → play vs AI
-    STATE.mmTimeout = setTimeout(() => {
-      if(STATE.socket) STATE.socket.emit('cancel_search');
-      GAME.isMultiplayer = false;
-      GAME.roomId = null;
-      // Show choice: play vs AI or come back later
-      showModal(
-        '🔍',
-        'AUCUN JOUEUR TROUVE',
-        'Aucun joueur en ligne. Que veux-tu faire ?',
-        '',
-        `🤖 JOUER CONTRE L'IA`,
-        function(){ closeModal(); openColorPicker(); },
-        '⏳ REVENIR PLUS TARD',
-        function(){ closeModal(); showScreen('mode'); }
-      );
-    }, 30000);
-  } else {
-    // No socket or solo - go directly to color picker
-    GAME.isMultiplayer = false;
-    GAME.roomId = null;
-    openColorPicker();
+  // Override confirm button based on mode
+  const confirmBtn = document.getElementById('btn-confirm-color');
+  if(confirmBtn){
+    confirmBtn.onclick = function(){
+      if(typeof SFX !== 'undefined') SFX.btnClick();
+
+      if(isOnline){
+        // Multiplayer: go to matchmaking after color choice
+        showScreen('matchmaking');
+        const mmMise = document.getElementById('mm-mise');
+        if(mmMise) mmMise.textContent = STATE.currentMode==='free' ? 'Gratuit' : STATE.currentMise.toLocaleString('fr-FR')+' 🪙';
+        const mmNeeded = document.getElementById('mm-needed');
+        if(mmNeeded) mmNeeded.textContent = STATE.numPlayers;
+
+        STATE.socket.emit('find_game', {
+          mode: STATE.currentMode,
+          mise: STATE.currentMise,
+          numPlayers: STATE.numPlayers,
+        });
+
+        // Timeout → choice modal
+        STATE.mmTimeout = setTimeout(() => {
+          if(STATE.socket) STATE.socket.emit('cancel_search');
+          GAME.isMultiplayer = false;
+          GAME.roomId = null;
+          showModal(
+            '🔍', 'AUCUN JOUEUR TROUVE',
+            "Aucun joueur en ligne. Que veux-tu faire ?", '',
+            `🤖 JOUER CONTRE L'IA`,
+            function(){ closeModal(); startGameWithColor(); },
+            '⏳ REVENIR PLUS TARD',
+            function(){ closeModal(); showScreen('mode'); }
+          );
+        }, 30000);
+
+      } else {
+        // IA mode: start game directly
+        startGameWithColor();
+      }
+    };
   }
 }
+
+
 function startLocalGame(){startGameWithColor();}
 function cancelMatchmaking(){
   if(STATE.mmTimeout){ clearTimeout(STATE.mmTimeout); STATE.mmTimeout = null; }
