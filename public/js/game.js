@@ -1060,13 +1060,33 @@ function renderTx(){
 
 // ===== NAVIGATION =====
 function showScreen(name){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  const el=document.getElementById('scr-'+name);if(el)el.classList.add('active');
-  if(name==='wallet'){ try{ renderTx(); if(typeof renderRealTransactions==='function') renderRealTransactions(); }catch(e){console.warn('wallet err:',e);} }
-  if(name==='game') updateAP();
-  if(name==='profile'){ try{ if(typeof updateProfileScreen==='function') updateProfileScreen(); }catch(e){console.warn('profile err:',e);} }
-  if(name==='settings'){ try{ loadSettings(); }catch(e){console.warn('settings err:',e);} }
-  if(name==='tournaments'){ try{ loadTournaments(); }catch(e){console.warn('tourn err:',e);} }
+  // Hide all screens
+  document.querySelectorAll('.screen').forEach(s=>{
+    s.classList.remove('active');
+    s.style.display = '';
+  });
+
+  // Show target screen
+  const el = document.getElementById('scr-'+name);
+  if(el){
+    el.classList.add('active');
+    // Override the display:none from CSS
+    el.style.setProperty('display', 'flex', 'important');
+    el.style.flexDirection = 'column';
+  } else {
+    console.warn('Screen not found: scr-'+name);
+    // Try fallback
+    const allScreens = document.querySelectorAll('.screen');
+    console.log('Available screens:', [...allScreens].map(s=>s.id));
+    return;
+  }
+
+  // Screen-specific actions
+  if(name==='wallet'){ try{ renderTx(); if(typeof renderRealTransactions==='function') renderRealTransactions(); }catch(e){console.warn('wallet:',e);} }
+  if(name==='game'){ try{ updateAP(); }catch(e){} }
+  if(name==='profile'){ try{ if(typeof updateProfileScreen==='function') updateProfileScreen(); }catch(e){console.warn('profile:',e);} }
+  if(name==='settings'){ try{ loadSettings(); updateBlockedCount(); }catch(e){console.warn('settings:',e);} }
+  if(name==='tournaments'){ try{ loadTournaments(); }catch(e){console.warn('tourn:',e);} }
 
   // Music management
   if(typeof SFX !== 'undefined'){
@@ -1086,9 +1106,16 @@ function showScreen(name){
   }
 }
 function navTo(name,btn){
+  if(typeof SFX !== 'undefined') SFX.btnClick();
   showScreen(name);
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(btn) btn.classList.add('active');
+  else {
+    // Auto-highlight correct nav button
+    const navMap = {home:'ni-home',wallet:'ni-wallet',profile:'ni-profile',tournaments:'ni-tourn'};
+    const navEl = document.getElementById(navMap[name]);
+    if(navEl) navEl.classList.add('active');
+  }
 }
 
 // ===== MODE SELECTION =====
@@ -1174,9 +1201,20 @@ function findGame(){
 
     // Timeout after 30s → play vs AI
     STATE.mmTimeout = setTimeout(() => {
-      showToast("Pas de joueurs trouves - partie contre l'IA");
       if(STATE.socket) STATE.socket.emit('cancel_search');
-      openColorPicker();
+      GAME.isMultiplayer = false;
+      GAME.roomId = null;
+      // Show choice: play vs AI or come back later
+      showModal(
+        '🔍',
+        'AUCUN JOUEUR TROUVE',
+        'Aucun joueur en ligne. Que veux-tu faire ?',
+        '',
+        '🤖 JOUER CONTRE L\'IA',
+        function(){ closeModal(); openColorPicker(); },
+        '⏳ REVENIR PLUS TARD',
+        function(){ closeModal(); showScreen('mode'); }
+      );
     }, 30000);
   } else {
     // No socket or solo - go directly to color picker
