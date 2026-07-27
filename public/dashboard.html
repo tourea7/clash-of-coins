@@ -17,7 +17,9 @@ html,body{width:100%;height:100%;overflow:hidden;
   background:url('/Bg.png') center center / cover no-repeat fixed;
   color:#fff;font-family:'Rajdhani',sans-serif}
 #app{position:fixed;inset:0;display:flex;flex-direction:column;z-index:1}
-.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden;z-index:1}.screen.active{display:flex!important;flex-direction:column}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden;z-index:1;background:rgba(0,0,0,.45)}
+.screen.active{display:flex!important;flex-direction:column;position:absolute;inset:0;overflow:hidden}
+#scr-game{background:rgba(0,0,0,.3)!important}
 .screen.active{display:flex}
 #particles{position:fixed;inset:0;pointer-events:none;z-index:0}
 
@@ -676,7 +678,7 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 .set-toggle input:checked + .set-toggle-slider::before{transform:translateX(22px)}
 
 /* Range slider */
-.set-slider{-webkit-appearance:none;appearance:none;width:100px;height:4px;border-radius:2px;background:rgba(255,255,255,.2);outline:none;cursor:pointer;flex-shrink:0}
+.set-slider{-webkit-appearance:none;width:100px;height:4px;border-radius:2px;background:rgba(255,255,255,.2);outline:none;cursor:pointer;flex-shrink:0}
 .set-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#FF8C00);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 
 /* Select */
@@ -891,7 +893,10 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 <div class="screen" id="scr-mode">
   <div class="shdr"><button class="bk" onclick="showScreen('home')">←</button><div class="shdr-title">JOUER</div></div>
   <div class="scroll" style="padding:16px 14px 80px">
-    <div class="mode-tabs"><div class="mt active" id="tab-rapide" onclick="setModeTab('rapide')">Partie Rapide</div><div class="mt" id="tab-amis" onclick="setModeTab('amis');showScreen('friends')">Avec Amis</div></div>
+    <div class="mode-tabs">
+  <div class="mt active" id="tab-rapide" onclick="setModeTab('rapide')">🤖 Vs IA</div>
+  <div class="mt" id="tab-amis" onclick="setModeTab('amis')">🌐 En ligne</div>
+</div>
     <div class="mode-sec">Choisir le mode</div>
     <div class="pbtns"><button class="pb" id="pb2" onclick="setPlayers(2)">2 Joueurs</button><button class="pb" id="pb3" onclick="setPlayers(3)">3 Joueurs</button><button class="pb active" id="pb4" onclick="setPlayers(4)">4 Joueurs</button></div>
     <div id="mise-section">
@@ -917,7 +922,7 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
       <div class="gain-val" id="gp-val">1 500 🪙</div>
       <div class="gain-sub">Commission 5% déduite</div>
     </div>
-    <button class="btn-find" onclick="findGame()">TROUVER UNE PARTIE ⚡</button>
+    <button class="btn-find" id="btn-find-game" onclick="handleFindGame()">TROUVER UNE PARTIE ⚡</button>
     <div class="mode-footer">🛡️ En jouant, vous acceptez nos conditions de jeu</div>
   </div>
 </div>
@@ -1129,6 +1134,224 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 </div>
 
 
+
+<!-- ===== COLOR PICKER ===== -->
+<div class="screen" id="scr-color">
+  <div class="shdr">
+    <button class="bk" onclick="showScreen('mode')">←</button>
+    <div class="shdr-title">CHOISIR MA COULEUR</div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:20px">
+    <div style="font-size:13px;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase">Sélectionne ton pion</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;max-width:320px">
+      <div id="cc-0" onclick="selectColor(0)" class="color-card" style="background:linear-gradient(135deg,#1a6fff,#0033cc)">
+        <div style="font-size:40px">🔵</div><div style="font-size:14px;font-weight:700;color:#fff;margin-top:8px">BLEU</div>
+      </div>
+      <div id="cc-1" onclick="selectColor(1)" class="color-card" style="background:linear-gradient(135deg,#ee1111,#aa0000)">
+        <div style="font-size:40px">🔴</div><div style="font-size:14px;font-weight:700;color:#fff;margin-top:8px">ROUGE</div>
+      </div>
+      <div id="cc-2" onclick="selectColor(2)" class="color-card" style="background:linear-gradient(135deg,#00cc44,#008822)">
+        <div style="font-size:40px">🟢</div><div style="font-size:14px;font-weight:700;color:#fff;margin-top:8px">VERT</div>
+      </div>
+      <div id="cc-3" onclick="selectColor(3)" class="color-card" style="background:linear-gradient(135deg,#ddaa00,#997700)">
+        <div style="font-size:40px">🟡</div><div style="font-size:14px;font-weight:700;color:#fff;margin-top:8px">JAUNE</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border-radius:16px;padding:12px 20px">
+      <div id="cp-pawn" style="font-size:32px">🔵</div>
+      <div id="cp-name" style="font-family:'Anton',sans-serif;font-size:18px;color:#1a6fff">BLEU</div>
+    </div>
+    <button id="btn-confirm-color" onclick="confirmColor()" class="btn-find" style="width:100%;max-width:320px;font-size:18px;padding:16px">
+      ✅ CONFIRMER
+    </button>
+  </div>
+</div>
+
+<!-- ===== PROFILE ===== -->
+<div class="screen" id="scr-profile">
+  <div class="shdr">
+    <button class="bk" onclick="showScreen('home')">←</button>
+    <div class="shdr-title">MON PROFIL</div>
+    <button onclick="openEditProfile()" style="background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);color:var(--gold);border-radius:20px;padding:6px 14px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">✏️ MODIFIER</button>
+  </div>
+  <div class="scroll" style="padding-bottom:80px">
+    <div class="prof-hero">
+      <div class="prof-av-wrap" onclick="openEditProfile()">
+        <div class="prof-av" id="prof-av-display">👑</div>
+        <div class="prof-av-edit">✏️</div>
+        <div class="prof-lv-badge" id="prof-lv-display">Niveau 1</div>
+      </div>
+      <div class="prof-name" id="prof-name-display">Chargement...</div>
+      <div class="prof-since" id="prof-since-display">Membre depuis...</div>
+      <div class="prof-xp-wrap">
+        <div class="prof-xp-bar"><div class="prof-xp-fill" id="prof-xp-fill"></div></div>
+        <div class="prof-xp-txt" id="prof-xp-txt">0 / 1000 XP</div>
+      </div>
+    </div>
+    <div style="margin:0 14px 14px;background:linear-gradient(135deg,#1a1300,#0d0900);border:1px solid rgba(255,215,0,.25);border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Solde total</div>
+        <div style="font-size:32px;font-weight:800;color:var(--gold)" id="profile-coins">0 🪙</div>
+      </div>
+      <div style="font-size:44px">🪙</div>
+    </div>
+    <div style="padding:0 14px;margin-bottom:14px">
+      <div class="sec-lbl" style="margin-bottom:10px">📊 Statistiques</div>
+      <div class="stat-grid">
+        <div class="sc-card"><div class="sc-val" id="stat-parties">0</div><div class="sc-lbl">Parties</div></div>
+        <div class="sc-card"><div class="sc-val" id="stat-victoires">0</div><div class="sc-lbl">Victoires</div></div>
+        <div class="sc-card"><div class="sc-val" id="stat-taux">0%</div><div class="sc-lbl">Taux victoire</div></div>
+        <div class="sc-card"><div class="sc-val" id="stat-serie">0</div><div class="sc-lbl">Meilleure série</div></div>
+      </div>
+    </div>
+    <div style="padding:0 14px;margin-bottom:14px">
+      <div class="sec-lbl" style="margin-bottom:10px">🎮 Historique</div>
+      <div id="game-history-list"><div style="text-align:center;padding:20px;color:rgba(255,255,255,.3)">Chargement...</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;padding:0 14px">
+      <button class="btn-find" style="font-size:15px;padding:14px" onclick="shareProfile()">📤 PARTAGER MON PROFIL</button>
+      <button onclick="logout()" style="padding:14px;background:rgba(255,50,50,.1);border:1.5px solid rgba(255,50,50,.3);color:#ff6666;border-radius:50px;cursor:pointer;font-family:'Anton',sans-serif;font-size:15px;letter-spacing:2px">🚪 SE DÉCONNECTER</button>
+    </div>
+  </div>
+  <div class="bnav">
+    <button class="ni" onclick="navTo('home',this)"><div class="ni-ic">🏠</div><div class="ni-lb">Accueil</div></button>
+    <button class="ni" onclick="startMode('free')"><div class="ni-ic">🎲</div><div class="ni-lb">Jouer</div></button>
+    <button class="ni" onclick="navTo('tournaments',this)"><div class="ni-ic">🏆</div><div class="ni-lb">Tournois</div></button>
+    <button class="ni" onclick="navTo('wallet',this)"><div class="ni-ic">👛</div><div class="ni-lb">Wallet</div></button>
+    <button class="ni active"><div class="ni-ic">👤</div><div class="ni-lb">Profil</div></button>
+  </div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div class="screen" id="scr-settings">
+  <div class="shdr">
+    <button class="bk" onclick="showScreen('home')">←</button>
+    <div class="shdr-title">PARAMÈTRES</div>
+  </div>
+  <div class="scroll" style="padding:14px 14px 80px">
+    <div class="set-section-label">🔊 Audio</div>
+    <div class="set-card">
+      <div class="set-row">
+        <div class="set-row-left"><div class="set-row-ic">🔊</div><div class="set-row-info"><div class="set-row-title">Volume sons</div><div class="set-row-sub">Effets sonores</div></div></div>
+        <input type="range" min="0" max="100" value="65" class="set-slider" id="sfx-volume" oninput="setSFXVolume(this.value)">
+      </div>
+      <div class="set-divider"></div>
+      <div class="set-row">
+        <div class="set-row-left"><div class="set-row-ic">🎵</div><div class="set-row-info"><div class="set-row-title">Volume musique</div><div class="set-row-sub">Musique de fond</div></div></div>
+        <input type="range" min="0" max="100" value="28" class="set-slider" id="music-volume" oninput="setMusicVolume(this.value)">
+      </div>
+      <div class="set-divider"></div>
+      <div class="set-row">
+        <div class="set-row-left"><div class="set-row-ic">🔇</div><div class="set-row-info"><div class="set-row-title">Couper les sons</div><div class="set-row-sub">Mode silencieux</div></div></div>
+        <label class="set-toggle"><input type="checkbox" id="toggle-mute" onchange="toggleAllSound(this.checked)"><span class="set-toggle-slider"></span></label>
+      </div>
+      <div class="set-divider"></div>
+      <div class="set-row">
+        <div class="set-row-left"><div class="set-row-ic">📳</div><div class="set-row-info"><div class="set-row-title">Vibrations</div><div class="set-row-sub">Retour haptique</div></div></div>
+        <label class="set-toggle"><input type="checkbox" id="toggle-vibration" checked onchange="saveSettings()"><span class="set-toggle-slider"></span></label>
+      </div>
+    </div>
+    <div class="set-section-label">🔔 Notifications</div>
+    <div class="set-card">
+      <div class="set-row">
+        <div class="set-row-left"><div class="set-row-ic">🔔</div><div class="set-row-info"><div class="set-row-title">Notifications push</div><div class="set-row-sub">Alertes de tour</div></div></div>
+        <label class="set-toggle"><input type="checkbox" id="toggle-notif" onchange="toggleNotifications(this.checked)"><span class="set-toggle-slider"></span></label>
+      </div>
+    </div>
+    <div class="set-section-label">🎮 Jeu</div>
+    <div class="set-card">
+      <div class="set-row">
+        <div class="set-row-left"><div class="set-row-ic">🌍</div><div class="set-row-info"><div class="set-row-title">Langue</div><div class="set-row-sub">Interface</div></div></div>
+        <select class="set-select" id="lang-select" onchange="saveSettings()"><option value="fr">🇫🇷 Français</option><option value="en">🇬🇧 English</option></select>
+      </div>
+      <div class="set-divider"></div>
+      <div class="set-row">
+        <div class="set-row-left"><div class="set-row-ic">🤖</div><div class="set-row-info"><div class="set-row-title">Difficulté IA</div><div class="set-row-sub">Niveau adversaires</div></div></div>
+        <select class="set-select" id="ai-difficulty" onchange="saveSettings()"><option value="easy">😊 Facile</option><option value="medium" selected>🎯 Moyen</option><option value="hard">💀 Difficile</option></select>
+      </div>
+      <div class="set-divider"></div>
+      <div class="set-row">
+        <div class="set-row-left"><div class="set-row-ic">🎨</div><div class="set-row-info"><div class="set-row-title">Thème</div><div class="set-row-sub">Apparence</div></div></div>
+        <select class="set-select" id="theme-select" onchange="applyTheme(this.value)"><option value="dark">🌙 Sombre</option><option value="gold">👑 Doré</option><option value="blue">🌊 Bleu</option></select>
+      </div>
+    </div>
+    <div class="set-section-label">👤 Compte</div>
+    <div class="set-card">
+      <div class="set-row set-row-btn" onclick="openEditProfile()"><div class="set-row-left"><div class="set-row-ic">✏️</div><div class="set-row-info"><div class="set-row-title">Modifier profil</div><div class="set-row-sub">Pseudo, avatar</div></div></div><div class="set-arrow">›</div></div>
+      <div class="set-divider"></div>
+      <div class="set-row set-row-btn" onclick="showScreen('profile')"><div class="set-row-left"><div class="set-row-ic">📊</div><div class="set-row-info"><div class="set-row-title">Statistiques</div><div class="set-row-sub">Historique et performances</div></div></div><div class="set-arrow">›</div></div>
+      <div class="set-divider"></div>
+      <div class="set-row set-row-btn" onclick="navTo('wallet',null)"><div class="set-row-left"><div class="set-row-ic">💳</div><div class="set-row-info"><div class="set-row-title">Transactions</div><div class="set-row-sub">Dépôts, retraits</div></div></div><div class="set-arrow">›</div></div>
+      <div class="set-divider"></div>
+      <div class="set-row set-row-btn" onclick="changePassword()"><div class="set-row-left"><div class="set-row-ic">🔒</div><div class="set-row-info"><div class="set-row-title">Mot de passe</div><div class="set-row-sub">Sécurité du compte</div></div></div><div class="set-arrow">›</div></div>
+      <div class="set-divider"></div>
+      <div class="set-row"><div class="set-row-left"><div class="set-row-ic">👁️</div><div class="set-row-info"><div class="set-row-title">Profil public</div><div class="set-row-sub">Visible dans le classement</div></div></div><label class="set-toggle"><input type="checkbox" id="toggle-public" checked onchange="saveSettings()"><span class="set-toggle-slider"></span></label></div>
+    </div>
+    <div class="set-section-label">📱 Application</div>
+    <div class="set-card">
+      <div class="set-row set-row-btn" onclick="installPWA()"><div class="set-row-left"><div class="set-row-ic">📲</div><div class="set-row-info"><div class="set-row-title">Installer l'app</div><div class="set-row-sub">Ajouter à l'écran d'accueil</div></div></div><div class="set-arrow">›</div></div>
+      <div class="set-divider"></div>
+      <div class="set-row set-row-btn" onclick="showHelp()"><div class="set-row-left"><div class="set-row-ic">❓</div><div class="set-row-info"><div class="set-row-title">Aide / FAQ</div><div class="set-row-sub">Comment jouer</div></div></div><div class="set-arrow">›</div></div>
+      <div class="set-divider"></div>
+      <div class="set-row set-row-btn" onclick="contactSupport()"><div class="set-row-left"><div class="set-row-ic">📧</div><div class="set-row-info"><div class="set-row-title">Support</div><div class="set-row-sub">horizonmanagement24@gmail.com</div></div></div><div class="set-arrow">›</div></div>
+      <div class="set-divider"></div>
+      <div class="set-row"><div class="set-row-left"><div class="set-row-ic">ℹ️</div><div class="set-row-info"><div class="set-row-title">Version</div><div class="set-row-sub">Clash of Coins v2.0</div></div></div><div style="font-size:12px;color:rgba(255,255,255,.3)">2024</div></div>
+    </div>
+    <div class="set-section-label" style="color:#ff6666">⚠️ Zone dangereuse</div>
+    <div class="set-card" style="border-color:rgba(255,50,50,.2)">
+      <div class="set-row set-row-btn" onclick="logout()"><div class="set-row-left"><div class="set-row-ic">🚪</div><div class="set-row-info"><div class="set-row-title">Déconnecter</div><div class="set-row-sub">Retour à la connexion</div></div></div><div class="set-arrow" style="color:#ff6666">›</div></div>
+      <div class="set-divider"></div>
+      <div class="set-row set-row-btn" onclick="deleteAccount()"><div class="set-row-left"><div class="set-row-ic">🗑️</div><div class="set-row-info"><div class="set-row-title" style="color:#ff4444">Supprimer le compte</div><div class="set-row-sub">Action irréversible</div></div></div><div class="set-arrow" style="color:#ff4444">›</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FRIEND MODE ===== -->
+<div class="screen" id="scr-friends">
+  <div class="shdr">
+    <button class="bk" onclick="showScreen('mode')">←</button>
+    <div class="shdr-title">AVEC AMIS</div>
+  </div>
+  <div class="scroll" style="padding:20px 14px 80px">
+    <div class="friend-card">
+      <div class="friend-card-ic">🏠</div>
+      <div class="friend-card-title">CRÉER UNE PARTIE</div>
+      <div class="friend-card-sub">Génère un code et invite tes amis</div>
+      <div id="friend-code-display" style="display:none">
+        <div style="font-family:'Anton',sans-serif;font-size:42px;letter-spacing:8px;color:var(--gold);margin:16px 0" id="friend-code-val">ABC123</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:12px">Partage ce code avec tes amis</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="shareRoomCode()" style="flex:1;padding:12px;background:linear-gradient(135deg,#1a5fff,#0033cc);color:#fff;border:none;border-radius:12px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;cursor:pointer">📤 PARTAGER</button>
+          <button onclick="copyRoomCode()" style="flex:1;padding:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:12px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;cursor:pointer">📋 COPIER</button>
+        </div>
+        <div id="friend-room-status" style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.5);text-align:center">En attente...</div>
+      </div>
+      <button id="btn-create-room" class="btn-find" style="font-size:16px;padding:14px;margin-top:8px" onclick="createFriendRoom()">🎮 CRÉER LA PARTIE</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin:16px 0">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+      <div style="font-size:12px;color:rgba(255,255,255,.3)">OU</div>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+    </div>
+    <div class="friend-card">
+      <div class="friend-card-ic">🔗</div>
+      <div class="friend-card-title">REJOINDRE</div>
+      <div class="friend-card-sub">Entre le code de ton ami</div>
+      <input id="join-code-input" type="text" maxlength="6" placeholder="ABC123"
+        style="width:100%;padding:14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,215,0,.3);border-radius:12px;color:#fff;font-family:'Anton',sans-serif;font-size:22px;letter-spacing:6px;text-transform:uppercase;text-align:center;outline:none;margin-top:12px;box-sizing:border-box"
+        oninput="this.value=this.value.toUpperCase()">
+      <button class="btn-find" style="font-size:16px;padding:14px;margin-top:10px;background:linear-gradient(135deg,#8833ff,#5500cc);box-shadow:0 6px 20px rgba(136,51,255,.4)" onclick="joinFriendRoom()">🎯 REJOINDRE</button>
+      <div id="join-status" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);text-align:center"></div>
+    </div>
+  </div>
+</div>
+
+<!-- add color-card CSS -->
+<style>
+.color-card{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;border-radius:20px;cursor:pointer;border:3px solid transparent;transition:all .2s;min-height:100px}
+.color-card:hover{transform:scale(1.05)}
+.color-card.selected{border-color:#FFD700;box-shadow:0 0 20px rgba(255,215,0,.5);transform:scale(1.08)}
+</style>
 
 <script>
 // ===== GLOBAL BUTTON HOVER SOUNDS =====
