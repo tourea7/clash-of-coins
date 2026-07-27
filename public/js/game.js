@@ -1070,14 +1070,14 @@ function showScreen(name){
   const el = document.getElementById('scr-'+name);
   if(el){
     el.classList.add('active');
-    // Override the display:none from CSS
-    el.style.setProperty('display', 'flex', 'important');
+    el.style.display = 'flex';
     el.style.flexDirection = 'column';
+    el.style.position = 'absolute';
+    el.style.inset = '0';
+    el.style.zIndex = '1';
+    el.style.overflow = 'hidden';
   } else {
     console.warn('Screen not found: scr-'+name);
-    // Try fallback
-    const allScreens = document.querySelectorAll('.screen');
-    console.log('Available screens:', [...allScreens].map(s=>s.id));
     return;
   }
 
@@ -1129,6 +1129,39 @@ function startMode(mode){
 function setModeTab(t){
   document.getElementById('tab-rapide').classList.toggle('active',t==='rapide');
   document.getElementById('tab-amis').classList.toggle('active',t==='amis');
+  STATE._gameMode = t; // 'rapide'=IA, 'amis'=online
+
+  // Update find button text
+  const btn = document.getElementById('btn-find-game');
+  if(btn){
+    if(t==='rapide'){
+      btn.textContent = `🤖 JOUER CONTRE L'IA ⚡`;
+    } else {
+      btn.textContent = '🌐 TROUVER UNE PARTIE ⚡';
+    }
+  }
+
+  // Show/hide mise section based on mode
+  const ms = document.getElementById('mise-section');
+  const gp = document.getElementById('gain-preview');
+  if(t==='amis' && STATE.currentMode==='comp'){
+    if(ms) ms.style.display='block';
+    if(gp) gp.style.display='block';
+  }
+}
+
+function handleFindGame(){
+  if(typeof SFX !== 'undefined') SFX.btnClick();
+  const tab = STATE._gameMode || 'rapide';
+  if(tab === 'rapide'){
+    // Play vs AI directly
+    GAME.isMultiplayer = false;
+    GAME.roomId = null;
+    openColorPicker();
+  } else {
+    // Online multiplayer
+    findGame();
+  }
 }
 function setPlayers(n){
   STATE.numPlayers=n;
@@ -1210,7 +1243,7 @@ function findGame(){
         'AUCUN JOUEUR TROUVE',
         'Aucun joueur en ligne. Que veux-tu faire ?',
         '',
-        '🤖 JOUER CONTRE L\'IA',
+        `🤖 JOUER CONTRE L'IA`,
         function(){ closeModal(); openColorPicker(); },
         '⏳ REVENIR PLUS TARD',
         function(){ closeModal(); showScreen('mode'); }
