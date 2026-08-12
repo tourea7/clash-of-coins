@@ -719,6 +719,73 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 .chat-name{font-size:9px;color:rgba(255,255,255,.35);margin-bottom:2px;padding:0 4px}
 #chat-panel{display:none}
 #chat-panel.open{display:flex}
+
+/* ===== GAME LAYOUT V2 ===== */
+.game-body{flex:1;display:flex;flex-direction:column;align-items:center;padding:4px 6px;gap:4px;overflow:hidden;position:relative}
+
+/* Status bar - top, big */
+.game-status-bar{
+  width:100%;
+  background:rgba(0,0,0,.6);
+  border-radius:14px;
+  padding:8px 14px;
+  border:1px solid rgba(255,215,0,.2);
+  backdrop-filter:blur(8px);
+}
+.game-log-big{
+  font-size:15px;
+  font-weight:800;
+  color:#fff;
+  text-align:center;
+  letter-spacing:.5px;
+  text-shadow:0 2px 8px rgba(0,0,0,.8);
+  transition:all .3s;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Dice bottom bar */
+.dice-bottom-bar{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  padding:4px 0 2px;
+}
+.dice-3d-wrap{width:72px;height:72px;cursor:pointer;perspective:400px}
+.dice-3d{
+  width:72px;height:72px;
+  background:linear-gradient(145deg,#ffffff,#e8e8e8);
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:44px;color:#111;
+  box-shadow:0 8px 24px rgba(0,0,0,.7),0 3px 0 rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.9);
+  transition:all .2s;cursor:pointer;border:2px solid rgba(255,215,0,.3);
+}
+.dice-3d:hover{transform:scale(1.1) translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.8),0 0 20px rgba(255,215,0,.4)}
+.dice-3d:active{transform:scale(.95)}
+.dice-label{font-size:10px;color:rgba(255,215,0,.8);font-weight:700;text-transform:uppercase;letter-spacing:2px}
+
+/* Player cards compact */
+.prow{display:flex;align-items:center;width:100%;gap:4px;padding:0 2px}
+.pi-card{display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:5px 8px;backdrop-filter:blur(8px);min-width:0;flex-shrink:0}
+.pi-card-right{flex-direction:row-reverse}
+.pi-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;border:2px solid rgba(255,255,255,.3);flex-shrink:0;transition:all .3s}
+.pi-info{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pi-info-right{align-items:flex-end}
+.pi-name{font-size:10px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px}
+.pi-coins{display:flex;align-items:center;gap:2px;font-size:10px;font-weight:800;color:var(--gold)}
+.pi-card.myturn{border-color:var(--gold);box-shadow:0 0 10px rgba(255,215,0,.4)}
+
+@media(max-width:480px){
+  .dice-3d-wrap{width:60px;height:60px}
+  .dice-3d{width:60px;height:60px;font-size:36px}
+  .game-log-big{font-size:13px}
+  .pi-av{width:28px;height:28px;font-size:9px}
+  .pi-name{font-size:9px;max-width:55px}
+}
 </style>
 
   <!-- PWA -->
@@ -1351,6 +1418,73 @@ button,div[onclick]{-webkit-tap-highlight-color:transparent;}
 .color-card{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;border-radius:20px;cursor:pointer;border:3px solid transparent;transition:all .2s;min-height:100px}
 .color-card:hover{transform:scale(1.05)}
 .color-card.selected{border-color:#FFD700;box-shadow:0 0 20px rgba(255,215,0,.5);transform:scale(1.08)}
+
+/* ===== GAME LAYOUT V2 ===== */
+.game-body{flex:1;display:flex;flex-direction:column;align-items:center;padding:4px 6px;gap:4px;overflow:hidden;position:relative}
+
+/* Status bar - top, big */
+.game-status-bar{
+  width:100%;
+  background:rgba(0,0,0,.6);
+  border-radius:14px;
+  padding:8px 14px;
+  border:1px solid rgba(255,215,0,.2);
+  backdrop-filter:blur(8px);
+}
+.game-log-big{
+  font-size:15px;
+  font-weight:800;
+  color:#fff;
+  text-align:center;
+  letter-spacing:.5px;
+  text-shadow:0 2px 8px rgba(0,0,0,.8);
+  transition:all .3s;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Dice bottom bar */
+.dice-bottom-bar{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  padding:4px 0 2px;
+}
+.dice-3d-wrap{width:72px;height:72px;cursor:pointer;perspective:400px}
+.dice-3d{
+  width:72px;height:72px;
+  background:linear-gradient(145deg,#ffffff,#e8e8e8);
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:44px;color:#111;
+  box-shadow:0 8px 24px rgba(0,0,0,.7),0 3px 0 rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.9);
+  transition:all .2s;cursor:pointer;border:2px solid rgba(255,215,0,.3);
+}
+.dice-3d:hover{transform:scale(1.1) translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.8),0 0 20px rgba(255,215,0,.4)}
+.dice-3d:active{transform:scale(.95)}
+.dice-label{font-size:10px;color:rgba(255,215,0,.8);font-weight:700;text-transform:uppercase;letter-spacing:2px}
+
+/* Player cards compact */
+.prow{display:flex;align-items:center;width:100%;gap:4px;padding:0 2px}
+.pi-card{display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:5px 8px;backdrop-filter:blur(8px);min-width:0;flex-shrink:0}
+.pi-card-right{flex-direction:row-reverse}
+.pi-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;border:2px solid rgba(255,255,255,.3);flex-shrink:0;transition:all .3s}
+.pi-info{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pi-info-right{align-items:flex-end}
+.pi-name{font-size:10px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px}
+.pi-coins{display:flex;align-items:center;gap:2px;font-size:10px;font-weight:800;color:var(--gold)}
+.pi-card.myturn{border-color:var(--gold);box-shadow:0 0 10px rgba(255,215,0,.4)}
+
+@media(max-width:480px){
+  .dice-3d-wrap{width:60px;height:60px}
+  .dice-3d{width:60px;height:60px;font-size:36px}
+  .game-log-big{font-size:13px}
+  .pi-av{width:28px;height:28px;font-size:9px}
+  .pi-name{font-size:9px;max-width:55px}
+}
 </style>
 
 <script>

@@ -964,21 +964,33 @@ function endGame(winner){playerFinished(winner);}
 
 // ===== UI HELPERS =====
 let logT;
-function log(msg,color='rgba(255,255,255,.5)'){
-  const el=document.getElementById('game-log');if(!el)return;
-  el.textContent=msg;el.style.color=color;
-  el.style.transform='scale(1.08)';
-  clearTimeout(logT);logT=setTimeout(()=>el.style.transform='scale(1)',300);
+function log(msg, color='rgba(255,255,255,.9)'){
+  const el = document.getElementById('game-log');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.color = color;
+  // Pulse animation
+  el.style.transform = 'scale(1.03)';
+  el.style.textShadow = `0 0 20px ${color}`;
+  clearTimeout(logT);
+  logT = setTimeout(() => {
+    el.style.transform = 'scale(1)';
+    el.style.textShadow = '0 2px 8px rgba(0,0,0,.8)';
+  }, 400);
 }
 function enableRoll(){
-  const b=document.getElementById('roll-btn');if(b)b.disabled=false;
-  const d=document.getElementById('dice-el');
-  if(d){ d.classList.remove('rolling'); d.style.transform=''; d.style.opacity='1'; }
+  const b = document.getElementById('roll-btn'); if(b) b.disabled=false;
+  const d = document.getElementById('dice-el');
+  if(d){ d.classList.remove('rolling'); d.style.transform=''; d.style.opacity='1'; d.style.boxShadow=''; }
+  const hint = document.getElementById('dice-hint');
+  if(hint){ hint.textContent='LANCER LE DÉ ⚡'; hint.style.color='rgba(255,215,0,.9)'; }
 }
 function disableRoll(){
-  const b=document.getElementById('roll-btn');if(b)b.disabled=true;
-  const d=document.getElementById('dice-el');
-  if(d) d.style.opacity='0.45';
+  const b = document.getElementById('roll-btn'); if(b) b.disabled=true;
+  const d = document.getElementById('dice-el');
+  if(d){ d.style.opacity='0.4'; d.style.boxShadow='none'; }
+  const hint = document.getElementById('dice-hint');
+  if(hint){ hint.textContent='En attente...'; hint.style.color='rgba(255,255,255,.3)'; }
 }
 function updateAP(){
   for(let i=0;i<4;i++){
@@ -1303,8 +1315,15 @@ function startGameWithColor(){
   GAME.eliminated = [];
   GAME.activePlayers = STATE.numPlayers;
   if(animFrame){ cancelAnimationFrame(animFrame); animFrame = null; }
-  
-  // Remove old socket listeners to avoid duplicates
+
+  // CRITICAL: Hide ALL screens first
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.style.display = 'none';
+    s.style.removeProperty('display');
+  });
+
+  // Remove old socket listeners
   if(STATE.socket){
     STATE.socket.off('match_found');
     STATE.socket.off('turn_change');
@@ -1321,7 +1340,6 @@ function startGameWithColor(){
     STATE.socket.off('tournament_over');
     STATE.socket.off('chat');
     STATE.socket.off('payment_success');
-    // Re-register persistent listeners
     STATE.socket.on('online_count', ({count}) => {
       const el = document.getElementById('online-count');
       if(el) el.textContent = count.toLocaleString('fr-FR');
