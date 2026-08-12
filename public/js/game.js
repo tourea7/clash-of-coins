@@ -81,15 +81,21 @@ let animFrame=null;
 function setupCanvas(){
   canvas=document.getElementById('board-canvas');
   
-  // Mobile-aware sizing
   const isMobile = window.innerWidth <= 480;
-  const headerH = isMobile ? 120 : 140;  // prow top
-  const footerH = isMobile ? 100 : 120;  // prow bottom + log
   const padding = isMobile ? 8 : 16;
   
+  // Reserve space for:
+  // - Status bar top: ~44px
+  // - Player row top: ~50px  
+  // - Player row bottom: ~50px
+  // - Dice bottom bar: ~100px
+  // - Gaps: ~20px
+  const reservedH = isMobile ? 264 : 284;
+  const topBarH = 44 + 8; // game-header height
+  
   const maxW = window.innerWidth - padding;
-  const maxH = window.innerHeight - headerH - footerH;
-  const size = Math.min(maxW, maxH, isMobile ? 380 : 460);
+  const maxH = window.innerHeight - reservedH - topBarH;
+  const size = Math.min(maxW, maxH, isMobile ? 360 : 440);
   
   canvas.width = canvas.height = size;
   C = size / 15;
