@@ -195,11 +195,12 @@ io.on('connection', (socket) => {
   console.log(`[+] Connected: ${socket.id}`);
 
   // ---- AUTH ----
-  socket.on('auth', ({ username, coins, userId }) => {
+  socket.on('auth', ({ username, coins, userId, preferredColor }) => {
     connectedPlayers.set(socket.id, {
       username: username || 'Joueur',
       coins: coins || 1000,
       userId: userId || null,
+      preferredColor: preferredColor || 0,
       inGame: false,
       roomId: null,
     });
@@ -378,13 +379,13 @@ io.on('connection', (socket) => {
       cheatReason = 'invalid exit position';
       moveValid = false;
     } else if (oldPos >= 0 && oldPos < 52) {
-      const expectedPos = Math.min(oldPos + room.dice, 58);
+      const expectedPos = Math.min(oldPos + room.dice, 57);
       if (newPos !== expectedPos) {
         cheatReason = `invalid move: ${oldPos}+${room.dice}=${expectedPos} but got ${newPos}`;
         moveValid = false;
       }
     } else if (oldPos >= 52 && oldPos < 58) {
-      const expectedPos = Math.min(oldPos + room.dice, 58);
+      const expectedPos = Math.min(oldPos + room.dice, 57);
       if (newPos !== expectedPos) {
         cheatReason = 'invalid home stretch move';
         moveValid = false;
@@ -438,7 +439,7 @@ io.on('connection', (socket) => {
     }
 
     // Check piece finished
-    if (newPos >= 58) {
+    if (newPos >= 57) {
       room.pieces[playerIdx][piece] = 58;
       room.finished[playerIdx]++;
       room.scores[playerIdx] += 50;
@@ -533,16 +534,26 @@ function createRoom(playerSockets, mode, mise, numPlayers, qKey) {
     scores: Array(numPlayers).fill(0),
     ranking: [],
     eliminated: [],
-    players: playerSockets.map((sid, idx) => {
-      const p = connectedPlayers.get(sid);
-      return {
-        socketId: sid,
-        index: idx,
-        username: p?.username || `Joueur${idx+1}`,
-        userId: p?.userId || null,
-        coins: p?.coins || 1000,
-      };
-    }),
+    players: (() => {
+      // Try to assign preferred colors
+      const usedColors = new Set();
+      return playerSockets.map((sid, idx) => {
+        const p = connectedPlayers.get(sid);
+        let colorIndex = idx; // default
+        // Try preferred color
+        if(p?.preferredColor !== undefined && !usedColors.has(p.preferredColor)){
+          colorIndex = p.preferredColor;
+        }
+        usedColors.add(colorIndex);
+        return {
+          socketId: sid,
+          index: colorIndex,
+          username: p?.username || `Joueur${idx+1}`,
+          userId: p?.userId || null,
+          coins: p?.coins || 1000,
+        };
+      });
+    })(),
     createdAt: Date.now(),
   };
 

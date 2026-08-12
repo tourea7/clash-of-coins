@@ -51,10 +51,10 @@ const P52=[
 
 // Home stretches (6 squares toward center)
 const HS=[
-  [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],     // Blue: row7 →
-  [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],     // Red: col7 ↓
-  [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]], // Green: row7 ←
-  [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]], // Yellow: col7 ↑
+  [[1,7],[2,7],[3,7],[4,7],[5,7]],     // Blue: row7 → (5 squares)
+  [[7,1],[7,2],[7,3],[7,4],[7,5]],     // Red: col7 ↓ (5 squares)
+  [[13,7],[12,7],[11,7],[10,7],[9,7]], // Green: row7 ← (5 squares)
+  [[7,13],[7,12],[7,11],[7,10],[7,9]], // Yellow: col7 ↑ (5 squares)
 ];
 
 // Base positions in home zones
@@ -201,10 +201,10 @@ function drawCell(col,row){
   let fill='#f0e8d0', border='rgba(180,150,100,.15)', bw=.5;
 
   // Home stretch corridors
-  if(row===7&&col>=1&&col<=6)       {fill='#c4d4ff';border='rgba(26,111,255,.3)';bw=.8;}
-  else if(col===7&&row>=1&&row<=6)  {fill='#ffc4c4';border='rgba(238,17,17,.3)';bw=.8;}
-  else if(row===7&&col>=8&&col<=13) {fill='#c4ffcc';border='rgba(0,204,68,.3)';bw=.8;}
-  else if(col===7&&row>=8&&row<=13) {fill='#fff0a0';border='rgba(221,170,0,.3)';bw=.8;}
+  if(row===7&&col>=1&&col<=5)       {fill='#c4d4ff';border='rgba(26,111,255,.3)';bw=.8;}
+  else if(col===7&&row>=1&&row<=5)  {fill='#ffc4c4';border='rgba(238,17,17,.3)';bw=.8;}
+  else if(row===7&&col>=9&&col<=13) {fill='#c4ffcc';border='rgba(0,204,68,.3)';bw=.8;}
+  else if(col===7&&row>=9&&row<=13) {fill='#fff0a0';border='rgba(221,170,0,.3)';bw=.8;}
 
   // Entry squares — same strong color as home zone
   if(ENTRY.has(`${col},${row}`)){
@@ -349,7 +349,7 @@ function drawCenter(){
 
 // ===== DRAW PAWN (Ludo King style teardrop) =====
 function drawPiece(p,i){
-  if(GAME.pieces[p][i]===58) return; // finished
+  if(GAME.pieces[p][i]===57) return; // finished
   const{x,y}=getPXY(p,i);
   const r=C*.27;
   const isActive=(p===GAME.current&&!GAME.rolled&&!GAME.over);
@@ -436,8 +436,8 @@ function getPXY(p,i){
     return{x:bases[i][0]*C,y:bases[i][1]*C};
   } else if(pos>=52){
     const si=pos-52;
-    if(si<6)[col,row]=HS[p][si];
-    else{col=7;row=7;}
+    if(si<5)[col,row]=HS[p][si];
+    else{col=7;row=7;} // pos 57+ = center
   } else {
     [col,row]=P52[(pos+EN[p])%52];
   }
@@ -476,14 +476,19 @@ function getMovable(player,dice){
   const m=[];
   for(let i=0;i<4;i++){
     const pos=GAME.pieces[player][i];
-    if(pos===58) continue; // Already finished
+    if(pos===57) continue; // Already finished (center)
     if(pos===-1){
       // In home base - need a 6 to exit
       if(dice===6) m.push({player,piece:i,newPos:0});
+    } else if(pos < 52) {
+      // On outer path
+      const np = pos + dice;
+      if(np <= 58) m.push({player, piece:i, newPos:np});
     } else {
-      // On board - check won't overshoot finish
-      const np=pos+dice;
-      if(np<=58) m.push({player,piece:i,newPos:np});
+      // In home stretch (pos 52-57) - can only move forward, cap at 58
+      const np = pos + dice;
+      if(np <= 58) m.push({player, piece:i, newPos:np});
+      // If np > 58, piece can't move (would overshoot)
     }
   }
   return m;
@@ -544,8 +549,8 @@ vibrate([100,50,100]);
   }
 
   // Finish check
-  if(newPos>=58){
-    GAME.pieces[player][piece]=58;GAME.finished[player]++;GAME.scores[player]+=50;
+  if(newPos>=57){
+    GAME.pieces[player][piece]=57;GAME.finished[player]++;GAME.scores[player]+=50;
     log(`⭐ Pièce ${piece+1} arrivée! +50 pts`,PC[player]);
     if(typeof SFX!=='undefined') SFX.pieceDone();
     if(GAME.finished[player]>=4){
@@ -1266,6 +1271,7 @@ function findGame(){
           mode: STATE.currentMode,
           mise: STATE.currentMise,
           numPlayers: STATE.numPlayers,
+          preferredColor: STATE.myColor, // Send chosen color
         });
 
         // Timeout → choice modal
@@ -2158,6 +2164,7 @@ function initSocket(){
         username: STATE.username,
         coins: STATE.coins,
         userId: typeof CURRENT_USER !== 'undefined' ? CURRENT_USER?.id : null,
+        preferredColor: STATE.myColor,
       });
     });
 
@@ -2185,7 +2192,7 @@ function initSocket(){
       GAME.isMultiplayer = true;
       GAME.roomId = roomId;
       GAME.myIndex = myIndex;
-      STATE.myColor = myIndex;
+      STATE.myColor = myIndex; // Server assigned color
 
       showToast('🎮 Partie trouvée! Démarrage...');
       if(typeof SFX!=='undefined') SFX.playerJoin();
@@ -2279,7 +2286,7 @@ function initSocket(){
       }
 
       // Check if piece finished
-      if(newPos >= 58){
+      if(newPos >= 57){
         GAME.finished[player] = (GAME.finished[player]||0) + 1;
         if(typeof SFX !== 'undefined') SFX.pieceDone();
       }
