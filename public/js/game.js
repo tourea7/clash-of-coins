@@ -1078,22 +1078,17 @@ function renderTx(){
 
 // ===== NAVIGATION =====
 function showScreen(name){
-  // Hide all screens
+  // Hide ALL screens completely
   document.querySelectorAll('.screen').forEach(s=>{
     s.classList.remove('active');
-    s.style.display = '';
+    s.style.cssText = 'display:none!important';
   });
 
   // Show target screen
   const el = document.getElementById('scr-'+name);
   if(el){
     el.classList.add('active');
-    el.style.display = 'flex';
-    el.style.flexDirection = 'column';
-    el.style.position = 'absolute';
-    el.style.inset = '0';
-    el.style.zIndex = '1';
-    el.style.overflow = 'hidden';
+    el.style.cssText = 'display:flex!important;flex-direction:column;position:absolute;inset:0;z-index:2;overflow:hidden';
   } else {
     console.warn('Screen not found: scr-'+name);
     return;
@@ -1325,8 +1320,7 @@ function startGameWithColor(){
   // CRITICAL: Hide ALL screens first
   document.querySelectorAll('.screen').forEach(s => {
     s.classList.remove('active');
-    s.style.display = 'none';
-    s.style.removeProperty('display');
+    s.style.cssText = 'display:none!important';
   });
 
   // Remove old socket listeners
