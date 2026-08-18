@@ -1373,6 +1373,8 @@ function startGameWithColor(){
     if(!piEl) continue;
     piEl.style.display=i<STATE.numPlayers?'flex':'none';
     if(i>=STATE.numPlayers) continue;
+    // Skip AI setup in multiplayer (match_found already set names)
+    if(GAME.isMultiplayer) continue;
     if(paEl){
       paEl.style.background=PC[i];
       paEl.style.borderColor=PCL[i];
@@ -2207,21 +2209,34 @@ function initSocket(){
       initGame(players.length);
       STATE.numPlayers = players.length;
 
-      // Set player names
-      players.forEach((p, idx) => {
-        const piEl = document.getElementById(`pi-${idx}`);
-        const paEl = document.getElementById(`pa-${idx}`);
-        const pnEl = document.getElementById(`pn-${idx}`);
-        const psEl = document.getElementById(`ps-${idx}`);
-        if(!piEl) return;
-        piEl.style.display = 'flex';
-        if(paEl){ paEl.style.background = PC[idx]; paEl.textContent = idx === myIndex ? 'MOI' : `P${idx+1}`; }
-        if(pnEl) pnEl.textContent = idx === myIndex ? 'Vous' : p.username;
-        if(psEl){ psEl.textContent = '0 pts'; psEl.style.color = PCL[idx]; }
+      // Hide unused player slots first
+      for(let i=0;i<4;i++){
+        const piEl = document.getElementById('pi-'+i);
+        if(piEl) piEl.style.cssText = 'display:none!important';
+      }
+
+      // Set player names using COLOR INDEX (not array position)
+      players.forEach((p, arrIdx) => {
+        // Server sends colorIndex for each player
+        const colorIdx = p.colorIndex !== undefined ? p.colorIndex : arrIdx;
+        const isMe = arrIdx === myIndex;
+
+        const piEl = document.getElementById('pi-'+colorIdx);
+        const paEl = document.getElementById('pa-'+colorIdx);
+        const pnEl = document.getElementById('pn-'+colorIdx);
+        const psEl = document.getElementById('ps-'+colorIdx);
+
+        if(piEl) piEl.style.cssText = 'display:flex';
+        if(paEl){
+          paEl.style.background = PC[colorIdx];
+          paEl.textContent = isMe ? 'MOI' : 'P'+(arrIdx+1);
+        }
+        if(pnEl) pnEl.textContent = isMe ? 'Vous' : p.username;
+        if(psEl){ psEl.textContent = '0'; psEl.style.color = PCL[colorIdx]; }
       });
 
       setupCanvas();
-      GAME.current = -1; // Wait for server to say who goes first
+      GAME.current = -1;
       disableRoll();
       log('🎮 Partie multijoueur! En attente...', '#FFD700');
     });

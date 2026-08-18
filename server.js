@@ -580,7 +580,10 @@ function createRoom(playerSockets, mode, mise, numPlayers, qKey) {
     io.to(sid).emit('match_found', {
       roomId,
       myIndex: idx,
-      players: room.players.map(p => ({ username: p.username })),
+      players: room.players.map((p, i) => ({
+        username: p.username,
+        colorIndex: p.index, // The actual color assigned
+      })),
       mode,
       mise,
     });
