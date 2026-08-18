@@ -130,9 +130,10 @@ function initGame(n){
   GAME.players=n;GAME.current=0;GAME.dice=1;GAME.rolled=false;GAME.over=false;
   GAME.waitMove=false;GAME.movable=[];
   GAME.scores=Array(4).fill(0);
-  GAME.pieces=Array.from({length:4},()=>Array(4).fill(-1));
+  GAME.pieces=Array.from({length:4},()=>Array(4).fill(-1)); // ALL 4 colors
   GAME.finished=Array(4).fill(0);
   GAME.ranking=[];GAME.eliminated=[];GAME.activePlayers=n;
+  GAME.activeColors=[]; // Will be set in multiplayer
 }
 
 // ===== DRAW BOARD =====
@@ -165,8 +166,8 @@ function drawBoard(){
   // Draw center star
   drawCenter();
 
-  // Draw all pieces
-  for(let p=0;p<GAME.players;p++)
+  // Draw all pieces - use all 4 color slots
+  for(let p=0;p<4;p++)
     for(let i=0;i<4;i++) drawPiece(p,i);
 
   // Draw movable highlights
@@ -707,15 +708,19 @@ function nextTurn(){
   if(GAME.over) return;
   if(GAME.isMultiplayer) return;
 
-  let next=(GAME.current+1)%GAME.players;
-  let safety=0;
-  while(GAME.eliminated.includes(next)&&safety<GAME.players){
-    next=(next+1)%GAME.players; safety++;
+  // Find next active color
+  const colors = GAME.activeColors.length ? GAME.activeColors : [0,1,2,3].slice(0,GAME.players);
+  const curIdx = colors.indexOf(GAME.current);
+  let nextIdx = (curIdx + 1) % colors.length;
+  let safety = 0;
+  while(GAME.eliminated.includes(colors[nextIdx]) && safety < colors.length){
+    nextIdx = (nextIdx+1) % colors.length;
+    safety++;
   }
 
-  // All eliminated? End game
-  if(safety>=GAME.players){ GAME.over=true; showFinalRanking(); return; }
+  if(safety >= colors.length){ GAME.over=true; showFinalRanking(); return; }
 
+  const next = colors[nextIdx];
   GAME.current=next;
   GAME.rolled=false;
   GAME.waitMove=false;
@@ -1365,31 +1370,51 @@ function startGameWithColor(){
   if(STATE.currentMode==='comp' && typeof SFX!=='undefined') SFX.betPlaced();
   initGame(STATE.numPlayers);
 
+  // Build active colors list for AI mode
+  // Always include myColor + fill remaining with other colors
+  if(!GAME.isMultiplayer){
+    const allColors = [0,1,2,3];
+    const otherColors = allColors.filter(c => c !== STATE.myColor);
+    GAME.activeColors = [STATE.myColor, ...otherColors.slice(0, STATE.numPlayers-1)];
+  }
+
+  // Show/hide player slots based on active colors
   for(let i=0;i<4;i++){
     const piEl=document.getElementById(`pi-${i}`);
     const paEl=document.getElementById(`pa-${i}`);
     const pnEl=document.getElementById(`pn-${i}`);
     const psEl=document.getElementById(`ps-${i}`);
     if(!piEl) continue;
-    piEl.style.display=i<STATE.numPlayers?'flex':'none';
-    if(i>=STATE.numPlayers) continue;
-    // Skip AI setup in multiplayer (match_found already set names)
+
+    const isActive = GAME.activeColors.includes(i);
+    piEl.style.display = isActive ? 'flex' : 'none';
+    if(!isActive) continue;
+
+    // Skip AI setup in multiplayer
     if(GAME.isMultiplayer) continue;
+
     if(paEl){
       paEl.style.background=PC[i];
       paEl.style.borderColor=PCL[i];
       paEl.textContent=i===STATE.myColor?'👑':`P${i+1}`;
     }
-    if(pnEl) pnEl.textContent=i===STATE.myColor?'Vous':(AI[i>STATE.myColor?i-1:i]||`IA ${i+1}`);
+    const aiNum = GAME.activeColors.indexOf(i); // Position in active list (0=human, 1,2,3=AI)
+    if(pnEl) pnEl.textContent=i===STATE.myColor?'Vous':(AI[aiNum-1]||`IA ${aiNum}`);
     if(psEl){ psEl.textContent='0'; psEl.style.color=PCL[i]; }
   }
 
   setupCanvas();
-  GAME.current=STATE.myColor;
+  // First turn: start with myColor (human always goes first in AI mode)
+  GAME.current = GAME.activeColors.length ? GAME.activeColors[0] : STATE.myColor;
   GAME.rolled=false;
   updateAP();
-  enableRoll();
-  log('🎲 Votre tour — lancez le dé!',PC[STATE.myColor]);
+  if(GAME.current === STATE.myColor){
+    enableRoll();
+    log('🎲 Votre tour — lancez le dé!',PC[STATE.myColor]);
+  } else {
+    disableRoll();
+    setTimeout(()=>aiTurn(GAME.current), 1000);
+  }
   // Reset chat
   _chatOpen = false;
   _unreadCount = 0;
@@ -2208,6 +2233,10 @@ function initSocket(){
 
       initGame(players.length);
       STATE.numPlayers = players.length;
+      // Store which colors are active
+      GAME.activeColors = players.map((p, i) => 
+        p.colorIndex !== undefined ? p.colorIndex : i
+      );
 
       // Hide unused player slots first
       for(let i=0;i<4;i++){
