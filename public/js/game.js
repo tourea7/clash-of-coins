@@ -2193,8 +2193,8 @@ function initSocket(){
 
       GAME.isMultiplayer = true;
       GAME.roomId = roomId;
-      GAME.myIndex = myIndex;
-      STATE.myColor = myIndex; // Server assigned color
+      GAME.myIndex = myIndex; // Color index (0=blue,1=red,2=green,3=yellow)
+      STATE.myColor = myIndex; // Use server-assigned color
 
       showToast('🎮 Partie trouvée! Démarrage...');
       if(typeof SFX!=='undefined') SFX.playerJoin();
@@ -2219,7 +2219,7 @@ function initSocket(){
       players.forEach((p, arrIdx) => {
         // Server sends colorIndex for each player
         const colorIdx = p.colorIndex !== undefined ? p.colorIndex : arrIdx;
-        const isMe = arrIdx === myIndex;
+        const isMe = colorIdx === myIndex; // myIndex is color index
 
         const piEl = document.getElementById('pi-'+colorIdx);
         const paEl = document.getElementById('pa-'+colorIdx);

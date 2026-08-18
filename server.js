@@ -249,10 +249,12 @@ io.on('connection', (socket) => {
   });
 
   // ---- FIND GAME ----
-  socket.on('find_game', ({ mode, mise, numPlayers }) => {
+  socket.on('find_game', ({ mode, mise, numPlayers, preferredColor }) => {
     const player = connectedPlayers.get(socket.id);
     if (!player) return;
     if (player.inGame) { socket.emit('error', { message: 'Déjà en partie' }); return; }
+    // Update preferred color from game selection
+    if(preferredColor !== undefined) player.preferredColor = preferredColor;
 
     // Check balance for comp mode (verify against DB)
     if (mode === 'comp') {
@@ -577,12 +579,14 @@ function createRoom(playerSockets, mode, mise, numPlayers, qKey) {
 
   // Notify all players - match found!
   playerSockets.forEach((sid, idx) => {
-    io.to(sid).emit('match_found', {
+    // Find this player's color index
+  const myColorIndex = room.players.find(p => p.socketId === sid)?.index ?? idx;
+  io.to(sid).emit('match_found', {
       roomId,
-      myIndex: idx,
+      myIndex: myColorIndex, // Send COLOR index, not array position
       players: room.players.map((p, i) => ({
         username: p.username,
-        colorIndex: p.index, // The actual color assigned
+        colorIndex: p.index,
       })),
       mode,
       mise,
