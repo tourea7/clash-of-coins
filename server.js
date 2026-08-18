@@ -432,7 +432,8 @@ io.on('connection', (socket) => {
               if (oc === mc && or2 === mr) {
                 room.pieces[p2][i2] = -1;
                 room.scores[playerIdx] += 20;
-                captured = { player: p2, piece: i2 };
+                const capturedColorIdx = room.players[p2]?.index ?? p2;
+                captured = { player: capturedColorIdx, piece: i2 };
               }
             }
           }
@@ -448,8 +449,10 @@ io.on('connection', (socket) => {
     }
 
     // Broadcast move to ALL in room
+    const movedColorIndex = room.players[playerIdx].index;
     io.to(roomId).emit('player_moved', {
-      player: playerIdx,
+      player: movedColorIndex, // Color index
+      arrayIndex: playerIdx,
       piece,
       newPos,
       captured,
@@ -598,8 +601,10 @@ function createRoom(playerSockets, mode, mise, numPlayers, qKey) {
   // Start first turn after 3s (let clients set up)
   setTimeout(() => {
     room.rolled = false;
+    const firstColorIndex = room.players[0].index;
     io.to(roomId).emit('turn_change', {
-      current: 0,
+      current: firstColorIndex, // Color index of first player
+      arrayIndex: 0,
       replay: false,
       message: `C'est le tour de ${room.players[0].username}`,
     });
@@ -621,8 +626,10 @@ function nextTurnRoom(roomId) {
   room.rolled = false;
   room.dice = 1; // Reset dice
 
+  const currentColorIndex = room.players[next].index; // Color index
   io.to(roomId).emit('turn_change', {
-    current: next,
+    current: currentColorIndex, // Send COLOR index not array index
+    arrayIndex: next,           // Also send array index for reference
     replay: false,
     message: `Tour de ${room.players[next].username}`,
   });
@@ -636,8 +643,10 @@ function playerFinishedRoom(roomId, playerIdx) {
   room.eliminated.push(playerIdx);
 
   const pos = room.ranking.length;
+  const rankedColorIndex = room.players[playerIdx].index;
   io.to(roomId).emit('player_ranked', {
-    player: playerIdx,
+    player: rankedColorIndex, // Color index
+    arrayIndex: playerIdx,
     position: pos,
     username: room.players[playerIdx].username,
   });
