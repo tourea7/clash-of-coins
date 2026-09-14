@@ -367,7 +367,8 @@ io.on('connection', (socket) => {
     // Validate piece index
     if (piece < 0 || piece > 3) { logCheat(socket.id, 'invalid piece index'); return; }
 
-    const oldPos = room.pieces[playerIdx][piece];
+    const colorIdx = room.players[playerIdx].index; // Get COLOR index
+    const oldPos = room.pieces[colorIdx][piece];
     if (oldPos === 58) { logCheat(socket.id, 'moving finished piece'); return; }
 
     // Validate move (log warnings but don't block to avoid false positives)
@@ -415,25 +416,25 @@ io.on('connection', (socket) => {
     room.rolled = false; // Consume the roll
     room.lastMove = { player: playerIdx, piece, newPos, at: Date.now() };
 
-    // Apply move
-    room.pieces[playerIdx][piece] = newPos;
+    // Apply move using COLOR index
+    room.pieces[colorIdx][piece] = newPos;
 
     // Check capture
     let captured = null;
     if (newPos >= 0 && newPos < 52) {
-      const [mc, mr] = P52[(newPos + EN[playerIdx]) % 52];
+      const [mc, mr] = P52[(newPos + EN[colorIdx]) % 52];
       if (!SF.has(`${mc},${mr}`)) {
         for (let p2 = 0; p2 < room.players.length; p2++) {
           if (p2 === playerIdx) continue;
+          const c2 = room.players[p2].index; // color of other player
           for (let i2 = 0; i2 < 4; i2++) {
-            const op = room.pieces[p2][i2];
+            const op = room.pieces[c2][i2];
             if (op >= 0 && op < 52) {
-              const [oc, or2] = P52[(op + EN[p2]) % 52];
+              const [oc, or2] = P52[(op + EN[c2]) % 52];
               if (oc === mc && or2 === mr) {
-                room.pieces[p2][i2] = -1;
-                room.scores[playerIdx] += 20;
-                const capturedColorIdx = room.players[p2]?.index ?? p2;
-                captured = { player: capturedColorIdx, piece: i2 };
+                room.pieces[c2][i2] = -1;
+                room.scores[colorIdx] += 20;
+                captured = { player: c2, piece: i2 };
               }
             }
           }
@@ -459,9 +460,15 @@ io.on('connection', (socket) => {
       scores: room.scores,
     });
 
-    // Check if player finished all 4 pieces
-    if (room.finished[playerIdx] >= 4) {
-      playerFinishedRoom(roomId, playerIdx);
+    // Check finish using color index
+    if (newPos >= 57) {
+      room.pieces[colorIdx][piece] = 57;
+      room.finished[colorIdx] = (room.finished[colorIdx] || 0) + 1;
+      room.scores[colorIdx] = (room.scores[colorIdx] || 0) + 50;
+    }
+
+    if (room.finished[colorIdx] >= 4) {
+      playerFinishedRoom(roomId, playerIdx); // playerIdx = array index
       return;
     }
 
@@ -534,9 +541,9 @@ function createRoom(playerSockets, mode, mise, numPlayers, qKey) {
     dice: 1,
     rolled: false,
     over: false,
-    pieces: Array.from({length: numPlayers}, () => Array(4).fill(-1)),
-    finished: Array(numPlayers).fill(0),
-    scores: Array(numPlayers).fill(0),
+    pieces: Array.from({length: 4}, () => Array(4).fill(-1)), // 4 color slots
+    finished: Array(4).fill(0),
+    scores: Array(4).fill(0),  // indexed by COLOR
     ranking: [],
     eliminated: [],
     players: (() => {
