@@ -382,13 +382,13 @@ io.on('connection', (socket) => {
       cheatReason = 'invalid exit position';
       moveValid = false;
     } else if (oldPos >= 0 && oldPos < 52) {
-      const expectedPos = Math.min(oldPos + room.dice, 57);
+      const expectedPos = Math.min(oldPos + room.dice, 58);
       if (newPos !== expectedPos) {
         cheatReason = `invalid move: ${oldPos}+${room.dice}=${expectedPos} but got ${newPos}`;
         moveValid = false;
       }
     } else if (oldPos >= 52 && oldPos < 58) {
-      const expectedPos = Math.min(oldPos + room.dice, 57);
+      const expectedPos = Math.min(oldPos + room.dice, 58);
       if (newPos !== expectedPos) {
         cheatReason = 'invalid home stretch move';
         moveValid = false;
@@ -443,7 +443,7 @@ io.on('connection', (socket) => {
     }
 
     // Check piece finished
-    if (newPos >= 57) {
+    if (newPos >= 58) {
 // finish handled below
     }
 
@@ -459,8 +459,8 @@ io.on('connection', (socket) => {
     });
 
     // Check finish using color index
-    if (newPos >= 57) {
-      room.pieces[colorIdx][piece] = 57;
+    if (newPos >= 58) {
+      room.pieces[colorIdx][piece] = 58;
       room.finished[colorIdx] = (room.finished[colorIdx] || 0) + 1;
       room.scores[colorIdx] = (room.scores[colorIdx] || 0) + 50;
     }
