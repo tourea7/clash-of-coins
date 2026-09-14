@@ -371,8 +371,6 @@ io.on('connection', (socket) => {
 
     // Validate piece index
     if (piece < 0 || piece > 3) { logCheat(socket.id, 'invalid piece index'); return; }
-
-    const colorIdx = room.players[playerIdx].index; // Get COLOR index
     const oldPos = room.pieces[colorIdx][piece];
     if (oldPos === 58) { logCheat(socket.id, 'moving finished piece'); return; }
 
@@ -410,12 +408,12 @@ io.on('connection', (socket) => {
 
     // Rate limiting — max 1 move per 300ms
     const now = Date.now();
-    const player = connectedPlayers.get(socket.id);
-    if (player && player.lastMove && now - player.lastMove < 300) {
+    const connPlayer = connectedPlayers.get(socket.id);
+    if (connPlayer && connPlayer.lastMove && now - connPlayer.lastMove < 300) {
       logCheat(socket.id, 'move too fast (rate limit)');
       return;
     }
-    if (player) player.lastMove = now;
+    if (connPlayer) connPlayer.lastMove = now;
 
     // ✅ Move is valid — apply it  
     room.rolled = false; // Consume the roll
