@@ -444,9 +444,7 @@ io.on('connection', (socket) => {
 
     // Check piece finished
     if (newPos >= 57) {
-      room.pieces[colorIdx][piece] = 58;
-      room.finished[colorIdx]++;
-      room.scores[colorIdx] += 50;
+// finish handled below
     }
 
     // Broadcast move to ALL in room

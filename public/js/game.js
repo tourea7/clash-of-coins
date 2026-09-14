@@ -556,7 +556,12 @@ vibrate([100,50,100]);
     if(typeof SFX!=='undefined') SFX.pieceDone();
     if(GAME.finished[player]>=4){
       if(typeof SFX!=='undefined') SFX.allDone();
-      playerFinished(player);return;
+      if(!GAME.isMultiplayer){
+        // Solo: handle locally
+        playerFinished(player);
+        return;
+      }
+      // Multiplayer: server will send player_ranked event
     }
   }
 
