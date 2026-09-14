@@ -444,9 +444,9 @@ io.on('connection', (socket) => {
 
     // Check piece finished
     if (newPos >= 57) {
-      room.pieces[playerIdx][piece] = 58;
-      room.finished[playerIdx]++;
-      room.scores[playerIdx] += 50;
+      room.pieces[colorIdx][piece] = 58;
+      room.finished[colorIdx]++;
+      room.scores[colorIdx] += 50;
     }
 
     // Broadcast move to ALL in room
@@ -475,8 +475,10 @@ io.on('connection', (socket) => {
     // Next turn or replay (6 = replay)
     if (room.dice === 6) {
       room.rolled = false;
+      const replayColorIndex = room.players[room.current].index; // COLOR index!
       io.to(roomId).emit('turn_change', {
-        current: room.current,
+        current: replayColorIndex,
+        arrayIndex: room.current,
         replay: true,
         message: `${room.players[playerIdx].username} rejoue (6)!`,
       });
@@ -770,9 +772,9 @@ async function saveRoomResult(room, prizes) {
       await supabase.from('game_history').insert({
         username: p.username,
         player_index: playerIdx,
-        score: room.scores[playerIdx] || 0,
-        pieces_done: room.finished[playerIdx] || 0,
-        captures: Math.floor((room.scores[playerIdx] || 0) / 20),
+        score: room.scores[colorIdx] || 0,
+        pieces_done: room.finished[colorIdx] || 0,
+        captures: Math.floor((room.scores[colorIdx] || 0) / 20),
         won: isWin,
         coins_change: coinsChange,
         mise: room.mise,
