@@ -318,8 +318,10 @@ io.on('connection', (socket) => {
     const room = activeRooms.get(roomId);
     if (!room || room.over) return;
 
-    const playerIdx = room.players.findIndex(p => p.socketId === socket.id);
-    if (playerIdx === -1 || playerIdx !== room.current) {
+    const dicePlayer = room.players.find(p => p.socketId === socket.id);
+    if (!dicePlayer) { logCheat(socket.id, 'dice roll not in room'); return; }
+    const playerIdx = room.players.indexOf(dicePlayer);
+    if (dicePlayer.color !== room.current) {
       logCheat(socket.id, 'dice roll not your turn'); return;
     }
     if (room.rolled) {
@@ -347,7 +349,7 @@ io.on('connection', (socket) => {
 
     // Broadcast to others
     socket.to(roomId).emit('dice_result', {
-      player: playerIdx,
+      player: room.current,  // COLOR index
       result,
     });
 
@@ -359,9 +361,12 @@ io.on('connection', (socket) => {
     const room = activeRooms.get(roomId);
     if (!room || room.over) return;
 
-    const playerIdx = room.players.findIndex(p => p.socketId === socket.id);
-    if (playerIdx === -1) { logCheat(socket.id, 'not in room'); return; }
-    if (playerIdx !== room.current) { logCheat(socket.id, 'not your turn'); return; }
+    // Find player by socketId
+    const player = room.players.find(p => p.socketId === socket.id);
+    if (!player) { logCheat(socket.id, 'not in room'); return; }
+    const colorIdx = player.color;  // COLOR index
+    if (colorIdx !== room.current) { logCheat(socket.id, 'not your turn'); return; }
+    const playerIdx = room.players.indexOf(player); // array index for compatibility
     if (!room.rolled) { logCheat(socket.id, 'move without rolling'); return; }
 
     // Validate piece index
@@ -466,19 +471,17 @@ io.on('connection', (socket) => {
     }
 
     if (room.finished[colorIdx] >= 4) {
-      playerFinishedRoom(roomId, playerIdx); // playerIdx = array index
+      playerFinishedRoom(roomId, colorIdx);  // colorIdx = COLOR index
       return;
     }
 
     // Next turn or replay (6 = replay)
     if (room.dice === 6) {
       room.rolled = false;
-      const replayColorIndex = room.players[room.current].index; // COLOR index!
       io.to(roomId).emit('turn_change', {
-        current: replayColorIndex,
-        arrayIndex: room.current,
+        current: room.current,  // Already COLOR index
         replay: true,
-        message: `${room.players[playerIdx].username} rejoue (6)!`,
+        message: `${player.username} rejoue (6)!`,
       });
     } else {
       nextTurnRoom(roomId);
@@ -529,148 +532,167 @@ io.on('connection', (socket) => {
 });
 
 // ===== ROOM FUNCTIONS =====
+// ============================================================
+// SERVER.JS — Multiplayer Logic (Clean Rewrite)
+// Rule: EVERYTHING uses COLOR index (0=blue,1=red,2=green,3=yellow)
+// room.current = COLOR index of current player
+// room.players[i].color = their chosen color
+// room.pieces[color][piece] = piece position
+// room.scores[color] = score
+// ============================================================
+
 function createRoom(playerSockets, mode, mise, numPlayers, qKey) {
   const roomId = `room_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+
+  // Assign colors — respect preferred colors
+  const usedColors = new Set();
+  const players = playerSockets.map((sid, arrIdx) => {
+    const p = connectedPlayers.get(sid);
+    let color = arrIdx; // default fallback
+    if(p?.preferredColor !== undefined && !usedColors.has(p.preferredColor)){
+      color = p.preferredColor;
+    } else {
+      // Find next available color
+      for(let c = 0; c < 4; c++){
+        if(!usedColors.has(c)){ color = c; break; }
+      }
+    }
+    usedColors.add(color);
+    return {
+      socketId: sid,
+      color,           // COLOR index — the one constant identifier
+      username: p?.username || `Joueur${arrIdx+1}`,
+      userId: p?.userId || null,
+      coins: p?.coins || 1000,
+    };
+  });
+
+  // Active colors list (sorted for turn order)
+  const activeColors = players.map(p => p.color).sort((a,b) => a-b);
 
   const room = {
     id: roomId,
     mode,
     mise,
     numPlayers,
-    current: 0,
+    // current = COLOR index of player whose turn it is
+    current: activeColors[0],
+    currentTurnIdx: 0, // index into activeColors array
     dice: 1,
     rolled: false,
     over: false,
-    pieces: Array.from({length: 4}, () => Array(4).fill(-1)), // 4 color slots
+    // All indexed by COLOR (0-3)
+    pieces: Array.from({length: 4}, () => Array(4).fill(-1)),
     finished: Array(4).fill(0),
-    scores: Array(4).fill(0),  // indexed by COLOR
-    ranking: [],
-    eliminated: [],
-    players: (() => {
-      // Try to assign preferred colors
-      const usedColors = new Set();
-      return playerSockets.map((sid, idx) => {
-        const p = connectedPlayers.get(sid);
-        let colorIndex = idx; // default
-        // Try preferred color
-        if(p?.preferredColor !== undefined && !usedColors.has(p.preferredColor)){
-          colorIndex = p.preferredColor;
-        }
-        usedColors.add(colorIndex);
-        return {
-          socketId: sid,
-          index: colorIndex,
-          username: p?.username || `Joueur${idx+1}`,
-          userId: p?.userId || null,
-          coins: p?.coins || 1000,
-        };
-      });
-    })(),
+    scores: Array(4).fill(0),
+    activeColors,     // e.g. [2,3] for green+yellow
+    players,          // array of player objects
+    ranking: [],      // COLOR indices in finish order
+    eliminated: [],   // COLOR indices eliminated
     createdAt: Date.now(),
   };
 
   activeRooms.set(roomId, room);
 
-  // Mark players as in-game
-  playerSockets.forEach((sid, idx) => {
+  // Join socket rooms + mark in-game
+  playerSockets.forEach(sid => {
     const p = connectedPlayers.get(sid);
-    if (p) { p.inGame = true; p.roomId = roomId; }
-    const s = io.sockets.sockets.get(sid);
-    if (s) s.join(roomId);
+    if(p){ p.inGame = true; p.roomId = roomId; }
+    io.sockets.sockets.get(sid)?.join(roomId);
   });
 
-  // Deduct mise for comp mode
-  if (mode === 'comp') {
+  // Deduct mise
+  if(mode === 'comp'){
     playerSockets.forEach(sid => {
       const p = connectedPlayers.get(sid);
-      if (p) p.coins -= mise;
+      if(p) p.coins -= mise;
     });
   }
 
-  // Notify all players - match found!
-  playerSockets.forEach((sid, idx) => {
-    // Find this player's color index
-  const myColorIndex = room.players.find(p => p.socketId === sid)?.index ?? idx;
-  io.to(sid).emit('match_found', {
+  // Notify each player
+  players.forEach(player => {
+    io.to(player.socketId).emit('match_found', {
       roomId,
-      myIndex: myColorIndex, // Send COLOR index, not array position
-      players: room.players.map((p, i) => ({
+      myColor: player.color,  // MY color index
+      players: players.map(p => ({
         username: p.username,
-        colorIndex: p.index,
+        color: p.color,
       })),
+      activeColors,
       mode,
       mise,
     });
   });
 
-  console.log(`[ROOM] Created ${roomId}: ${room.players.map(p=>p.username).join(' vs ')}`);
+  console.log(`[ROOM] ${roomId}: ${players.map(p=>`${p.username}(${['🔵','🔴','🟢','🟡'][p.color]})`).join(' vs ')}`);
 
-  // Start first turn after 3s (let clients set up)
+  // Start first turn after 3s
   setTimeout(() => {
     room.rolled = false;
-    const firstColorIndex = room.players[0].index;
+    const first = room.activeColors[0];
+    const firstName = room.players.find(p => p.color === first)?.username || '';
     io.to(roomId).emit('turn_change', {
-      current: firstColorIndex, // Color index of first player
-      arrayIndex: 0,
+      current: first,  // COLOR index
       replay: false,
-      message: `C'est le tour de ${room.players[0].username}`,
+      message: `C'est le tour de ${firstName}`,
     });
   }, 3000);
 }
 
 function nextTurnRoom(roomId) {
   const room = activeRooms.get(roomId);
-  if (!room || room.over) return;
+  if(!room || room.over) return;
 
-  let next = (room.current + 1) % room.numPlayers;
+  // Find next non-eliminated color in activeColors order
+  const colors = room.activeColors;
+  let nextTurnIdx = (room.currentTurnIdx + 1) % colors.length;
   let safety = 0;
-  while (room.eliminated.includes(next) && safety < room.numPlayers) {
-    next = (next + 1) % room.numPlayers;
+  while(room.eliminated.includes(colors[nextTurnIdx]) && safety < colors.length){
+    nextTurnIdx = (nextTurnIdx + 1) % colors.length;
     safety++;
   }
 
-  room.current = next;
-  room.rolled = false;
-  room.dice = 1; // Reset dice
+  if(safety >= colors.length){ endRoom(roomId); return; }
 
-  const currentColorIndex = room.players[next].index; // Color index
+  room.currentTurnIdx = nextTurnIdx;
+  room.current = colors[nextTurnIdx];
+  room.rolled = false;
+  room.dice = 1;
+
+  const playerName = room.players.find(p => p.color === room.current)?.username || '';
   io.to(roomId).emit('turn_change', {
-    current: currentColorIndex, // Send COLOR index not array index
-    arrayIndex: next,           // Also send array index for reference
+    current: room.current,  // COLOR index
     replay: false,
-    message: `Tour de ${room.players[next].username}`,
+    message: `Tour de ${playerName}`,
   });
 }
 
-function playerFinishedRoom(roomId, playerIdx) {
+function playerFinishedRoom(roomId, color) {
   const room = activeRooms.get(roomId);
-  if (!room || room.eliminated.includes(playerIdx)) return;
+  if(!room || room.eliminated.includes(color)) return;
 
-  room.ranking.push(playerIdx);
-  room.eliminated.push(playerIdx);
+  room.ranking.push(color);
+  room.eliminated.push(color);
 
   const pos = room.ranking.length;
-  const rankedColorIndex = room.players[playerIdx].index;
+  const username = room.players.find(p => p.color === color)?.username || '';
   io.to(roomId).emit('player_ranked', {
-    player: rankedColorIndex, // Color index
-    arrayIndex: playerIdx,
+    player: color,   // COLOR index
     position: pos,
-    username: room.players[playerIdx].username,
+    username,
   });
 
-  // Check if only 1 remains
-  const remaining = [];
-  for (let i = 0; i < room.numPlayers; i++) {
-    if (!room.eliminated.includes(i)) remaining.push(i);
-  }
-
-  if (remaining.length <= 1) {
-    if (remaining.length === 1) room.ranking.push(remaining[0]);
+  // Check remaining
+  const remaining = room.activeColors.filter(c => !room.eliminated.includes(c));
+  if(remaining.length <= 1){
+    if(remaining.length === 1) room.ranking.push(remaining[0]);
     endRoom(roomId);
   } else {
     nextTurnRoom(roomId);
   }
 }
+
+
 
 function endRoom(roomId) {
   const room = activeRooms.get(roomId);

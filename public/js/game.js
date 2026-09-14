@@ -51,10 +51,10 @@ const P52=[
 
 // Home stretches (6 squares toward center)
 const HS=[
-  [[1,7],[2,7],[3,7],[4,7],[5,7]],     // Blue: row7 → (5 squares)
-  [[7,1],[7,2],[7,3],[7,4],[7,5]],     // Red: col7 ↓ (5 squares)
-  [[13,7],[12,7],[11,7],[10,7],[9,7]], // Green: row7 ← (5 squares)
-  [[7,13],[7,12],[7,11],[7,10],[7,9]], // Yellow: col7 ↑ (5 squares)
+  [[1,6],[1,7],[2,7],[3,7],[4,7],[5,7]],     // Blue: entry(1,6) + 5 corridor
+  [[8,1],[7,1],[7,2],[7,3],[7,4],[7,5]],     // Red: entry(8,1) + 5 corridor
+  [[13,8],[13,7],[12,7],[11,7],[10,7],[9,7]],// Green: entry(13,8) + 5 corridor
+  [[6,13],[7,13],[7,12],[7,11],[7,10],[7,9]],// Yellow: entry(6,13) + 5 corridor
 ];
 
 // Base positions in home zones
@@ -350,7 +350,7 @@ function drawCenter(){
 
 // ===== DRAW PAWN (Ludo King style teardrop) =====
 function drawPiece(p,i){
-  if(GAME.pieces[p][i]===57) return; // finished
+  if(GAME.pieces[p][i]===58) return; // finished
   const{x,y}=getPXY(p,i);
   const r=C*.27;
   const isActive=(p===GAME.current&&!GAME.rolled&&!GAME.over);
@@ -437,8 +437,8 @@ function getPXY(p,i){
     return{x:bases[i][0]*C,y:bases[i][1]*C};
   } else if(pos>=52){
     const si=pos-52;
-    if(si<5)[col,row]=HS[p][si];
-    else{col=7;row=7;} // pos 57+ = center
+    if(si<6)[col,row]=HS[p][si];
+    else{col=7;row=7;} // pos 58+ = center
   } else {
     [col,row]=P52[(pos+EN[p])%52];
   }
@@ -477,7 +477,7 @@ function getMovable(player,dice){
   const m=[];
   for(let i=0;i<4;i++){
     const pos=GAME.pieces[player][i];
-    if(pos===57) continue; // Already finished (center)
+    if(pos===58) continue; // Already finished (center)
     if(pos===-1){
       // In home base - need a 6 to exit
       if(dice===6) m.push({player,piece:i,newPos:0});
@@ -550,13 +550,18 @@ vibrate([100,50,100]);
   }
 
   // Finish check
-  if(newPos>=57){
-    GAME.pieces[player][piece]=57;GAME.finished[player]++;GAME.scores[player]+=50;
+  if(newPos>=58){
+    GAME.pieces[player][piece]=58;GAME.finished[player]++;GAME.scores[player]+=50;
     log(`⭐ Pièce ${piece+1} arrivée! +50 pts`,PC[player]);
     if(typeof SFX!=='undefined') SFX.pieceDone();
     if(GAME.finished[player]>=4){
       if(typeof SFX!=='undefined') SFX.allDone();
-      playerFinished(player);return;
+      if(!GAME.isMultiplayer){
+        // Solo: handle locally
+        playerFinished(player);
+        return;
+      }
+      // Multiplayer: server will send player_ranked event
     }
   }
 
@@ -771,34 +776,53 @@ function aiTurn(player){
 
 function playerFinished(player){
   if(GAME.eliminated.includes(player)) return;
-  // In multiplayer, server handles ranking via player_ranked event
   if(GAME.isMultiplayer) return;
-  GAME.ranking.push(player);GAME.eliminated.push(player);GAME.activePlayers--;
-  const pos=GAME.ranking.length;
-  const posLabels=['🥇 1er','🥈 2e','🥉 3e','💀 Dernier'];
-  const name=player===STATE.myColor?'Vous':(AI[player>STATE.myColor?player-1:player]||'IA');
-  log(`${posLabels[pos-1]||`${pos}e`} — ${name} a terminé!`,PC[player]);
+
+  GAME.ranking.push(player);
+  GAME.eliminated.push(player);
+  GAME.activePlayers--;
+
+  const pos = GAME.ranking.length;
+  const posLabels = ['🥇 1er','🥈 2e','🥉 3e','💀 Dernier'];
+  const name = player===STATE.myColor ? 'Vous' : (document.getElementById('pn-'+player)?.textContent || 'IA');
+  log(`${posLabels[pos-1]||pos+'e'} — ${name} a terminé!`, PC[player]);
   updateSUI();
-  const remaining=[];
-  for(let i=0;i<GAME.players;i++) if(!GAME.eliminated.includes(i)) remaining.push(i);
-  if(remaining.length<=1){
-    if(remaining.length===1) GAME.ranking.push(remaining[0]);
-    GAME.over=true;
-    setTimeout(()=>showFinalRanking(),800);
+
+  // Use GAME.activeColors to find remaining players
+  const colors = GAME.activeColors.length ? GAME.activeColors : [0,1,2,3].slice(0,GAME.players);
+  const remaining = colors.filter(c => !GAME.eliminated.includes(c));
+
+  if(remaining.length <= 1){
+    // Game over - last player gets last place
+    if(remaining.length === 1) GAME.ranking.push(remaining[0]);
+    GAME.over = true;
+    setTimeout(()=>showFinalRanking(), 800);
     return;
   }
+
+  // Continue - find next active non-eliminated color
   setTimeout(()=>{
-    let next=(GAME.current+1)%GAME.players;
-    while(GAME.eliminated.includes(next)) next=(next+1)%GAME.players;
-    GAME.current=next;GAME.rolled=false;updateAP();
-    if(GAME.current===STATE.myColor){log('🎲 Votre tour!',PC[STATE.myColor]);enableRoll();}
-    else{
-      const aiIdx=GAME.current>STATE.myColor?GAME.current-1:GAME.current;
-      log(`Tour de ${AI[aiIdx]||'IA'}...`,PC[GAME.current]);
-      if(typeof SFX!=='undefined') SFX.turnChange();
-    disableRoll();setTimeout(()=>aiTurn(GAME.current),1000);
+    const curIdx = colors.indexOf(GAME.current);
+    let nextIdx = (curIdx + 1) % colors.length;
+    let safety = 0;
+    while(GAME.eliminated.includes(colors[nextIdx]) && safety < colors.length){
+      nextIdx = (nextIdx+1) % colors.length;
+      safety++;
     }
-  },1200);
+    GAME.current = colors[nextIdx];
+    GAME.rolled = false;
+    updateAP();
+    if(GAME.current === STATE.myColor){
+      log('🎲 Votre tour!', PC[STATE.myColor]);
+      enableRoll();
+    } else {
+      const aiName = document.getElementById('pn-'+GAME.current)?.textContent || 'IA';
+      log(`Tour de ${aiName}...`, PC[GAME.current]);
+      if(typeof SFX !== 'undefined') SFX.turnChange();
+      disableRoll();
+      setTimeout(()=>aiTurn(GAME.current), 1000);
+    }
+  }, 1200);
 }
 
 function showFinalRanking(){
@@ -869,12 +893,20 @@ updateBlockedCount();
   }
 
   // Rankings
-  document.getElementById('m-msg').innerHTML = GAME.ranking.map((p,i)=>{
-    const n=p===STATE.myColor?`<b style="color:var(--gold)">Vous</b>`:(AI[p>STATE.myColor?p-1:p]||'IA');
+  // Only show players who actually played (active colors)
+  const colors = GAME.activeColors.length ? GAME.activeColors : [0,1,2,3].slice(0,GAME.players);
+  // Make sure ranking only includes active colors
+  const validRanking = GAME.ranking.filter(p => colors.includes(p));
+  // Add any missing active colors at the end
+  colors.forEach(c => { if(!validRanking.includes(c)) validRanking.push(c); });
+  
+  document.getElementById('m-msg').innerHTML = validRanking.map((p,i)=>{
+    const nameEl = document.getElementById('pn-'+p);
+    const n = p===STATE.myColor ? `<b style="color:var(--gold)">Vous</b>` : (nameEl?.textContent || 'IA');
     return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)">
-      <span style="font-size:18px">${posLabels[i]}</span>
+      <span style="font-size:18px">${posLabels[i]||'🏁'}</span>
       <span style="color:${PC[p]};font-weight:700;flex:1">${n}</span>
-      <span style="color:rgba(255,255,255,.5);font-size:12px">${GAME.scores[p]} pts</span>
+      <span style="color:rgba(255,255,255,.5);font-size:12px">${GAME.scores[p]||0} pts</span>
     </div>`;
   }).join('');
 
@@ -2212,14 +2244,17 @@ function initSocket(){
     });
 
     // Match found!
-    STATE.socket.on('match_found', ({roomId, myIndex, players, mode, mise}) => {
+    STATE.socket.on('match_found', (data) => {
+      const {roomId, myColor, myIndex, players, activeColors, mode, mise} = data;
       clearTimeout(STATE.mmTimeout);
-      console.log(`🎮 Match found! Room: ${roomId}, myIndex: ${myIndex}`);
+      const assignedColor = myColor !== undefined ? myColor : myIndex;
+      console.log(`🎮 Match! Room:${roomId} myColor:${assignedColor}`);
 
       GAME.isMultiplayer = true;
       GAME.roomId = roomId;
-      GAME.myIndex = myIndex; // Color index (0=blue,1=red,2=green,3=yellow)
-      STATE.myColor = myIndex; // Use server-assigned color
+      GAME.myIndex = assignedColor;
+      STATE.myColor = assignedColor;
+      if(activeColors) GAME.activeColors = activeColors;
 
       showToast('🎮 Partie trouvée! Démarrage...');
       if(typeof SFX!=='undefined') SFX.playerJoin();
@@ -2246,9 +2281,8 @@ function initSocket(){
 
       // Set player names using COLOR INDEX (not array position)
       players.forEach((p, arrIdx) => {
-        // Server sends colorIndex for each player
-        const colorIdx = p.colorIndex !== undefined ? p.colorIndex : arrIdx;
-        const isMe = colorIdx === myIndex; // myIndex is color index
+        const colorIdx = p.color !== undefined ? p.color : (p.colorIndex !== undefined ? p.colorIndex : arrIdx);
+        const isMe = colorIdx === assignedColor;
 
         const piEl = document.getElementById('pi-'+colorIdx);
         const paEl = document.getElementById('pa-'+colorIdx);
@@ -2330,7 +2364,7 @@ function initSocket(){
       }
 
       // Check if piece finished
-      if(newPos >= 57){
+      if(newPos >= 58){
         GAME.finished[player] = (GAME.finished[player]||0) + 1;
         if(typeof SFX !== 'undefined') SFX.pieceDone();
       }
